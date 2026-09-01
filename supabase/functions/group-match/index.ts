@@ -69,8 +69,8 @@ function deterministicResult(input: { trip: { id: string; name: string; mode: st
   }
   const blockingCategories = [...blocking]; const status = blockingCategories.length ? 'blocked' : 'matched';
   const actions: Record<string, { kind: string; label: string; tail: string }> = {
-    shortlist: { kind: 'compare_shortlist', label: 'Compare the shortlist', tail: 'shortlist' },
-    undecided: { kind: 'discover_destinations', label: 'Discover destinations', tail: 'discover' },
+    shortlist: { kind: 'compare_shortlist', label: 'Compare the shortlist', tail: 'destinations' },
+    undecided: { kind: 'discover_destinations', label: 'Discover destinations', tail: 'destinations' },
     destination_locked: { kind: 'generate_itinerary', label: 'Generate an itinerary', tail: 'itinerary' },
   };
   const action = actions[input.trip.mode];

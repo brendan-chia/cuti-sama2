@@ -1,0 +1,24 @@
+appId: com.cutisama2.app
+name: Seeded destination discovery and comparison journeys
+tags:
+  - requires-destination-catalogue-seed
+---
+# The harness provides completed Slice 6 trips for each planning mode and the placeholder launch catalogue.
+- launchApp:
+    clearState: true
+- openLink: ${UNDECIDED_REVEAL_LINK}
+- assertVisible: "GROUP MATCH · TRACEABLE REVEAL"
+- tapOn: "Discover destinations"
+- assertVisible: "DESTINATION DISCOVERY"
+- assertVisible: "Filtered possibilities"
+- assertNotVisible: "Siem Reap"
+- assertVisible: "CONFIDENCE & PROVENANCE"
+- openLink: ${SHORTLIST_REVEAL_LINK}
+- tapOn: "Compare the shortlist"
+- assertVisible: "SHORTLIST COMPARISON"
+- assertVisible: "The trade-offs, side by side"
+- assertVisible: "lower-confidence comparison"
+- openLink: ${LOCKED_DESTINATIONS_LINK}
+- assertVisible: "LOCKED DESTINATION"
+- assertVisible: "Evidence before the itinerary"
+

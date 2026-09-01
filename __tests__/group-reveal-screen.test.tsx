@@ -12,8 +12,8 @@ afterEach(async () => { await cleanup(); });
 function result(mode: GroupMatchResult['mode']): GroupMatchResult {
   const actions = {
     destination_locked: { kind: 'generate_itinerary' as const, label: 'Generate an itinerary', route: `/trip/${tripId}/itinerary` },
-    shortlist: { kind: 'compare_shortlist' as const, label: 'Compare the shortlist', route: `/trip/${tripId}/shortlist` },
-    undecided: { kind: 'discover_destinations' as const, label: 'Discover destinations', route: `/trip/${tripId}/discover` },
+    shortlist: { kind: 'compare_shortlist' as const, label: 'Compare the shortlist', route: `/trip/${tripId}/destinations` },
+    undecided: { kind: 'discover_destinations' as const, label: 'Discover destinations', route: `/trip/${tripId}/destinations` },
   };
   return {
     runId: null, tripId, tripName: 'Anywhere together', mode, status: 'matched', blockingCategories: [], generatedAt: '2026-09-01T00:00:00Z', nextAction: actions[mode],

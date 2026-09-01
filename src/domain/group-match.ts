@@ -19,8 +19,8 @@ const factToken = (value: string) => normalized(value).replace(/[^a-z0-9]+/g, '-
 const memberLabel = (member: GroupMatchInput['members'][number]) => `${member.displayName}${member.discriminator > 1 ? ` · ${member.discriminator}` : ''}`;
 
 function nextAction(mode: GroupMatchInput['mode'], tripId: string): GroupMatchResult['nextAction'] {
-  if (mode === 'shortlist') return { kind: 'compare_shortlist', label: 'Compare the shortlist', route: `/trip/${tripId}/shortlist` };
-  if (mode === 'undecided') return { kind: 'discover_destinations', label: 'Discover destinations', route: `/trip/${tripId}/discover` };
+  if (mode === 'shortlist') return { kind: 'compare_shortlist', label: 'Compare the shortlist', route: `/trip/${tripId}/destinations` };
+  if (mode === 'undecided') return { kind: 'discover_destinations', label: 'Discover destinations', route: `/trip/${tripId}/destinations` };
   return { kind: 'generate_itinerary', label: 'Generate an itinerary', route: `/trip/${tripId}/itinerary` };
 }
 
