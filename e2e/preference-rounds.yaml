@@ -1,0 +1,35 @@
+appId: com.cutisama2.app
+name: Four-client blind preference rounds
+jsEngine: graaljs
+tags:
+  - requires-four-client-seed
+---
+# Seed: a four-member trip with locked constraints and organizer session on this device.
+- launchApp
+- openLink: ${PREFERENCE_ORGANIZER_LINK}
+- assertVisible: "PREFERENCE TRIP ROOM"
+- tapOn: "Start preference rounds"
+- assertVisible: "ROUND 1 OF 5 · VIBE"
+- tapOn: "Vibe answer"
+- inputText: "Slow mornings and lively dinners"
+- tapOn: "Submit card"
+- assertVisible: "1 / 4 READY"
+# The harness submits clients 2–4 concurrently without exposing their values to this client.
+- runScript: preference-four-client-submit.js
+- extendedWaitUntil:
+    visible: "Cards revealed"
+    timeout: 15000
+- assertVisible: "4 / 4 READY"
+- tapOn: "Close round"
+- tapOn: "Open Pace round"
+- assertVisible: "ROUND 2 OF 5 · PACE"
+- tapOn: "Pace answer"
+- inputText: "Balanced days"
+- tapOn: "Submit card"
+- assertVisible: "1 / 4 READY"
+# The harness submits two peers and removes the fourth pending member.
+- runScript: preference-member-removal.js
+- extendedWaitUntil:
+    visible: "Cards revealed"
+    timeout: 15000
+- assertVisible: "3 / 3 READY"

@@ -16,13 +16,14 @@ import { colors, radius, spacing, typography } from '@/theme/tokens';
 type Props = {
   tripId: string;
   onBack: () => void;
+  onRoom?: () => void;
   loadAction?: typeof loadConstraintCollection;
   saveAction?: typeof saveConstraints;
   lockAction?: typeof lockConstraints;
   subscribeAction?: typeof subscribeToConstraints;
 };
 
-export function ConstraintsScreen({ tripId, onBack, loadAction = loadConstraintCollection, saveAction = saveConstraints, lockAction = lockConstraints, subscribeAction = subscribeToConstraints }: Props) {
+export function ConstraintsScreen({ tripId, onBack, onRoom, loadAction = loadConstraintCollection, saveAction = saveConstraints, lockAction = lockConstraints, subscribeAction = subscribeToConstraints }: Props) {
   const [collection, setCollection] = useState<ConstraintCollection | null>(null);
   const [values, setValues] = useState<ConstraintFormValues>(initialConstraintForm);
   const [errors, setErrors] = useState<ConstraintErrors>({});
@@ -87,6 +88,7 @@ export function ConstraintsScreen({ tripId, onBack, loadAction = loadConstraintC
   return <Screen footer={<View style={styles.footer}>
     {!locked ? <AppButton label={collection.ownConstraint ? 'Update my constraints' : 'Submit my constraints'} loading={busy} onPress={() => void submit()} testID="save-constraints" /> : null}
     {collection.currentRole === 'organizer' && !locked ? <AppButton disabled={!collection.canLock} label="Lock constraints" loading={busy} onPress={() => void lock()} testID="lock-constraints" variant="secondary" /> : null}
+    {locked && onRoom ? <AppButton label="Enter preference room" onPress={onRoom} testID="open-preference-room" /> : null}
   </View>} testID="constraints-screen">
     <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.back}>‹ Trip room</Text></Pressable>
     <View style={styles.headingRow}><View style={styles.headingText}><Text style={styles.kicker}>HARD CONSTRAINTS</Text><Text style={styles.title}>{collection.tripName}</Text></View><View style={styles.connection}><View style={[styles.dot, connected ? styles.live : null]} /><Text style={styles.meta}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
@@ -119,4 +121,3 @@ export function ConstraintsScreen({ tripId, onBack, loadAction = loadConstraintC
 const styles = StyleSheet.create({
   center: { alignItems: 'center', flex: 1, justifyContent: 'center' }, back: { color: colors.sky, fontSize: typography.body, marginBottom: spacing.xl }, headingRow: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' }, headingText: { flex: 1 }, kicker: { color: colors.coral, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.6 }, title: { color: colors.white, fontSize: typography.title, fontWeight: '900', marginTop: spacing.sm }, intro: { color: colors.textMuted, fontSize: typography.body, lineHeight: 24, marginTop: spacing.md }, connection: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs }, dot: { backgroundColor: colors.disabled, borderRadius: radius.pill, height: 8, width: 8 }, live: { backgroundColor: colors.sky }, statusCard: { backgroundColor: colors.midnightRaised, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.sm, marginTop: spacing.xl, padding: spacing.lg }, lockedCard: { borderColor: colors.gold }, statusTitle: { color: colors.white, fontSize: typography.heading, fontWeight: '800' }, meta: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 }, memberList: { marginTop: spacing.lg }, memberRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52 }, memberName: { color: colors.white, flex: 1, fontSize: typography.small, fontWeight: '700' }, memberState: { color: colors.textMuted, fontSize: typography.label, fontWeight: '800' }, complete: { color: colors.gold }, form: { gap: spacing.lg, marginTop: spacing.xxl }, readOnly: { opacity: 0.72 }, sectionTitle: { color: colors.white, fontSize: typography.heading, fontWeight: '800' }, group: { gap: spacing.lg }, consent: { alignItems: 'flex-start', borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, flexDirection: 'row', gap: spacing.md, padding: spacing.lg }, consentError: { borderColor: colors.danger }, checkbox: { alignItems: 'center', borderColor: colors.textMuted, borderRadius: 4, borderWidth: 1, height: 22, justifyContent: 'center', width: 22 }, checkboxChecked: { backgroundColor: colors.sky, borderColor: colors.sky }, checkmark: { color: colors.midnight, fontWeight: '900' }, consentText: { color: colors.textMuted, flex: 1, fontSize: typography.small, lineHeight: 19 }, divider: { backgroundColor: colors.border, height: StyleSheet.hairlineWidth, marginVertical: spacing.sm }, error: { color: colors.danger, fontSize: typography.small, lineHeight: 19 }, footer: { gap: spacing.md },
 });
-
