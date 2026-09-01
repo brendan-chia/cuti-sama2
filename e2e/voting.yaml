@@ -1,0 +1,27 @@
+appId: com.cutisama2.app
+name: Voting — four-client lock consistency
+jsEngine: graaljs
+tags:
+  - requires-four-client-seed
+---
+# Seed: four authenticated clients share a trip with destination options ready.
+- launchApp
+- openLink: ${VOTING_ORGANIZER_LINK}
+- assertVisible: "GROUP DECISION"
+- tapOn: "Start destination vote"
+- tapOn:
+    id: "vote-option-${WINNING_OPTION_ID}"
+- tapOn: "Submit my vote"
+- assertVisible: "1 / 4 VOTED"
+# Three independent member sessions vote concurrently through the CI harness.
+- runScript: voting-four-client-submit.js
+- extendedWaitUntil:
+    visible: "Resolved by the final vote totals."
+    timeout: 15000
+- assertVisible: "4 / 4 VOTED"
+- tapOn:
+    id: lock-winner
+- assertVisible: "DESTINATION LOCKED"
+- assertVisible: ${EXPECTED_DESTINATION}
+# The harness fetches all four member views and requires the same lock and phase.
+- runScript: voting-four-client-assert-lock.js

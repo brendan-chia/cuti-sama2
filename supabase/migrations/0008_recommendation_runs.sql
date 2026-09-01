@@ -1,4 +1,4 @@
-+create type public.recommendation_run_status as enum ('matched', 'blocked');
+create type public.recommendation_run_status as enum ('matched', 'blocked');
 
 create table public.recommendation_runs (
   id uuid primary key default extensions.gen_random_uuid(),
@@ -19,5 +19,4 @@ grant select on public.recommendation_runs to authenticated;
 create policy "Active members can read recommendation runs"
   on public.recommendation_runs for select to authenticated
   using ((select private.is_active_trip_member(trip_id)));
-
 

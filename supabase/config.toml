@@ -58,3 +58,12 @@ verify_jwt = true
 
 [functions.recommend-destinations]
 verify_jwt = true
+
+[functions.submit-vote]
+verify_jwt = true
+
+[functions.close-vote]
+verify_jwt = true
+
+[functions.lock-destination]
+verify_jwt = true
