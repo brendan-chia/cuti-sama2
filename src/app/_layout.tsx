@@ -26,6 +26,7 @@ export default function RootLayout() {
         <Stack.Screen name="invite/[token]" options={{ title: 'Trip invitation' }} />
         <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Lobby' }} />
         <Stack.Screen name="trip/[tripId]/share" options={{ title: 'Invite the group' }} />
+        <Stack.Screen name="trip/[tripId]/reveal" options={{ title: 'Group match' }} />
       </Stack>
     </GestureHandlerRootView>
   );

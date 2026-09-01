@@ -12,9 +12,9 @@ import { loadTripRoom, managePreferenceRound, submitPreferenceCard, subscribeToT
 import { useReducedMotion } from '@/theme/motion';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
-type Props = { tripId: string; onBack: () => void; loadAction?: typeof loadTripRoom; submitAction?: typeof submitPreferenceCard; manageAction?: typeof managePreferenceRound; subscribeAction?: typeof subscribeToTripRoom };
+type Props = { tripId: string; onBack: () => void; onReveal?: () => void; loadAction?: typeof loadTripRoom; submitAction?: typeof submitPreferenceCard; manageAction?: typeof managePreferenceRound; subscribeAction?: typeof subscribeToTripRoom };
 
-export function TripRoomScreen({ tripId, onBack, loadAction = loadTripRoom, submitAction = submitPreferenceCard, manageAction = managePreferenceRound, subscribeAction = subscribeToTripRoom }: Props) {
+export function TripRoomScreen({ tripId, onBack, onReveal, loadAction = loadTripRoom, submitAction = submitPreferenceCard, manageAction = managePreferenceRound, subscribeAction = subscribeToTripRoom }: Props) {
   const [room, setRoom] = useState<TripRoom | null>(null);
   const [value, setValue] = useState('');
   const [dirty, setDirty] = useState(false);
@@ -69,6 +69,7 @@ export function TripRoomScreen({ tripId, onBack, loadAction = loadTripRoom, subm
     {round && collecting && organizer ? <AppButton label="Close & reveal round" loading={busy} onPress={() => void mutate(() => manageAction(tripId, 'close'))} variant="secondary" testID="close-round" /> : null}
     {round?.status === 'revealed' && organizer ? <AppButton label="Close round" loading={busy} onPress={() => void mutate(() => manageAction(tripId, 'close'))} testID="close-round" /> : null}
     {round?.status === 'closed' && nextKind && organizer ? <AppButton label={`Open ${preferenceCardFor(nextKind).label} round`} loading={busy} onPress={() => void mutate(() => manageAction(tripId, 'advance'))} testID="advance-round" /> : null}
+    {round?.status === 'closed' && !nextKind && onReveal ? <AppButton label="Reveal the group match" onPress={onReveal} testID="open-group-reveal" /> : null}
   </View>} testID="preference-trip-room">
     <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.back}>‹ Constraints</Text></Pressable>
     <View style={styles.header}><View style={styles.heading}><Text style={styles.kicker}>PREFERENCE TRIP ROOM</Text><Text style={styles.title}>{room.tripName}</Text></View><View style={styles.connection}><View style={[styles.dot, connected ? styles.live : null]} /><Text style={styles.meta}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
