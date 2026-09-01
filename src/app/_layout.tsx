@@ -1,0 +1,29 @@
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import { colors } from '@/theme/tokens';
+
+export const unstable_settings = { initialRouteName: 'index' };
+
+export default function RootLayout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: colors.midnight },
+          headerBackButtonDisplayMode: 'minimal',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: colors.midnight },
+          headerTintColor: colors.white,
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="create" options={{ title: 'Create a Trip Room' }} />
+        <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Room' }} />
+      </Stack>
+    </GestureHandlerRootView>
+  );
+}
