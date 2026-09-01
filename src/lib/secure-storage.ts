@@ -79,3 +79,19 @@ export function saveLastTripId(tripId: string) {
 export function getLastTripId() {
   return sessionStorage.getItem(LAST_TRIP_KEY);
 }
+
+function inviteCacheKey(tripId: string) {
+  return `cutisama2.invitation.${tripId}`;
+}
+
+export function saveCachedInvitation(tripId: string, invitation: string) {
+  return sessionStorage.setItem(inviteCacheKey(tripId), invitation);
+}
+
+export function getCachedInvitation(tripId: string) {
+  return sessionStorage.getItem(inviteCacheKey(tripId));
+}
+
+export function clearCachedInvitation(tripId: string) {
+  return sessionStorage.removeItem(inviteCacheKey(tripId));
+}

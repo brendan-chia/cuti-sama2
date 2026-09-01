@@ -39,3 +39,12 @@ otp_expiry = 3600
 
 [functions.create-trip]
 verify_jwt = true
+
+[functions.manage-invite]
+verify_jwt = true
+
+[functions.resolve-invite]
+verify_jwt = true
+
+[functions.join-trip]
+verify_jwt = true

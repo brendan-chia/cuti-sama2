@@ -43,6 +43,7 @@ export default function WelcomeScreen() {
 
       <View style={styles.actionPanel}>
         <AppButton label="Start a group trip" onPress={() => router.push('/create')} />
+        <AppButton label="Join with an invitation" onPress={() => router.push('/join')} variant="secondary" />
         {lastTripId ? (
           <AppButton
             label="Continue your Trip Room"

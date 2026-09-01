@@ -1,0 +1,15 @@
+appId: com.cutisama2.app
+---
+- launchApp:
+    clearState: true
+- tapOn: "Start a group trip"
+- tapOn: "Trip name"
+- inputText: "Langkawi weekend"
+- tapOn: "Destination"
+- inputText: "Langkawi"
+- tapOn: "Create our Trip Room"
+- assertVisible: "ROOM CREATED"
+- tapOn: "Invite the group"
+- tapOn: "Create invitation link"
+- assertVisible: "Share invitation"
+- assertVisible: "Copy link"

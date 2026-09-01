@@ -1,8 +1,9 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import type { TripSummary } from '../../../packages/contracts/src/trip';
+import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { planningModeOptions } from '@/features/trips/planning-modes';
 import { loadTrip } from '@/features/trips/service';
@@ -10,6 +11,7 @@ import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 export default function TripRoomScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
+  const router = useRouter();
   const [trip, setTrip] = useState<TripSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,6 +91,9 @@ export default function TripRoomScreen() {
         <Text style={styles.metaLabel}>ROOM ID</Text>
         <Text selectable style={styles.metaValue}>{trip.tripId}</Text>
       </View>
+      <View style={styles.inviteAction}>
+        <AppButton label="Invite the group" onPress={() => router.push({ pathname: '/trip/[tripId]/share', params: { tripId: trip.tripId } })} />
+      </View>
     </Screen>
   );
 }
@@ -116,4 +121,5 @@ const styles = StyleSheet.create({
   metaRow: { gap: spacing.sm, marginTop: spacing.xl },
   metaLabel: { color: colors.textMuted, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.2 },
   metaValue: { color: colors.sky, fontSize: typography.small },
+  inviteAction: { marginTop: spacing.xl },
 });

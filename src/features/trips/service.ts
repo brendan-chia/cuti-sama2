@@ -1,19 +1,9 @@
 import type { CreateTripRequest, TripSummary } from '../../../packages/contracts/src/trip';
 
+import { ensureAnonymousSession } from '@/lib/auth';
 import { getLastTripId, saveLastTripId } from '@/lib/secure-storage';
 import { requireSupabase } from '@/lib/supabase';
 import { parseTripSummary } from '@/features/trips/validation';
-
-async function ensureAnonymousSession() {
-  const client = requireSupabase();
-  const { data } = await client.auth.getSession();
-  if (data.session) return data.session;
-
-  const { data: anonymousData, error } = await client.auth.signInAnonymously();
-  if (error) throw new Error(`Could not start a guest session: ${error.message}`);
-  if (!anonymousData.session) throw new Error('Anonymous authentication did not return a session.');
-  return anonymousData.session;
-}
 
 export async function createTrip(request: CreateTripRequest): Promise<TripSummary> {
   await ensureAnonymousSession();
