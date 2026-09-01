@@ -8,7 +8,8 @@ export const LobbyMemberSchema = z.object({
   discriminator: z.number().int().min(1),
   role: z.enum(['organizer', 'member']),
   ready: z.boolean(),
-  joinedAt: z.iso.datetime(),
+  constraintComplete: z.boolean().optional(),
+  joinedAt: z.iso.datetime({ offset: true }),
 });
 
 export type LobbyMember = z.infer<typeof LobbyMemberSchema>;
@@ -17,10 +18,12 @@ export const LobbySchema = z.object({
   tripId: z.uuid(),
   tripName: z.string().min(2).max(80),
   mode: PlanningModeSchema,
-  startedAt: z.iso.datetime().nullable(),
+  startedAt: z.iso.datetime({ offset: true }).nullable(),
   joiningOpen: z.boolean(),
   currentMemberId: z.uuid(),
   currentRole: z.enum(['organizer', 'member']),
+  constraintsLockedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+  constraintsCanLock: z.boolean().optional(),
   members: z.array(LobbyMemberSchema).min(1).max(8),
 });
 

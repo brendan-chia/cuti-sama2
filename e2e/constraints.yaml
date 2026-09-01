@@ -1,0 +1,50 @@
+appId: com.cutisama2.app
+name: Four-member hard-constraint completion
+tags:
+  - requires-four-member-seed
+---
+# The E2E seed provides a started undecided trip with four authenticated app states.
+- launchApp:
+    clearState: true
+- openLink: ${CONSTRAINTS_MEMBER_ONE_LINK}
+- assertVisible: "HARD CONSTRAINTS"
+- tapOn: "Origin *"
+- inputText: "Kuala Lumpur"
+- tapOn: "Earliest start *"
+- inputText: "2027-01-10"
+- tapOn: "Latest end *"
+- inputText: "2027-01-17"
+- tapOn: "Date flexibility in days *"
+- inputText: "0"
+- tapOn: "Minimum budget *"
+- inputText: "500"
+- tapOn: "Maximum budget *"
+- inputText: "1500"
+- tapOn: "Currency *"
+- inputText: "MYR"
+- tapOn: "Maximum one-way travel time (hours) *"
+- inputText: "8"
+- tapOn: "Accessibility requirements *"
+- inputText: "None"
+- tapOn: "I understand this accessibility information will be visible to trip members."
+- tapOn: "Submit my constraints"
+- runFlow:
+    file: constraints-submit-member.yaml
+    env:
+      MEMBER_LINK: ${CONSTRAINTS_MEMBER_TWO_LINK}
+      MEMBER_ORIGIN: "Penang"
+- runFlow:
+    file: constraints-submit-member.yaml
+    env:
+      MEMBER_LINK: ${CONSTRAINTS_MEMBER_THREE_LINK}
+      MEMBER_ORIGIN: "Johor Bahru"
+- runFlow:
+    file: constraints-submit-member.yaml
+    env:
+      MEMBER_LINK: ${CONSTRAINTS_ORGANIZER_LINK}
+      MEMBER_ORIGIN: "Kuching"
+- extendedWaitUntil:
+    visible: "4 of 4 complete"
+    timeout: 15000
+- tapOn: "Lock constraints"
+- assertVisible: "Collection locked"

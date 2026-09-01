@@ -14,6 +14,7 @@ type Props = {
   tripId: string;
   onInvite: () => void;
   onAccessRevoked: () => void;
+  onConstraints?: () => void;
   loadAction?: typeof loadLobby;
   readyAction?: typeof setLobbyReady;
   removeAction?: typeof removeLobbyMember;
@@ -26,7 +27,7 @@ function initials(member: LobbyMember) {
   return member.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 }
 
-export function LobbyScreen({ tripId, onInvite, onAccessRevoked, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
+export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onConstraints, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [onlineMembers, setOnlineMembers] = useState<Set<string>>(new Set());
   const [connected, setConnected] = useState(false);
@@ -94,13 +95,15 @@ export function LobbyScreen({ tripId, onInvite, onAccessRevoked, loadAction = lo
   const mode = planningModeOptions.find((option) => option.value === lobby.mode);
   const started = lobby.startedAt !== null;
   const notReadyCount = lobby.members.filter((member) => !member.ready).length;
+  const constraintCount = lobby.members.filter((member) => member.constraintComplete).length;
   return <Screen footer={<View style={styles.footerActions}>
     {!started ? <AppButton label={currentMember?.ready ? 'I need more time' : 'I’m ready'} loading={busy} onPress={() => void mutate(() => readyAction(tripId, !currentMember?.ready))} variant={currentMember?.ready ? 'secondary' : 'primary'} /> : null}
     {isOrganizer && !started ? <AppButton disabled={!allReady} label="Start planning" loading={busy} onPress={() => void mutate(() => startAction(tripId))} testID="start-planning" /> : null}
+    {started && onConstraints ? <AppButton label="Add my constraints" onPress={onConstraints} testID="open-constraints" /> : null}
   </View>} testID="trip-lobby-screen">
     <View style={styles.headerRow}><View><Text style={styles.kicker}>TRIP LOBBY</Text><Text style={styles.tripName}>{lobby.tripName}</Text></View><View style={styles.connection}><View style={[styles.connectionDot, connected ? styles.online : null]} /><Text style={styles.connectionText}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
     <Text style={styles.mode}>{mode?.title}</Text>
-    {started ? <View style={styles.startedBanner}><Text style={styles.startedTitle}>Planning has begun</Text><Text style={styles.body}>The group is ready. Hard constraints are the next planning step.</Text></View> : null}
+    {started ? <View style={styles.startedBanner}><Text style={styles.startedTitle}>{lobby.constraintsLockedAt ? 'Constraints locked' : 'Planning has begun'}</Text><Text style={styles.body}>{lobby.constraintsLockedAt ? 'The group’s hard boundaries are ready for the next planning stage.' : `Hard constraints are next · ${constraintCount} of ${lobby.members.length} complete.`}</Text></View> : null}
     <ScrollView contentContainerStyle={styles.playerRow} horizontal showsHorizontalScrollIndicator={false}>
       {lobby.members.map((member) => <View key={member.memberId} style={styles.player}><View style={[styles.avatar, member.ready ? styles.avatarReady : null]}><Text style={styles.avatarText}>{initials(member)}</Text><View style={[styles.presenceDot, (onlineMembers.has(member.memberId) || member.memberId === lobby.currentMemberId) ? styles.online : null]} /></View><Text numberOfLines={1} style={styles.playerName}>{memberLabel(member)}</Text><Text style={[styles.readyLabel, member.ready ? styles.ready : null]}>{member.ready ? 'READY' : 'GETTING READY'}</Text></View>)}
     </ScrollView>
