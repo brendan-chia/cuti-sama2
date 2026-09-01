@@ -13,7 +13,7 @@ name: Create and restore a locked-destination Trip Room
 - hideKeyboard
 - tapOn: "Create our Trip Room"
 - extendedWaitUntil:
-    visible: "ROOM CREATED"
+    visible: "TRIP LOBBY"
     timeout: 15000
 - stopApp
 - launchApp

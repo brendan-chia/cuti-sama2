@@ -1,6 +1,6 @@
 # CutiSama2
 
-CutiSama2 is an Expo React Native application for collaborative group-trip planning. Slices 1–2 implement anonymous Trip Room creation plus private, expiring guest invitation links with QR sharing, duplicate-name handling, revocation, and same-device membership restoration.
+CutiSama2 is an Expo React Native application for collaborative group-trip planning. Slices 1–3 implement anonymous Trip Room creation, private expiring guest invitations, and a realtime Lobby with persisted readiness and organiser controls.
 
 ## Requirements
 
@@ -40,3 +40,5 @@ maestro test e2e/create-trip.yaml e2e/invite-and-join.yaml
 The Supabase, Deno, and Maestro commands require their respective local toolchains. Jest tests do not require a live backend.
 
 Production HTTPS app links also require the chosen domain in `ios.associatedDomains`, Android intent filters, and the domain's Apple/Android association files. The custom `cutisama2://` scheme remains available for development.
+
+The Lobby uses a private Supabase Realtime channel. Broadcast payloads contain only scoped entity/member identifiers; clients refetch the authoritative RLS-protected lobby after each event. Readiness and planning-start state are persisted independently from transient online presence.

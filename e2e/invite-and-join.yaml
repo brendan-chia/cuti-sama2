@@ -8,7 +8,7 @@ appId: com.cutisama2.app
 - tapOn: "Destination"
 - inputText: "Langkawi"
 - tapOn: "Create our Trip Room"
-- assertVisible: "ROOM CREATED"
+- assertVisible: "TRIP LOBBY"
 - tapOn: "Invite the group"
 - tapOn: "Create invitation link"
 - assertVisible: "Share invitation"
