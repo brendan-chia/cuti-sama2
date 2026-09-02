@@ -16,6 +16,7 @@ CutiSama2 is an Expo React Native application for collaborative group-trip plann
 3. Start the local Supabase stack with `npx supabase start` or link a hosted project.
 4. Apply the migrations in filename order and deploy all functions under `supabase/functions`.
 5. Set the Edge Function secret `INVITE_BASE_URL` to the HTTPS origin that opens the Expo Router app. Do not include a trailing path.
+6. For itinerary generation, set the Edge Function-only secrets `GROQ_API_KEY` and `GROQ_ITINERARY_MODEL`. Strict schema output currently requires `openai/gpt-oss-20b` or `openai/gpt-oss-120b`; unsupported model IDs fail closed before any itinerary is stored.
 
 Only the Supabase URL and publishable key belong in the Expo environment. Never add a secret/service-role key or future Groq credentials to an `EXPO_PUBLIC_` variable.
 
@@ -33,7 +34,7 @@ npm run typecheck
 npm test
 npx expo export --platform web
 npx supabase test db
-deno test supabase/functions/create-trip/index.test.ts supabase/functions/manage-invite/index.test.ts supabase/functions/join-trip/index.test.ts
+deno test --allow-env supabase/functions/create-trip/index.test.ts supabase/functions/manage-invite/index.test.ts supabase/functions/join-trip/index.test.ts supabase/functions/generate-itinerary/groq.test.ts
 maestro test e2e/create-trip.yaml e2e/invite-and-join.yaml
 ```
 

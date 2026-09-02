@@ -1,0 +1,21 @@
+appId: com.cutisama2.app
+---
+- launchApp:
+    clearState: false
+- assertVisible: "DESTINATION LOCKED"
+- tapOn:
+    id: "continue-itinerary"
+- assertVisible: "AI ITINERARY"
+- tapOn:
+    id: "generate-itinerary"
+- assertVisible:
+    id: "itinerary-progress"
+- extendedWaitUntil:
+    visible:
+      id: "stored-itinerary"
+    timeout: 60000
+- stopApp
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "stored-itinerary"
