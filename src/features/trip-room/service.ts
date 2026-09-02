@@ -1,6 +1,6 @@
-import * as Crypto from 'expo-crypto';
 import { ManageRoundPayloadSchema, SubmitCardPayloadSchema, TripRoomSchema, type ManageRoundPayload, type SubmitCardPayload, type TripRoom } from '../../../packages/contracts/src/preferences';
 import { ensureAnonymousSession } from '@/lib/auth';
+import { withPersistentOperationKey } from '@/lib/idempotency';
 import { requireSupabase } from '@/lib/supabase';
 
 export async function loadTripRoom(tripId: string) {
@@ -17,10 +17,10 @@ async function invokeRoomFunction(name: string, payload: SubmitCardPayload | Man
   return TripRoomSchema.parse(data);
 }
 export function submitPreferenceCard(input: Omit<SubmitCardPayload, 'idempotencyKey'>) {
-  return invokeRoomFunction('submit-card', SubmitCardPayloadSchema.parse({ ...input, idempotencyKey: Crypto.randomUUID() }));
+  return withPersistentOperationKey('submit-card', `${input.tripId}.${input.roundId}`, { value: input.value }, (idempotencyKey) => invokeRoomFunction('submit-card', SubmitCardPayloadSchema.parse({ ...input, idempotencyKey })));
 }
 export function managePreferenceRound(tripId: string, action: ManageRoundPayload['action']) {
-  return invokeRoomFunction('manage-round', ManageRoundPayloadSchema.parse({ tripId, action, idempotencyKey: Crypto.randomUUID() }));
+  return withPersistentOperationKey('manage-round', tripId, { action }, (idempotencyKey) => invokeRoomFunction('manage-round', ManageRoundPayloadSchema.parse({ tripId, action, idempotencyKey })));
 }
 type Callbacks = { onChanged: () => void; onConnection: (connected: boolean) => void };
 export async function subscribeToTripRoom(room: Pick<TripRoom, 'tripId'>, callbacks: Callbacks) {

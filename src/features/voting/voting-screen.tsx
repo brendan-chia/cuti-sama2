@@ -2,9 +2,12 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { CloseVotePayload, VoteRoom } from '../../../packages/contracts/src/vote';
+import { VoteRoomSchema, type CloseVotePayload, type VoteRoom } from '../../../packages/contracts/src/vote';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
+import { StaleStateBanner } from '@/components/StaleStateBanner';
+import { useOfflineRoom } from '@/features/recovery/use-offline-room';
+import { recoveryKind, recoveryMessage } from '@/features/recovery/errors';
 import { loadVoteRoom, manageVote, setDestinationLock, submitVote, subscribeToVotes } from '@/features/voting/service';
 import { VoteOptionCard } from '@/features/voting/vote-option';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
@@ -12,12 +15,13 @@ import { colors, radius, spacing, typography } from '@/theme/tokens';
 type Props = { tripId: string; onBack: () => void; onItinerary?: () => void; loadAction?: typeof loadVoteRoom; submitAction?: typeof submitVote; manageAction?: typeof manageVote; lockAction?: typeof setDestinationLock; subscribeAction?: typeof subscribeToVotes };
 
 export function VotingScreen({ tripId, onBack, onItinerary, loadAction = loadVoteRoom, submitAction = submitVote, manageAction = manageVote, lockAction = setDestinationLock, subscribeAction = subscribeToVotes }: Props) {
-  const [room, setRoom] = useState<VoteRoom | null>(null); const [selected, setSelected] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [connected, setConnected] = useState(false); const [error, setError] = useState<string | null>(null);
-  const accept = useCallback((next: VoteRoom) => { setRoom(next); setSelected(next.round?.ownVoteOptionId ?? null); }, []);
-  const refresh = useCallback(async () => { try { accept(await loadAction(tripId)); setError(null); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load voting.'); } }, [accept, loadAction, tripId]);
+  const [room, setRoom] = useState<VoteRoom | null>(null); const [selected, setSelected] = useState<string | null>(null); const [selectionDirty, setSelectionDirty] = useState(false); const [busy, setBusy] = useState(false); const [connected, setConnected] = useState(false); const [error, setError] = useState<string | null>(null);
+  const accept = useCallback((next: VoteRoom) => { setRoom(next); if (!selectionDirty) setSelected(next.round?.ownVoteOptionId ?? null); }, [selectionDirty]);
+  const { refresh: refreshRecovered, acceptAuthoritative, stale, reconnecting } = useOfflineRoom({ namespace: 'vote-room', scope: tripId, load: () => loadAction(tripId), parse: (value) => VoteRoomSchema.parse(value), accept });
+  const refresh = useCallback(async () => { try { await refreshRecovered(); setError(null); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load voting.'); } }, [refreshRecovered]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
   useEffect(() => { if (!room) return; let cleanup: (() => Promise<unknown>) | undefined; let active = true; void subscribeAction(room, { onChanged: () => void refresh(), onConnection: (value) => active && setConnected(value) }).then((value) => { if (active) cleanup = value; else void value(); }); return () => { active = false; if (cleanup) void cleanup(); }; }, [room?.tripId, refresh, subscribeAction]); // eslint-disable-line react-hooks/exhaustive-deps
-  async function mutate(action: () => Promise<VoteRoom>) { setBusy(true); setError(null); try { accept(await action()); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Voting could not be updated.'); } finally { setBusy(false); } }
+  async function mutate(action: () => Promise<VoteRoom>) { setBusy(true); setError(null); try { acceptAuthoritative(await action()); setSelectionDirty(false); } catch (cause) { setError(recoveryMessage(recoveryKind(cause))); } finally { setBusy(false); } }
   function manage(action: CloseVotePayload['action']) { void mutate(() => manageAction(tripId, action)); }
   function submit() { if (!room?.round || !selected) { setError('Choose a destination first.'); return; } void mutate(() => submitAction(tripId, room.round!.roundId, selected)); }
   function lock(optionId: string) { void mutate(() => lockAction(tripId, optionId, 'lock')); }
@@ -36,6 +40,7 @@ export function VotingScreen({ tripId, onBack, onItinerary, loadAction = loadVot
     <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.back}>‹ Destinations</Text></Pressable>
     <View style={styles.header}><View><Text style={styles.kicker}>GROUP DECISION</Text><Text style={styles.title}>{room.tripName}</Text></View><Text style={styles.live}>{connected ? '● LIVE' : '○ CONNECTING'}</Text></View>
     <Text style={styles.intro}>One vote each. Choices stay hidden until everyone votes or the organiser closes the round.</Text>
+    {stale || reconnecting ? <StaleStateBanner reconnecting={reconnecting} /> : null}
     {room.lockedDestination ? <View style={styles.locked}><Text style={styles.kicker}>DESTINATION LOCKED</Text><Text style={styles.lockedName}>{room.lockedDestination.name}</Text><Text style={styles.body}>The group has moved to itinerary planning.</Text>{organizer ? <Pressable accessibilityRole="button" onPress={confirmUnlock} testID="unlock-destination"><Text style={styles.unlock}>Unlock destination</Text></Pressable> : null}</View> : null}
     {round ? <>
       <View style={styles.progress}><Text style={styles.progressLabel}>ROUND {round.roundNumber}</Text><Text accessibilityLiveRegion="polite" style={styles.progressCount}>{round.votedCount} / {round.participantCount} VOTED</Text></View>
@@ -44,7 +49,7 @@ export function VotingScreen({ tripId, onBack, onItinerary, loadAction = loadVot
       {round.status === 'closed' && winner ? <View style={styles.result}><Text style={styles.sectionTitle}>{winner.name} leads the group</Text><Text style={styles.body}>{round.resolution === 'constraint_comparison' ? 'Resolved by the recorded constraint comparison.' : 'Resolved by the final vote totals.'}</Text></View> : null}
       <View accessibilityRole="radiogroup" style={styles.options}>{round.options.map((option) => {
         const total = round.totals?.find((item) => item.optionId === option.optionId)?.total;
-        return <View key={option.optionId}><VoteOptionCard disabled={!open || busy} onPress={() => { setSelected(option.optionId); setError(null); }} option={option} selected={selected === option.optionId} total={total} />
+        return <View key={option.optionId}><VoteOptionCard disabled={!open || busy} onPress={() => { setSelected(option.optionId); setSelectionDirty(true); setError(null); }} option={option} selected={selected === option.optionId} total={total} />
           {round.status === 'tied' && organizer && round.tiedOptionIds.includes(option.optionId) ? <Pressable accessibilityRole="button" onPress={() => lock(option.optionId)} testID={`lock-tied-${option.optionId}`}><Text style={styles.tieChoice}>Explicitly lock this tied finalist</Text></Pressable> : null}
         </View>;
       })}</View>

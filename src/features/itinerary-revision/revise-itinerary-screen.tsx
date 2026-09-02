@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -9,6 +8,7 @@ import { FormField } from '@/components/form-field';
 import { Screen } from '@/components/screen';
 import { estimateLabel } from '@/features/itinerary-revision/estimate-label';
 import { activateItinerary, loadRevisionState, reviseItinerary } from '@/features/itinerary-revision/service';
+import { recoveryKind, recoveryMessage } from '@/features/recovery/errors';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type Kind = RevisionInstruction['kind'];
@@ -36,8 +36,8 @@ export function ReviseItineraryScreen({ tripId, onBack, onActivated, loadAction 
   }, [activityId, amount, brief, currency, kind, pace]);
   const submit = useCallback(async () => {
     if (!baseVersionId || !instruction) return; setSubmitting(true); setError(null);
-    try { const result = await reviseAction(tripId, baseVersionId, instruction, Crypto.randomUUID()); setPreview(result.preview); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not revise the itinerary.'); }
+    try { const result = await reviseAction(tripId, baseVersionId, instruction); setPreview(result.preview); }
+    catch (cause) { setError(recoveryMessage(recoveryKind(cause))); }
     finally { setSubmitting(false); }
   }, [baseVersionId, instruction, reviseAction, tripId]);
   const activate = useCallback(async () => {

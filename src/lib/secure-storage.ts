@@ -71,6 +71,7 @@ export const sessionStorage =
   Platform.OS === 'web' ? createWebStorage() : createChunkedStorage(SecureStore);
 
 const LAST_TRIP_KEY = 'cutisama2.last-trip-id';
+const IDENTITY_MARKER_KEY = 'cutisama2.anonymous-identity';
 
 export function saveLastTripId(tripId: string) {
   return sessionStorage.setItem(LAST_TRIP_KEY, tripId);
@@ -79,6 +80,10 @@ export function saveLastTripId(tripId: string) {
 export function getLastTripId() {
   return sessionStorage.getItem(LAST_TRIP_KEY);
 }
+
+export function saveIdentityMarker(userId: string) { return sessionStorage.setItem(IDENTITY_MARKER_KEY, userId); }
+export function getIdentityMarker() { return sessionStorage.getItem(IDENTITY_MARKER_KEY); }
+export function clearIdentityMarker() { return sessionStorage.removeItem(IDENTITY_MARKER_KEY); }
 
 function inviteCacheKey(tripId: string) {
   return `cutisama2.invitation.${tripId}`;

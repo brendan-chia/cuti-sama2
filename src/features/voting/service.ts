@@ -1,7 +1,6 @@
-import * as Crypto from 'expo-crypto';
-
 import { CloseVotePayloadSchema, LockDestinationPayloadSchema, SubmitVotePayloadSchema, VoteRoomSchema, type CloseVotePayload, type VoteRoom } from '../../../packages/contracts/src/vote';
 import { ensureAnonymousSession } from '@/lib/auth';
+import { withPersistentOperationKey } from '@/lib/idempotency';
 import { requireSupabase } from '@/lib/supabase';
 
 export async function loadVoteRoom(tripId: string) {
@@ -20,15 +19,15 @@ async function invoke(name: string, body: Record<string, unknown>) {
 }
 
 export function submitVote(tripId: string, roundId: string, optionId: string) {
-  return invoke('submit-vote', SubmitVotePayloadSchema.parse({ tripId, roundId, optionId, idempotencyKey: Crypto.randomUUID() }));
+  return withPersistentOperationKey('submit-vote', `${tripId}.${roundId}`, { optionId }, (idempotencyKey) => invoke('submit-vote', SubmitVotePayloadSchema.parse({ tripId, roundId, optionId, idempotencyKey })));
 }
 
 export function manageVote(tripId: string, action: CloseVotePayload['action']) {
-  return invoke('close-vote', CloseVotePayloadSchema.parse({ tripId, action, idempotencyKey: Crypto.randomUUID() }));
+  return withPersistentOperationKey('manage-vote', tripId, { action }, (idempotencyKey) => invoke('close-vote', CloseVotePayloadSchema.parse({ tripId, action, idempotencyKey })));
 }
 
 export function setDestinationLock(tripId: string, optionId: string, action: 'lock' | 'unlock') {
-  return invoke('lock-destination', LockDestinationPayloadSchema.parse({ tripId, optionId, action, idempotencyKey: Crypto.randomUUID() }));
+  return withPersistentOperationKey('destination-lock', tripId, { optionId, action }, (idempotencyKey) => invoke('lock-destination', LockDestinationPayloadSchema.parse({ tripId, optionId, action, idempotencyKey })));
 }
 
 type Callbacks = { onChanged: () => void; onConnection: (connected: boolean) => void };

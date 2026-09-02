@@ -2,13 +2,16 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { TripRoom } from '../../../packages/contracts/src/preferences';
+import { TripRoomSchema, type TripRoom } from '../../../packages/contracts/src/preferences';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
+import { StaleStateBanner } from '@/components/StaleStateBanner';
 import { nextRoundKind } from '@/domain/round-state';
 import { preferenceCardFor } from '@/features/cards/card-definitions';
 import { PreferenceCard } from '@/features/cards/preference-card';
 import { loadTripRoom, managePreferenceRound, submitPreferenceCard, subscribeToTripRoom } from '@/features/trip-room/service';
+import { useOfflineRoom } from '@/features/recovery/use-offline-room';
+import { recoveryKind, recoveryMessage } from '@/features/recovery/errors';
 import { useReducedMotion } from '@/theme/motion';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
@@ -34,10 +37,8 @@ export function TripRoomScreen({ tripId, onBack, onReveal, loadAction = loadTrip
       loadedSubmission.current = submissionKey;
     }
   }, [dirty]);
-  const refresh = useCallback(async () => {
-    try { acceptRoom(await loadAction(tripId)); setError(null); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load the Trip Room.'); }
-  }, [acceptRoom, loadAction, tripId]);
+  const { refresh: refreshRecovered, acceptAuthoritative, stale, reconnecting } = useOfflineRoom({ namespace: 'preference-room', scope: tripId, load: () => loadAction(tripId), parse: (value) => TripRoomSchema.parse(value), accept: acceptRoom });
+  const refresh = useCallback(async () => { try { await refreshRecovered(); setError(null); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load the Trip Room.'); } }, [refreshRecovered]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
   useEffect(() => {
     if (!room) return undefined;
@@ -48,8 +49,8 @@ export function TripRoomScreen({ tripId, onBack, onReveal, loadAction = loadTrip
   }, [room?.tripId, refresh, subscribeAction]); // eslint-disable-line react-hooks/exhaustive-deps
   async function mutate(action: () => Promise<TripRoom>) {
     setBusy(true); setError(null);
-    try { acceptRoom(await action()); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'The round could not be updated.'); }
+    try { acceptAuthoritative(await action()); }
+    catch (cause) { setError(recoveryMessage(recoveryKind(cause))); }
     finally { setBusy(false); }
   }
   function submit() {
@@ -74,6 +75,7 @@ export function TripRoomScreen({ tripId, onBack, onReveal, loadAction = loadTrip
     <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.back}>‹ Constraints</Text></Pressable>
     <View style={styles.header}><View style={styles.heading}><Text style={styles.kicker}>PREFERENCE TRIP ROOM</Text><Text style={styles.title}>{room.tripName}</Text></View><View style={styles.connection}><View style={[styles.dot, connected ? styles.live : null]} /><Text style={styles.meta}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
     <Text style={styles.intro}>Cards stay blind while everyone answers. Only readiness is shared until the round reveals.</Text>
+    {stale || reconnecting ? <StaleStateBanner reconnecting={reconnecting} /> : null}
     {reducedMotion ? <Text accessibilityLiveRegion="polite" style={styles.motionNote}>Reduced motion · transitions are immediate</Text> : null}
     {!round ? <View style={styles.waiting}><Text style={styles.sectionTitle}>The table is ready</Text><Text style={styles.body}>{organizer ? 'Start the Vibe round when everyone is settled.' : 'Waiting for the organiser to start the first round.'}</Text></View> : null}
     {round ? <>

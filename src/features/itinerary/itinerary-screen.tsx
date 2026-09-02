@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ItineraryState, StoredItinerary } from '../../../packages/contracts/src/itinerary';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
-import { generateItinerary, loadItineraryState } from '@/features/itinerary/service';
+import { generateItinerary, generationOperationKey, loadItineraryState } from '@/features/itinerary/service';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type Props = { tripId: string; onBack: () => void; onReview?: () => void; loadAction?: typeof loadItineraryState; generateAction?: typeof generateItinerary; slowAfterMs?: number };
@@ -30,7 +30,8 @@ export function ItineraryScreen({ tripId, onBack, onReview, loadAction = loadIti
   }, [loadAction, slowAfterMs, tripId]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
-  const run = useCallback(async (key: string) => {
+  const run = useCallback(async (requestedKey?: string) => {
+    const key = requestedKey ?? await generationOperationKey(tripId);
     const sequence = ++requestSequence.current; setOperationKey(key); setGenerating(true); setSlow(false); setError(null);
     const timer = setTimeout(() => { if (requestSequence.current === sequence) setSlow(true); }, slowAfterMs);
     try {
@@ -48,7 +49,7 @@ export function ItineraryScreen({ tripId, onBack, onReview, loadAction = loadIti
   const locked = state.lockedDestination;
   const retryKey = operationKey ?? Crypto.randomUUID();
   return <Screen footer={locked && !version ? <View style={styles.footer}>
-    {!generating ? <AppButton label="Generate itinerary" onPress={() => void run(Crypto.randomUUID())} testID="generate-itinerary" /> : null}
+    {!generating ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
     {slow ? <AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary" variant="secondary" /> : null}
   </View> : undefined} testID="itinerary-screen">
     <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.back}>‹ Destination vote</Text></Pressable>

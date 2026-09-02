@@ -1,0 +1,30 @@
+appId: com.cutisama2.app
+name: Offline cache, safe retry, and four-client convergence
+jsEngine: graaljs
+tags:
+  - requires-four-client-seed
+  - requires-network-control
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "preference-trip-room"
+- setAirplaneMode: enabled
+- assertVisible:
+    id: "stale-state-banner"
+- tapOn:
+    id: "submit-card"
+- assertVisible: "Inputs and pending actions remain on this device."
+- runScript: offline-four-client-convergence.js
+- setAirplaneMode: disabled
+- extendedWaitUntil:
+    notVisible:
+      id: "stale-state-banner"
+    timeout: 5000
+- assertVisible:
+    id: "preference-trip-room"
+- stopApp
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "preference-trip-room"

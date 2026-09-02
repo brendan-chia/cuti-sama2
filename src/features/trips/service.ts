@@ -4,14 +4,18 @@ import { ensureAnonymousSession } from '@/lib/auth';
 import { getLastTripId, saveLastTripId } from '@/lib/secure-storage';
 import { requireSupabase } from '@/lib/supabase';
 import { parseTripSummary } from '@/features/trips/validation';
+import { idempotency } from '@/lib/idempotency';
 
 export async function createTrip(request: CreateTripRequest): Promise<TripSummary> {
   await ensureAnonymousSession();
   const client = requireSupabase();
-  const { data, error } = await client.functions.invoke('create-trip', { body: request });
+  const fingerprintInput = { ...request, idempotencyKey: undefined };
+  const idempotencyKey = await idempotency.keyFor('create', 'new-trip', fingerprintInput);
+  const { data, error } = await client.functions.invoke('create-trip', { body: { ...request, idempotencyKey } });
 
   if (error) throw new Error(error.message || 'Trip creation failed.');
   const trip = parseTripSummary(data);
+  await idempotency.complete('create', 'new-trip', idempotencyKey);
   await saveLastTripId(trip.tripId);
   return trip;
 }

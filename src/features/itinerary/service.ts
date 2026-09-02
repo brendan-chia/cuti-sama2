@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 
 import { GenerateItineraryRequestSchema, GenerateItineraryResponseSchema, ItineraryStateSchema } from '../../../packages/contracts/src/itinerary';
 import { ensureAnonymousSession } from '@/lib/auth';
+import { idempotency } from '@/lib/idempotency';
 import { requireSupabase } from '@/lib/supabase';
 
 export async function loadItineraryState(tripId: string) {
@@ -17,5 +18,9 @@ export async function generateItinerary(tripId: string, idempotencyKey = Crypto.
   const { data, error } = await requireSupabase().functions.invoke('generate-itinerary', { body });
   if (error) throw new Error(data?.error ?? error.message);
   if (data?.error) throw new Error(data.error);
-  return GenerateItineraryResponseSchema.parse(data);
+  const result = GenerateItineraryResponseSchema.parse(data);
+  await idempotency.complete('generate', tripId, idempotencyKey);
+  return result;
 }
+
+export function generationOperationKey(tripId: string) { return idempotency.keyFor('generate', tripId, { tripId }); }

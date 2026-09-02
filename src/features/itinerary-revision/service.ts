@@ -1,5 +1,3 @@
-import * as Crypto from 'expo-crypto';
-
 import { StoredItinerarySchema } from '../../../packages/contracts/src/itinerary';
 import {
   ActivateItineraryRequestSchema,
@@ -10,6 +8,7 @@ import {
   type RevisionInstruction,
 } from '../../../packages/contracts/src/revision';
 import { ensureAnonymousSession } from '@/lib/auth';
+import { withPersistentOperationKey } from '@/lib/idempotency';
 import { requireSupabase } from '@/lib/supabase';
 
 export class VersionConflictError extends Error {
@@ -35,12 +34,14 @@ export async function loadItineraryVersion(tripId: string, version: number) {
   return StoredItinerarySchema.parse({ versionId: data.id, version: data.version_number, generatedAt: data.generated_at, itinerary: data.content });
 }
 
-export async function reviseItinerary(tripId: string, baseVersionId: string, instruction: RevisionInstruction, idempotencyKey = Crypto.randomUUID()) {
+export async function reviseItinerary(tripId: string, baseVersionId: string, instruction: RevisionInstruction, suppliedKey?: string) {
   await ensureAnonymousSession();
-  const body = ReviseItineraryRequestSchema.parse({ tripId, baseVersionId, instruction, idempotencyKey });
-  const { data, error } = await requireSupabase().functions.invoke('revise-itinerary', { body });
-  if (error || data?.error) throw apiError(data, error?.message ?? 'Could not revise the itinerary.');
-  return ReviseItineraryResponseSchema.parse(data);
+  const invoke = async (idempotencyKey: string) => {
+    const { data, error } = await requireSupabase().functions.invoke('revise-itinerary', { body: ReviseItineraryRequestSchema.parse({ tripId, baseVersionId, instruction, idempotencyKey }) });
+    if (error || data?.error) throw apiError(data, error?.message ?? 'Could not revise the itinerary.');
+    return ReviseItineraryResponseSchema.parse(data);
+  };
+  return suppliedKey ? invoke(suppliedKey) : withPersistentOperationKey('revise', `${tripId}.${baseVersionId}`, instruction, invoke);
 }
 
 export async function activateItinerary(tripId: string, versionId: string, expectedActiveVersionId: string) {

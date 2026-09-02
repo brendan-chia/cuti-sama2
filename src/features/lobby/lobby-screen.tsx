@@ -2,18 +2,22 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { memberLabel, type Lobby, type LobbyMember } from '../../../packages/contracts/src/lobby';
+import { LobbySchema, memberLabel, type Lobby, type LobbyMember } from '../../../packages/contracts/src/lobby';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
+import { StaleStateBanner } from '@/components/StaleStateBanner';
 import { closeInvitation } from '@/features/invites/service';
 import { loadLobby, removeLobbyMember, setLobbyReady, startTripPlanning, subscribeToLobby } from '@/features/lobby/service';
 import { planningModeOptions } from '@/features/trips/planning-modes';
+import { recoveryKind } from '@/features/recovery/errors';
+import { useOfflineRoom } from '@/features/recovery/use-offline-room';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type Props = {
   tripId: string;
   onInvite: () => void;
   onAccessRevoked: () => void;
+  onIdentityLost?: () => void;
   onConstraints?: () => void;
   loadAction?: typeof loadLobby;
   readyAction?: typeof setLobbyReady;
@@ -27,21 +31,24 @@ function initials(member: LobbyMember) {
   return member.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 }
 
-export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onConstraints, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
+export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost, onConstraints, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [onlineMembers, setOnlineMembers] = useState<Set<string>>(new Set());
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const acceptLobby = useCallback((next: Lobby) => setLobby(next), []);
+  const { refresh: refreshRecovered, acceptAuthoritative, stale, reconnecting } = useOfflineRoom({ namespace: 'lobby', scope: tripId, load: () => loadAction(tripId), parse: (value) => LobbySchema.parse(value), accept: acceptLobby });
   const refresh = useCallback(async () => {
-    try { setLobby(await loadAction(tripId)); setError(null); }
+    try { await refreshRecovered(); setError(null); }
     catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Could not load the lobby.';
       setError(message);
-      if (/access is unavailable/i.test(message)) onAccessRevoked();
+      if (recoveryKind(cause) === 'identity_lost') onIdentityLost?.();
+      else if (/access is unavailable/i.test(message)) onAccessRevoked();
     }
-  }, [loadAction, onAccessRevoked, tripId]);
+  }, [onAccessRevoked, onIdentityLost, refreshRecovered]);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
@@ -66,7 +73,7 @@ export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onConstraints, 
 
   async function mutate(action: () => Promise<Lobby>) {
     setBusy(true); setError(null);
-    try { setLobby(await action()); }
+    try { acceptAuthoritative(await action()); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'The lobby could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -103,6 +110,7 @@ export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onConstraints, 
   </View>} testID="trip-lobby-screen">
     <View style={styles.headerRow}><View><Text style={styles.kicker}>TRIP LOBBY</Text><Text style={styles.tripName}>{lobby.tripName}</Text></View><View style={styles.connection}><View style={[styles.connectionDot, connected ? styles.online : null]} /><Text style={styles.connectionText}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
     <Text style={styles.mode}>{mode?.title}</Text>
+    {stale || reconnecting ? <StaleStateBanner reconnecting={reconnecting} /> : null}
     {started ? <View style={styles.startedBanner}><Text style={styles.startedTitle}>{lobby.constraintsLockedAt ? 'Constraints locked' : 'Planning has begun'}</Text><Text style={styles.body}>{lobby.constraintsLockedAt ? 'The group’s hard boundaries are ready for the next planning stage.' : `Hard constraints are next · ${constraintCount} of ${lobby.members.length} complete.`}</Text></View> : null}
     <ScrollView contentContainerStyle={styles.playerRow} horizontal showsHorizontalScrollIndicator={false}>
       {lobby.members.map((member) => <View key={member.memberId} style={styles.player}><View style={[styles.avatar, member.ready ? styles.avatarReady : null]}><Text style={styles.avatarText}>{initials(member)}</Text><View style={[styles.presenceDot, (onlineMembers.has(member.memberId) || member.memberId === lobby.currentMemberId) ? styles.online : null]} /></View><Text numberOfLines={1} style={styles.playerName}>{memberLabel(member)}</Text><Text style={[styles.readyLabel, member.ready ? styles.ready : null]}>{member.ready ? 'READY' : 'GETTING READY'}</Text></View>)}

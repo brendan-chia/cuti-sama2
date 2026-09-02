@@ -16,6 +16,7 @@ import {
   type CreateTripFormValues,
 } from '@/features/trips/validation';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { recoveryKind, recoveryMessage } from '@/features/recovery/errors';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type CreateTripScreenProps = {
@@ -59,7 +60,7 @@ export function CreateTripScreen({
       const trip = await createTripAction(result.data);
       onCreated(trip);
     } catch (error) {
-      setErrors({ form: readableValidationError(error) });
+      const kind = recoveryKind(error); setErrors({ form: kind === 'unknown' ? readableValidationError(error) : recoveryMessage(kind) });
     } finally {
       setSubmitting(false);
     }

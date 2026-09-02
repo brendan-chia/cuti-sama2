@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="create" options={{ title: 'Create a Trip Room' }} />
         <Stack.Screen name="join" options={{ title: 'Join a Trip Room' }} />
+        <Stack.Screen name="recover" options={{ title: 'Recover room access' }} />
         <Stack.Screen name="invite/[token]" options={{ title: 'Trip invitation' }} />
         <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Lobby' }} />
         <Stack.Screen name="trip/[tripId]/share" options={{ title: 'Invite the group' }} />
