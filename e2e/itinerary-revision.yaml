@@ -1,0 +1,39 @@
+appId: com.cutisama2.app
+name: Generate → revise → activate → restart
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "stored-itinerary"
+    timeout: 60000
+- tapOn:
+    id: "review-itinerary"
+- assertVisible:
+    id: "itinerary-version-screen"
+- tapOn:
+    id: "revise-itinerary"
+- assertVisible:
+    id: "revise-itinerary-screen"
+- tapOn:
+    id: "revision-pace"
+- tapOn: "relaxed"
+- tapOn:
+    id: "preview-revision"
+- extendedWaitUntil:
+    visible:
+      id: "revision-preview"
+    timeout: 60000
+- assertVisible:
+    id: "changed-day-1"
+- tapOn:
+    id: "activate-revision"
+- assertVisible: "ACTIVE · SHARED READ-ONLY"
+- assertVisible: "Version 2 · Active"
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "review-itinerary"
+- assertVisible: "Version 2 · Active"
+- assertVisible: "Version 1"

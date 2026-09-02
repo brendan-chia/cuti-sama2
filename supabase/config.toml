@@ -70,3 +70,9 @@ verify_jwt = true
 
 [functions.generate-itinerary]
 verify_jwt = true
+
+[functions.revise-itinerary]
+verify_jwt = true
+
+[functions.activate-itinerary]
+verify_jwt = true

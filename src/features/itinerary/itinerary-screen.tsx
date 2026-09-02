@@ -9,9 +9,9 @@ import { Screen } from '@/components/screen';
 import { generateItinerary, loadItineraryState } from '@/features/itinerary/service';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
-type Props = { tripId: string; onBack: () => void; loadAction?: typeof loadItineraryState; generateAction?: typeof generateItinerary; slowAfterMs?: number };
+type Props = { tripId: string; onBack: () => void; onReview?: () => void; loadAction?: typeof loadItineraryState; generateAction?: typeof generateItinerary; slowAfterMs?: number };
 
-export function ItineraryScreen({ tripId, onBack, loadAction = loadItineraryState, generateAction = generateItinerary, slowAfterMs = 30_000 }: Props) {
+export function ItineraryScreen({ tripId, onBack, onReview, loadAction = loadItineraryState, generateAction = generateItinerary, slowAfterMs = 30_000 }: Props) {
   const [state, setState] = useState<ItineraryState | null>(null); const [version, setVersion] = useState<StoredItinerary | null>(null);
   const [operationKey, setOperationKey] = useState<string | null>(null); const [loading, setLoading] = useState(true); const [generating, setGenerating] = useState(false); const [slow, setSlow] = useState(false); const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
@@ -72,6 +72,7 @@ export function ItineraryScreen({ tripId, onBack, loadAction = loadItineraryStat
         </View>)}</View>
       </View>)}</View>
       <Text style={styles.source}>Draft confidence: {version.itinerary.confidence.level} ({version.itinerary.confidence.score}%). Verify opening hours, availability, prices, and accessibility directly before booking.</Text>
+      {onReview ? <View style={styles.action}><AppButton label="Review, revise & share" onPress={onReview} testID="review-itinerary" /></View> : null}
     </View> : locked && !generating ? <Text style={styles.intro}>Generate a schema-checked draft shaped by the group’s shared input. Private member details are not shown in explanations.</Text> : null}
   </Screen>;
 }
