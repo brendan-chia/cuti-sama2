@@ -1,8 +1,7 @@
 import { DateTimePicker } from '@expo/ui/community/datetime-picker';
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { FormField } from '@/components/form-field';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type DateFieldProps = {
@@ -10,6 +9,7 @@ type DateFieldProps = {
   label: string;
   minimumDate?: string;
   onChange: (value: string) => void;
+  required?: boolean;
   value: string;
 };
 
@@ -34,24 +34,45 @@ function displayDate(value: string) {
   });
 }
 
-export function DateField({ error, label, minimumDate, onChange, value }: DateFieldProps) {
+export function DateField({ error, label, minimumDate, onChange, required = false, value }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const hint = `${required ? 'Required' : 'Optional'} — choose from the calendar`;
 
-  // @expo/ui's native calendar does not render on web, so retain a typed
-  // fallback there. Android and iOS users always get the platform picker.
+  // @expo/ui's picker is native-only. Use the browser's date control on web.
   if (Platform.OS === 'web') {
     return (
-      <FormField
-        autoCapitalize="none"
-        error={error}
-        hint="Optional — use YYYY-MM-DD"
-        keyboardType="numbers-and-punctuation"
-        label={label}
-        maxLength={10}
-        onChangeText={onChange}
-        placeholder="2026-12-05"
-        value={value}
-      />
+      <View style={styles.group}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.hint}>{hint}</Text>
+        <input
+          aria-invalid={Boolean(error)}
+          aria-label={label}
+          min={minimumDate}
+          onChange={(event) => onChange(event.currentTarget.value)}
+          required={required}
+          style={{
+            backgroundColor: colors.midnightRaised,
+            border: `1px solid ${error ? colors.danger : colors.border}`,
+            borderRadius: radius.md,
+            boxSizing: 'border-box',
+            color: colors.white,
+            colorScheme: 'dark',
+            fontFamily: 'inherit',
+            fontSize: typography.body,
+            minHeight: 52,
+            padding: `${spacing.md}px ${spacing.lg}px`,
+            width: '100%',
+          } satisfies CSSProperties}
+          type="date"
+          value={value}
+        />
+        {value ? (
+          <Pressable accessibilityRole="button" onPress={() => onChange('')} style={styles.clearButton}>
+            <Text style={styles.clearText}>Clear date</Text>
+          </Pressable>
+        ) : null}
+        {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+      </View>
     );
   }
 
@@ -60,7 +81,7 @@ export function DateField({ error, label, minimumDate, onChange, value }: DateFi
   return (
     <View style={styles.group}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.hint}>Optional — choose from the calendar</Text>
+      <Text style={styles.hint}>{hint}</Text>
       <Pressable
         accessibilityLabel={label}
         accessibilityRole="button"

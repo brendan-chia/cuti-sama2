@@ -9,7 +9,7 @@ import type { PlanningMode } from '../../packages/contracts/src/trip';
 
 export type ConstraintFormValues = Record<
   'origin' | 'startsOn' | 'endsOn' | 'dateFlexibilityDays' | 'budgetMin' | 'budgetMax' |
-  'currency' | 'maxTravelHours' | 'accessibilityRequirements' | 'climate' | 'visaConcern' |
+  'maxTravelHours' | 'accessibilityRequirements' | 'climate' | 'visaConcern' |
   'transport' | 'accommodation', string
 > & { accessibilityVisibilityConsent: boolean };
 
@@ -18,7 +18,7 @@ export type ConstraintErrors = Partial<Record<ConstraintField, string>>;
 
 export const initialConstraintForm: ConstraintFormValues = {
   origin: '', startsOn: '', endsOn: '', dateFlexibilityDays: '', budgetMin: '', budgetMax: '',
-  currency: '', maxTravelHours: '', accessibilityRequirements: '', accessibilityVisibilityConsent: false,
+  maxTravelHours: '', accessibilityRequirements: '', accessibilityVisibilityConsent: false,
   climate: '', visaConcern: '', transport: '', accommodation: '',
 };
 
@@ -31,7 +31,7 @@ export function constraintToForm(value: ConstraintInput | null): ConstraintFormV
     origin: value.origin ?? '', startsOn: value.startsOn ?? '', endsOn: value.endsOn ?? '',
     dateFlexibilityDays: value.dateFlexibilityDays?.toString() ?? '',
     budgetMin: value.budgetMin?.toString() ?? '', budgetMax: value.budgetMax?.toString() ?? '',
-    currency: value.currency ?? '', maxTravelHours: value.maxTravelMinutes === null ? '' : String(value.maxTravelMinutes / 60),
+    maxTravelHours: value.maxTravelMinutes === null ? '' : String(value.maxTravelMinutes / 60),
     accessibilityRequirements: value.accessibilityRequirements ?? '',
     accessibilityVisibilityConsent: value.accessibilityVisibilityConsent,
     climate: value.climate ?? '', visaConcern: value.visaConcern ?? '', transport: value.transport ?? '',
@@ -45,12 +45,14 @@ export function buildConstraintRequest(
   values: ConstraintFormValues,
   idempotencyKey = Crypto.randomUUID(),
 ): { success: true; data: ConstraintRequest } | { success: false; errors: ConstraintErrors } {
+  const budgetMin = nullableNumber(values.budgetMin);
+  const budgetMax = nullableNumber(values.budgetMax);
   const input = {
     tripId, idempotencyKey,
     origin: nullableText(values.origin), startsOn: nullableText(values.startsOn), endsOn: nullableText(values.endsOn),
     dateFlexibilityDays: nullableNumber(values.dateFlexibilityDays),
-    budgetMin: nullableNumber(values.budgetMin), budgetMax: nullableNumber(values.budgetMax),
-    currency: nullableText(values.currency)?.toUpperCase() ?? null,
+    budgetMin, budgetMax,
+    currency: budgetMin !== null || budgetMax !== null ? 'MYR' : null,
     maxTravelMinutes: values.maxTravelHours.trim() === '' ? null : Number(values.maxTravelHours) * 60,
     accessibilityRequirements: nullableText(values.accessibilityRequirements),
     accessibilityVisibilityConsent: values.accessibilityVisibilityConsent,
@@ -76,7 +78,6 @@ export function buildConstraintRequest(
       ['dateFlexibilityDays', 'Date flexibility is required; enter 0 for fixed dates.'],
       ['budgetMin', 'A minimum budget is required while the destination is undecided.'],
       ['budgetMax', 'A maximum budget is required while the destination is undecided.'],
-      ['currency', 'A budget currency is required while the destination is undecided.'],
       ['maxTravelHours', 'Maximum travel time is required while the destination is undecided.'],
       ['accessibilityRequirements', 'Accessibility requirements are required; enter None if there are none.'],
     ];

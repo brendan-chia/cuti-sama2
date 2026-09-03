@@ -27,6 +27,8 @@ describe('ConstraintsScreen', () => {
     const screen = await render(<ConstraintsScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => collection)} saveAction={saveAction} lockAction={jest.fn()} subscribeAction={subscription} />);
     await waitFor(() => screen.getByText('Anywhere together'));
     expect(screen.getByText('Origin *')).toBeTruthy();
+    expect(screen.getByText('Minimum budget (MYR) *')).toBeTruthy();
+    expect(screen.queryByText('Currency *')).toBeNull();
     expect(screen.getByText('Climate')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('save-constraints'));
     expect(await screen.findByText(/Origin is required/)).toBeTruthy();
