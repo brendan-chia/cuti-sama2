@@ -56,4 +56,30 @@ describe('LobbyScreen', () => {
     });
     await waitFor(() => expect(removeAction).toHaveBeenCalledWith(lobby.tripId, memberId));
   });
+
+  it('lets the organiser remove a participant after planning has started', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    const startedLobby = { ...lobby, startedAt: '2026-09-01T01:00:00.000Z' };
+    const removeAction = jest.fn(async () => ({ ...startedLobby, members: [startedLobby.members[0]] }));
+    const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} loadAction={jest.fn(async () => startedLobby)} readyAction={jest.fn()} removeAction={removeAction} startAction={jest.fn()} closeAction={jest.fn()} subscribeAction={subscription} />);
+    await waitFor(() => expect(screen.getByText('Planning has begun')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId(`remove-member-${memberId}`));
+    const actions = alert.mock.calls[0][2];
+    await act(async () => {
+      actions?.find((action) => action.text === 'Remove')?.onPress?.();
+    });
+
+    await waitFor(() => expect(removeAction).toHaveBeenCalledWith(lobby.tripId, memberId));
+    expect(screen.queryByText('Aina')).toBeNull();
+  });
+
+  it('does not show removal controls to participants', async () => {
+    const memberLobby = { ...lobby, currentMemberId: memberId, currentRole: 'member' as const };
+    const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} loadAction={jest.fn(async () => memberLobby)} readyAction={jest.fn()} removeAction={jest.fn()} startAction={jest.fn()} closeAction={jest.fn()} subscribeAction={subscription} />);
+    await waitFor(() => expect(screen.getByText('Langkawi weekend')).toBeTruthy());
+
+    expect(screen.queryByTestId(`remove-member-${memberId}`)).toBeNull();
+    expect(screen.queryByText('Remove')).toBeNull();
+  });
 });
