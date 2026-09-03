@@ -15,3 +15,12 @@ jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   default: { addEventListener: jest.fn(() => jest.fn()), fetch: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })) },
 }));
+
+jest.mock('@expo/ui/community/datetime-picker', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ testID }: { testID?: string }) => React.createElement(View, { testID }),
+  };
+});

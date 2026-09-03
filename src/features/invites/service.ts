@@ -11,6 +11,8 @@ import {
   type JoinTripResult,
 } from '../../../packages/contracts/src/invite';
 import * as Crypto from 'expo-crypto';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import { z } from 'zod';
 
 import { ensureAnonymousSession } from '@/lib/auth';
 import {
@@ -28,8 +30,26 @@ async function invoke<T>(
 ) {
   await ensureAnonymousSession();
   const { data, error } = await requireSupabase().functions.invoke(functionName, { body });
-  if (error) throw new Error(error.message || `${functionName} failed.`);
-  return parse(data);
+  if (error) {
+    let message = error.message || `${functionName} failed.`;
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const payload = await error.context.json() as { error?: unknown };
+        if (typeof payload.error === 'string') message = payload.error;
+      } catch {
+        // Retain the SDK error when the response has no readable JSON body.
+      }
+    }
+    throw new Error(message);
+  }
+  try {
+    return parse(data);
+  } catch (cause) {
+    if (cause instanceof z.ZodError) {
+      throw new Error('The server returned invitation data in an unexpected format.');
+    }
+    throw cause;
+  }
 }
 
 async function readCachedInvitation(tripId: string): Promise<CachedInvitation | null> {

@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 import { PlanningModeSchema } from './trip';
 
+// PostgreSQL serializes timestamptz values with an explicit offset (for example,
+// `+00:00`), while JavaScript commonly uses the equivalent `Z` suffix. Accept
+// both representations at the API boundary.
+const TimestampSchema = z.iso.datetime({ offset: true });
+
 export const InviteTokenSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{43}$/, 'Invitation token is invalid.');
@@ -10,7 +15,7 @@ export const InviteContextSchema = z.object({
   tripName: z.string().min(2).max(80),
   mode: PlanningModeSchema,
   organizerName: z.string().min(1).max(50),
-  expiresAt: z.iso.datetime(),
+  expiresAt: TimestampSchema,
 });
 
 export type InviteContext = z.infer<typeof InviteContextSchema>;
@@ -21,7 +26,7 @@ export const InvitationStatusSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('open'),
     inviteId: z.uuid(),
-    expiresAt: z.iso.datetime(),
+    expiresAt: TimestampSchema,
   }),
 ]);
 
@@ -32,7 +37,7 @@ export const IssuedInvitationSchema = z.object({
   inviteId: z.uuid(),
   token: InviteTokenSchema,
   inviteUrl: z.url().refine((value) => value.startsWith('https://'), 'Invitation URL must use HTTPS.'),
-  expiresAt: z.iso.datetime(),
+  expiresAt: TimestampSchema,
 });
 
 export type IssuedInvitation = z.infer<typeof IssuedInvitationSchema>;

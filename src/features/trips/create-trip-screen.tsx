@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { PlanningMode, TripSummary } from '../../../packages/contracts/src/trip';
 import { AppButton } from '@/components/app-button';
+import { DateField } from '@/components/date-field';
 import { FormField } from '@/components/form-field';
 import { Screen } from '@/components/screen';
 import { ModeCard } from '@/features/trips/mode-card';
@@ -161,26 +162,17 @@ export function CreateTripScreen({
         ) : null}
 
         <View style={styles.dateGroup}>
-          <FormField
-            autoCapitalize="none"
+          <DateField
             error={errors.startsOn}
-            hint="Optional — use YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
             label="Start date"
-            maxLength={10}
-            onChangeText={(value) => update('startsOn', value)}
-            placeholder="2026-12-05"
+            onChange={(value) => update('startsOn', value)}
             value={values.startsOn}
           />
-          <FormField
-            autoCapitalize="none"
+          <DateField
             error={errors.endsOn}
-            hint="Optional — use YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
             label="End date"
-            maxLength={10}
-            onChangeText={(value) => update('endsOn', value)}
-            placeholder="2026-12-08"
+            minimumDate={values.startsOn || undefined}
+            onChange={(value) => update('endsOn', value)}
             value={values.endsOn}
           />
         </View>
