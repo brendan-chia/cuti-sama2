@@ -82,25 +82,137 @@ export type AiItinerary = z.infer<typeof AiItinerarySchema>;
 
 const nullable = (schema: Record<string, unknown>) => ({ anyOf: [schema, { type: 'null' }] });
 const stringArray = (maxItems: number, maxLength: number) => ({ type: 'array', maxItems, items: { type: 'string', minLength: 1, maxLength } });
-const confidenceJson = { type: 'object', additionalProperties: false, required: ['level', 'score', 'reason'], properties: { level: { type: 'string', enum: ['high', 'medium', 'low'] }, score: { type: 'integer', minimum: 0, maximum: 100 }, reason: { type: 'string', minLength: 1, maxLength: 300 } } };
-const itineraryJsonSchema = {
-  type: 'object', additionalProperties: false, required: ['schemaVersion', 'destination', 'summary', 'days', 'warnings', 'confidence', 'sourceTimestamps'],
+const confidenceJson = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['level', 'score', 'reason'],
   properties: {
-    schemaVersion: { type: 'string', const: '1.0' }, destination: { type: 'object', additionalProperties: false, required: ['name', 'country'], properties: { name: { type: 'string', minLength: 1, maxLength: 120 }, country: nullable({ type: 'string', minLength: 1, maxLength: 120 }) } },
+    level: { type: 'string', enum: ['high', 'medium', 'low'] },
+    score: { type: 'integer', minimum: 0, maximum: 100 },
+    reason: { type: 'string', minLength: 1, maxLength: 300 },
+  },
+};
+
+const activityJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'activityId',
+    'title',
+    'description',
+    'timeBlock',
+    'location',
+    'estimate',
+    'travelMinutes',
+    'rationale',
+    'warnings',
+    'confidence',
+    'sourceTimestamps',
+    'tags',
+    'accessibility',
+  ],
+  properties: {
+    activityId: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$' },
+    title: { type: 'string', minLength: 1, maxLength: 160 },
+    description: { type: 'string', minLength: 1, maxLength: 600 },
+    timeBlock: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['start', 'end', 'timezone'],
+      properties: {
+        start: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+        end: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+        timezone: { type: 'string', minLength: 1, maxLength: 80 },
+      },
+    },
+    location: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['name', 'address', 'latitude', 'longitude'],
+      properties: {
+        name: { type: 'string', minLength: 1, maxLength: 160 },
+        address: nullable({ type: 'string', minLength: 1, maxLength: 240 }),
+        latitude: nullable({ type: 'number', minimum: -90, maximum: 90 }),
+        longitude: nullable({ type: 'number', minimum: -180, maximum: 180 }),
+      },
+    },
+    estimate: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['currency', 'minimum', 'maximum', 'basis', 'sourceTimestamp'],
+      properties: {
+        currency: { type: 'string', pattern: '^[A-Z]{3}$' },
+        minimum: { type: 'number', minimum: 0 },
+        maximum: { type: 'number', minimum: 0 },
+        basis: { type: 'string', enum: ['per_person', 'group'] },
+        sourceTimestamp: { type: 'string' },
+      },
+    },
+    travelMinutes: nullable({ type: 'integer', minimum: 0, maximum: 1440 }),
+    rationale: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['explanation', 'groupSignal'],
+      properties: {
+        explanation: { type: 'string', minLength: 1, maxLength: 400 },
+        groupSignal: {
+          type: 'string',
+          enum: ['vibe', 'pace', 'must_have', 'nice_to_have', 'accessibility', 'budget'],
+        },
+      },
+    },
+    warnings: stringArray(10, 300),
+    confidence: confidenceJson,
+    sourceTimestamps: { type: 'array', minItems: 1, maxItems: 10, items: { type: 'string' } },
+    tags: stringArray(20, 80),
+    accessibility: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['status', 'features', 'notes'],
+      properties: {
+        status: { type: 'string', enum: ['confirmed', 'partial', 'unknown', 'not_accessible'] },
+        features: stringArray(20, 160),
+        notes: nullable({ type: 'string', minLength: 1, maxLength: 300 }),
+      },
+    },
+  },
+};
+
+const itineraryJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['schemaVersion', 'destination', 'summary', 'days', 'warnings', 'confidence', 'sourceTimestamps'],
+  properties: {
+    schemaVersion: { type: 'string', const: '1.0' },
+    destination: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['name', 'country'],
+      properties: {
+        name: { type: 'string', minLength: 1, maxLength: 120 },
+        country: nullable({ type: 'string', minLength: 1, maxLength: 120 }),
+      },
+    },
     summary: { type: 'string', minLength: 1, maxLength: 800 },
-    days: { type: 'array', minItems: 1, maxItems: 30, items: { type: 'object', additionalProperties: false, required: ['dayNumber', 'date', 'title', 'activities'], properties: {
-      dayNumber: { type: 'integer', minimum: 1, maximum: 30 }, date: nullable({ type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }), title: { type: 'string', minLength: 1, maxLength: 160 },
-      activities: { type: 'array', minItems: 1, maxItems: 12, items: { type: 'object', additionalProperties: false, required: ['activityId', 'title', 'description', 'timeBlock', 'location', 'estimate', 'travelMinutes', 'rationale', 'warnings', 'confidence', 'sourceTimestamps', 'tags', 'accessibility'], properties: {
-        activityId: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$' }, title: { type: 'string', minLength: 1, maxLength: 160 }, description: { type: 'string', minLength: 1, maxLength: 600 },
-        timeBlock: { type: 'object', additionalProperties: false, required: ['start', 'end', 'timezone'], properties: { start: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, timezone: { type: 'string', minLength: 1, maxLength: 80 } } },
-        location: { type: 'object', additionalProperties: false, required: ['name', 'address', 'latitude', 'longitude'], properties: { name: { type: 'string', minLength: 1, maxLength: 160 }, address: nullable({ type: 'string', minLength: 1, maxLength: 240 }), latitude: nullable({ type: 'number', minimum: -90, maximum: 90 }), longitude: nullable({ type: 'number', minimum: -180, maximum: 180 }) } },
-        estimate: { type: 'object', additionalProperties: false, required: ['currency', 'minimum', 'maximum', 'basis', 'sourceTimestamp'], properties: { currency: { type: 'string', pattern: '^[A-Z]{3}$' }, minimum: { type: 'number', minimum: 0 }, maximum: { type: 'number', minimum: 0 }, basis: { type: 'string', enum: ['per_person', 'group'] }, sourceTimestamp: { type: 'string' } },
-        travelMinutes: nullable({ type: 'integer', minimum: 0, maximum: 1440 }), rationale: { type: 'object', additionalProperties: false, required: ['explanation', 'groupSignal'], properties: { explanation: { type: 'string', minLength: 1, maxLength: 400 }, groupSignal: { type: 'string', enum: ['vibe', 'pace', 'must_have', 'nice_to_have', 'accessibility', 'budget'] } } },
-        warnings: stringArray(10, 300), confidence: confidenceJson, sourceTimestamps: { type: 'array', minItems: 1, maxItems: 10, items: { type: 'string' } }, tags: stringArray(20, 80),
-        accessibility: { type: 'object', additionalProperties: false, required: ['status', 'features', 'notes'], properties: { status: { type: 'string', enum: ['confirmed', 'partial', 'unknown', 'not_accessible'] }, features: stringArray(20, 160), notes: nullable({ type: 'string', minLength: 1, maxLength: 300 }) } },
-      } } },
-    } } },
-    warnings: stringArray(20, 300), confidence: confidenceJson, sourceTimestamps: { type: 'array', minItems: 1, maxItems: 20, items: { type: 'string' } },
+    days: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 30,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['dayNumber', 'date', 'title', 'activities'],
+        properties: {
+          dayNumber: { type: 'integer', minimum: 1, maximum: 30 },
+          date: nullable({ type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }),
+          title: { type: 'string', minLength: 1, maxLength: 160 },
+          activities: { type: 'array', minItems: 1, maxItems: 12, items: activityJsonSchema },
+        },
+      },
+    },
+    warnings: stringArray(20, 300),
+    confidence: confidenceJson,
+    sourceTimestamps: { type: 'array', minItems: 1, maxItems: 20, items: { type: 'string' } },
   },
 };
 

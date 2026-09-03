@@ -27,6 +27,29 @@ export function validateDestinationAnnotations(value: unknown, allowed: Readonly
   return parsed.data;
 }
 
+const destinationAnnotationsJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['destinations'],
+  properties: {
+    destinations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['destinationId', 'reasonOrder'],
+        properties: {
+          destinationId: { type: 'string' },
+          reasonOrder: {
+            type: 'array',
+            items: { type: 'integer', minimum: 0 },
+          },
+        },
+      },
+    },
+  },
+};
+
 export async function requestDestinationAnnotations(cards: { destinationId: string; matchReasons: string[] }[], options: { fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
   const apiKey = Deno.env.get('GROQ_API_KEY'); const model = Deno.env.get('GROQ_STRUCTURED_OUTPUT_MODEL');
   if (!apiKey || !model || cards.length === 0) return null;
@@ -37,7 +60,14 @@ export async function requestDestinationAnnotations(cards: { destinationId: stri
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model, temperature: 0,
-        response_format: { type: 'json_schema', json_schema: { name: 'destination_reason_order', strict: true, schema: { type: 'object', additionalProperties: false, required: ['destinations'], properties: { destinations: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['destinationId', 'reasonOrder'], properties: { destinationId: { type: 'string' }, reasonOrder: { type: 'array', items: { type: 'integer', minimum: 0 } } } } } } } },
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'destination_reason_order',
+            strict: true,
+            schema: destinationAnnotationsJsonSchema,
+          },
+        },
         messages: [
           { role: 'system', content: 'You may only reorder supplied reason indexes for supplied destination IDs. Never add a destination, reason, fact, certainty claim, or eligibility decision.' },
           { role: 'user', content: JSON.stringify({ destinations: cards }) },
