@@ -10,11 +10,11 @@ const sceneMarks: Record<string, string> = {
   'hot-spring': '≋ ♨', postcard: '✦ ▱',
 };
 
-type Props = { card: PreferenceChoice; selected: boolean; customText?: string | null; disabled?: boolean; onPress?: () => void; compact?: boolean };
+type Props = { card: PreferenceChoice; selected: boolean; customText?: string | null; disabled?: boolean; onPress?: () => void; compact?: boolean; accessibilityHint?: string };
 
-export function PreferenceCard({ card, selected, customText, disabled = false, onPress, compact = false }: Props) {
+export function PreferenceCard({ card, selected, customText, disabled = false, onPress, compact = false, accessibilityHint }: Props) {
   return <Pressable
-    accessibilityHint={`${card.accessibilityHint} Double tap to select this card.`}
+    accessibilityHint={accessibilityHint ?? `${card.accessibilityHint} Double tap to select this card.`}
     accessibilityLabel={customText || card.accessibilityLabel}
     accessibilityRole="radio"
     accessibilityState={{ disabled, selected }}

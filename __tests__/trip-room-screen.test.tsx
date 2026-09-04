@@ -26,11 +26,11 @@ describe('TripRoomScreen', () => {
     expect(screen.queryByLabelText('Vibe answer')).toBeNull(); expect(screen.queryByText('Aina hidden card')).toBeNull();
   });
 
-  it('supports tap selection and the accessible Throw card action', async () => {
+  it('plays a card directly without a separate Throw card action', async () => {
     const submitted: TripRoom = { ...room, currentRound: { ...round, submittedCount: 2, ownSubmission: { choiceId: 'quiet', customText: null, value: 'Quiet — peaceful places', updatedAt: '2026-09-01T00:01:00Z' }, participants: round.participants.map((item) => item.memberId === memberId ? { ...item, submitted: true } : item) } };
     const submitAction = jest.fn(async () => submitted);
     const screen = await render(<TripRoomScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => room)} submitAction={submitAction} manageAction={jest.fn()} subscribeAction={subscribe} />);
-    await waitFor(() => screen.getByTestId('preference-card-vibe-quiet')); await fireEvent.press(screen.getByTestId('preference-card-vibe-quiet')); await fireEvent.press(screen.getByTestId('throw-card'));
+    await waitFor(() => screen.getByTestId('preference-card-vibe-quiet')); expect(screen.queryByTestId('throw-card')).toBeNull(); await fireEvent.press(screen.getByTestId('preference-card-vibe-quiet'));
     await waitFor(() => expect(submitAction).toHaveBeenCalledWith({ tripId, roundId: round.roundId, roundType: 'vibe', choiceId: 'quiet', customText: null }));
   });
 
@@ -43,11 +43,14 @@ describe('TripRoomScreen', () => {
     await waitFor(() => screen.getByText('Cards on the table')); expect(screen.getByText('Lively')).toBeTruthy();
   });
 
-  it('opens custom input only after choosing Add Your Own', async () => {
+  it('opens custom input and plays the custom card after creation', async () => {
     const mustHaveRoom: TripRoom = { ...room, currentRound: { ...round, sequence: 3, kind: 'must_have' } };
-    const screen = await render(<TripRoomScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => mustHaveRoom)} submitAction={jest.fn()} manageAction={jest.fn()} subscribeAction={subscribe} />);
+    const submitAction = jest.fn(async () => mustHaveRoom);
+    const screen = await render(<TripRoomScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => mustHaveRoom)} submitAction={submitAction} manageAction={jest.fn()} subscribeAction={subscribe} />);
     await waitFor(() => screen.getByTestId('preference-card-must_have-custom')); expect(screen.queryByLabelText('Custom Must-Have')).toBeNull();
     await fireEvent.press(screen.getByTestId('preference-card-must_have-custom'));
     expect(screen.getByLabelText('Custom Must-Have')).toBeTruthy(); expect(screen.getByText('0 / 60')).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Custom Must-Have'), 'See the cherry blossoms'); await fireEvent.press(screen.getByTestId('create-custom-card'));
+    await waitFor(() => expect(submitAction).toHaveBeenCalledWith({ tripId, roundId: round.roundId, roundType: 'must_have', choiceId: 'custom', customText: 'See the cherry blossoms' }));
   });
 });

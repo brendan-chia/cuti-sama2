@@ -13,7 +13,7 @@ export function CustomMustHaveSheet({ visible, initialValue, onCancel, onCreate 
       <Text style={styles.body}>Enter one specific experience. This won’t change dates, budgets or other hard constraints.</Text>
       <TextInput accessibilityLabel="Custom Must-Have" autoFocus maxLength={60} onChangeText={(text) => { setValue(text); setError(null); }} placeholder="e.g. See the cherry blossoms" placeholderTextColor={colors.disabled} selectionColor={colors.coral} style={styles.input} value={value} />
       <Text style={styles.count}>{value.length} / 60</Text>{error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      <View style={styles.actions}><AppButton label="Create card" onPress={create} testID="create-custom-card" /><Pressable accessibilityRole="button" onPress={onCancel} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable></View>
+      <View style={styles.actions}><AppButton label="Create & play card" onPress={create} testID="create-custom-card" /><Pressable accessibilityRole="button" onPress={onCancel} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable></View>
     </View></View>
   </Modal>;
 }

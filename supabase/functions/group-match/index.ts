@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { authenticatedClient, corsHeaders, json, requestJson } from '../_shared/invites.ts';
 import { requestGroqWording } from '../_shared/groq.ts';
-import { GroupMatchPayloadSchema } from './contract.ts';
+import { areGroupMatchRoundsComplete, expectedGroupMatchRoundKinds, GroupMatchPayloadSchema } from './contract.ts';
 
 type Member = { id: string; display_name: string; display_name_discriminator: number };
 type Constraint = {
@@ -11,7 +11,7 @@ type Constraint = {
   accessibility_visibility_consent: boolean; climate: string | null; visa_concern: string | null; transport: string | null; accommodation: string | null;
 };
 type Submission = { round_id: string; member_id: string; value: string };
-type Round = { id: string; kind: 'vibe' | 'pace' | 'must_have' | 'nice_to_have' | 'avoid'; closed_at: string | null };
+type Round = { id: string; sequence: number; kind: 'vibe' | 'pace' | 'must_have' | 'nice_to_have' | 'avoid'; closed_at: string | null };
 type Source = { sourceId: string; memberId: string; attribution: string | null; groupVisible: boolean; inputKind: 'constraint' | 'preference'; category: string; value: string };
 type Fact = { factId: string; kind: 'agreement' | 'minority_must_have' | 'dealbreaker' | 'unresolved_conflict'; category: string; title: string; detail: string; sourceIds: string[] };
 
@@ -103,10 +103,10 @@ Deno.serve(async (request) => {
     service.from('trips').select('id,name,mode,constraints_locked_at').eq('id', parsed.data.tripId).single(),
     service.from('trip_members').select('id,display_name,display_name_discriminator').eq('trip_id', parsed.data.tripId).eq('active', true).order('created_at'),
     service.from('member_constraints').select('member_id,starts_on,ends_on,budget_min,budget_max,currency,max_travel_minutes,origin,accessibility_requirements,accessibility_visibility_consent,climate,visa_concern,transport,accommodation').eq('trip_id', parsed.data.tripId).order('member_id'),
-    service.from('preference_rounds').select('id,kind,closed_at').eq('trip_id', parsed.data.tripId).order('sequence'),
+    service.from('preference_rounds').select('id,sequence,kind,closed_at').eq('trip_id', parsed.data.tripId).lte('sequence', expectedGroupMatchRoundKinds.length).order('sequence'),
   ]);
   if (tripQuery.error || memberQuery.error || constraintQuery.error || roundQuery.error) return json({ error: 'Could not load group inputs.' }, 500);
-  if (!tripQuery.data.constraints_locked_at || roundQuery.data.length !== 5 || roundQuery.data.some((round) => !round.closed_at)) return json({ error: 'Complete and close all preference rounds before revealing the match.' }, 409);
+  if (!tripQuery.data.constraints_locked_at || !areGroupMatchRoundsComplete(roundQuery.data)) return json({ error: 'Complete and close all preference rounds before revealing the match.' }, 409);
   const roundIds = roundQuery.data.map((round) => round.id);
   const submissionQuery = await service.from('preference_submissions').select('round_id,member_id,value').in('round_id', roundIds).order('round_id').order('member_id');
   if (submissionQuery.error) return json({ error: 'Could not load preference inputs.' }, 500);

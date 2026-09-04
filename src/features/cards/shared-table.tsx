@@ -8,8 +8,8 @@ export function SharedTable({ submittedCount, participantCount, ownSubmitted, ac
       {Array.from({ length: Math.min(submittedCount, 5) }, (_, index) => <View key={index} style={[styles.cardBack, { transform: [{ rotate: `${(index - 2) * 3}deg` }, { translateX: (index - 2) * 2 }] }]} />)}
       {submittedCount === 0 ? <Text style={styles.arrow}>↑</Text> : <Text style={styles.stackCount}>{submittedCount}</Text>}
     </View>
-    <Text style={styles.title}>{active ? 'Release to play your card' : ownSubmitted ? 'Your card is face-down' : 'Throw your card onto the table'}</Text>
-    <Text style={styles.body}>{ownSubmitted ? 'Your choice stays hidden until reveal. You can replace it before then.' : 'Drag upward into this area, or use the button below.'}</Text>
+    <Text style={styles.title}>{active ? 'Release to play your card' : ownSubmitted ? 'Your card is face-down' : 'Swipe a card onto the table'}</Text>
+    <Text style={styles.body}>{ownSubmitted ? 'Your choice stays hidden until reveal. Swipe another card up to replace it.' : 'Swipe any card in your hand upward to play it.'}</Text>
   </View>;
 }
 
