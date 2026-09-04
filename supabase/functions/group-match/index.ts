@@ -94,8 +94,8 @@ Deno.serve(async (request) => {
   if (!memberClient) return json({ error: 'Member session is invalid or expired.' }, 401);
   const parsed = GroupMatchPayloadSchema.safeParse(await requestJson(request));
   if (!parsed.success) return json({ error: 'Group match request is invalid.' }, 400);
-  const { data: membership } = await memberClient.from('trip_members').select('id').eq('trip_id', parsed.data.tripId).eq('active', true).maybeSingle();
-  if (!membership) return json({ error: 'Trip Room access is unavailable.' }, 403);
+  const { data: accessibleTrip, error: accessError } = await memberClient.from('trips').select('id').eq('id', parsed.data.tripId).maybeSingle();
+  if (accessError || !accessibleTrip) return json({ error: 'Trip Room access is unavailable.' }, 403);
   const url = Deno.env.get('SUPABASE_URL'); const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !serviceKey) return json({ error: 'Function configuration is incomplete.' }, 500);
   const service = createClient(url, serviceKey, { auth: { persistSession: false } });
