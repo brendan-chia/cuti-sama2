@@ -1,8 +1,7 @@
-import * as Crypto from 'expo-crypto';
-
 import { LobbySchema, type Lobby } from '../../../packages/contracts/src/lobby';
 import { ensureAnonymousSession } from '@/lib/auth';
 import { requireSupabase } from '@/lib/supabase';
+import { createUuid } from '@/lib/uuid';
 
 async function lobbyRpc(functionName: string, body: Record<string, unknown>) {
   await ensureAnonymousSession();
@@ -16,15 +15,15 @@ export function loadLobby(tripId: string) {
 }
 
 export function setLobbyReady(tripId: string, ready: boolean) {
-  return lobbyRpc('set_lobby_ready', { p_trip_id: tripId, p_ready: ready, p_idempotency_key: Crypto.randomUUID() });
+  return lobbyRpc('set_lobby_ready', { p_trip_id: tripId, p_ready: ready, p_idempotency_key: createUuid() });
 }
 
 export function removeLobbyMember(tripId: string, memberId: string) {
-  return lobbyRpc('remove_trip_member', { p_trip_id: tripId, p_member_id: memberId, p_idempotency_key: Crypto.randomUUID() });
+  return lobbyRpc('remove_trip_member', { p_trip_id: tripId, p_member_id: memberId, p_idempotency_key: createUuid() });
 }
 
 export function startTripPlanning(tripId: string) {
-  return lobbyRpc('start_trip_planning', { p_trip_id: tripId, p_idempotency_key: Crypto.randomUUID() });
+  return lobbyRpc('start_trip_planning', { p_trip_id: tripId, p_idempotency_key: createUuid() });
 }
 
 type LobbySubscriptionCallbacks = {

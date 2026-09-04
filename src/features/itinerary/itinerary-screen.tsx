@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +7,7 @@ import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { generateItinerary, generationOperationKey, loadItineraryState } from '@/features/itinerary/service';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
+import { createUuid } from '@/lib/uuid';
 
 type Props = { tripId: string; onBack: () => void; onReview?: () => void; loadAction?: typeof loadItineraryState; generateAction?: typeof generateItinerary; slowAfterMs?: number };
 
@@ -47,7 +47,7 @@ export function ItineraryScreen({ tripId, onBack, onReview, loadAction = loadIti
   if (loading && !state) return <Screen scroll={false}><View style={styles.center}><Text style={styles.title}>Restoring itinerary…</Text></View></Screen>;
   if (!state) return <Screen scroll={false}><View style={styles.center}><Text accessibilityRole="alert" style={styles.error}>{error ?? 'The itinerary is unavailable.'}</Text><View style={styles.action}><AppButton label="Try again" onPress={() => void refresh()} /></View></View></Screen>;
   const locked = state.lockedDestination;
-  const retryKey = operationKey ?? Crypto.randomUUID();
+  const retryKey = operationKey ?? createUuid();
   return <Screen footer={locked && !version ? <View style={styles.footer}>
     {!generating ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
     {slow ? <AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary" variant="secondary" /> : null}

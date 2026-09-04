@@ -1,11 +1,10 @@
-import * as Crypto from 'expo-crypto';
-
 import {
   ConstraintRequestSchema,
   type ConstraintInput,
   type ConstraintRequest,
 } from '../../packages/contracts/src/constraints';
 import type { PlanningMode } from '../../packages/contracts/src/trip';
+import { createUuid } from '@/lib/uuid';
 
 export type ConstraintFormValues = Record<
   'origin' | 'startsOn' | 'endsOn' | 'dateFlexibilityDays' | 'budgetMin' | 'budgetMax' |
@@ -43,7 +42,7 @@ export function buildConstraintRequest(
   tripId: string,
   mode: PlanningMode,
   values: ConstraintFormValues,
-  idempotencyKey = Crypto.randomUUID(),
+  idempotencyKey = createUuid(),
 ): { success: true; data: ConstraintRequest } | { success: false; errors: ConstraintErrors } {
   const budgetMin = nullableNumber(values.budgetMin);
   const budgetMax = nullableNumber(values.budgetMax);

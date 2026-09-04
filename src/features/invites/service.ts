@@ -22,6 +22,7 @@ import {
   saveLastTripId,
 } from '@/lib/secure-storage';
 import { requireSupabase } from '@/lib/supabase';
+import { createUuid } from '@/lib/uuid';
 
 async function invoke<T>(
   functionName: string,
@@ -77,7 +78,7 @@ export async function getInvitationStatus(tripId: string): Promise<{
 }
 
 async function issue(tripId: string, action: 'issue' | 'rotate'): Promise<IssuedInvitation> {
-  const bytes = await Crypto.getRandomBytesAsync(32);
+  const bytes = Crypto.getRandomBytes(32);
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let base64 = '';
   for (let index = 0; index < bytes.length; index += 3) {
@@ -93,7 +94,7 @@ async function issue(tripId: string, action: 'issue' | 'rotate'): Promise<Issued
   const token = base64.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   const invitation = await invoke(
     'manage-invite',
-    { action, tripId, token, idempotencyKey: Crypto.randomUUID() },
+    { action, tripId, token, idempotencyKey: createUuid() },
     (value) => IssuedInvitationSchema.parse(value),
   );
   await saveCachedInvitation(tripId, JSON.stringify(invitation));
@@ -111,7 +112,7 @@ export function rotateInvitation(tripId: string) {
 export async function closeInvitation(tripId: string) {
   const status = await invoke(
     'manage-invite',
-    { action: 'close', tripId, idempotencyKey: Crypto.randomUUID() },
+    { action: 'close', tripId, idempotencyKey: createUuid() },
     (value) => InvitationStatusSchema.parse(value),
   );
   await clearCachedInvitation(tripId);
@@ -126,7 +127,7 @@ export async function joinTrip(
   token: string,
   displayName: string,
   confirmDuplicate: boolean,
-  idempotencyKey = Crypto.randomUUID(),
+  idempotencyKey = createUuid(),
 ): Promise<JoinTripResult> {
   const validName = DisplayNameSchema.parse(displayName);
   const result = await invoke(

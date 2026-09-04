@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import { z } from 'zod';
 
 import {
@@ -7,6 +6,7 @@ import {
   type CreateTripRequest,
   type PlanningMode,
 } from '../../../packages/contracts/src/trip';
+import { createUuid } from '@/lib/uuid';
 
 export type CreateTripFormValues = {
   tripName: string;
@@ -42,7 +42,7 @@ function destinationField(mode: PlanningMode): CreateTripField {
 
 export function buildCreateTripRequest(
   values: CreateTripFormValues,
-  idempotencyKey = Crypto.randomUUID(),
+  idempotencyKey = createUuid(),
 ): { success: true; data: CreateTripRequest } | { success: false; errors: CreateTripErrors } {
   const destinations =
     values.mode === 'destination_locked'

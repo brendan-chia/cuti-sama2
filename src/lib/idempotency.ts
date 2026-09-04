@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { sessionStorage, type AsyncStorageDriver } from '@/lib/secure-storage';
+import { createUuid } from '@/lib/uuid';
 
 type PendingOperation = { key: string; fingerprint: string; createdAt: string };
 function stable(value: unknown): string {
@@ -9,7 +10,7 @@ function stable(value: unknown): string {
 }
 const storageKey = (operation: string, scope: string) => `cutisama2.operation.${operation}.${scope}`;
 
-export function createIdempotencyStore(storage: AsyncStorageDriver, uuid = () => Crypto.randomUUID(), digest = (value: string) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value), now = () => Date.now()) {
+export function createIdempotencyStore(storage: AsyncStorageDriver, uuid = createUuid, digest = (value: string) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value), now = () => Date.now()) {
   return {
     async keyFor(operation: string, scope: string, input: unknown) {
       const fingerprint = await digest(stable(input)); const target = storageKey(operation, scope);
