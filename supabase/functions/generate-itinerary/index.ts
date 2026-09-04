@@ -69,8 +69,10 @@ Deno.serve(async (request) => {
   let memberClient; try { memberClient = await authenticatedClient(request); } catch { return json({ error: 'Function configuration is incomplete.' }, 500); }
   if (!memberClient) return json({ error: 'Member session is invalid or expired.' }, 401);
   const parsed = PayloadSchema.safeParse(await requestJson(request)); if (!parsed.success) return json({ error: 'Itinerary request is invalid.' }, 400);
-  const { data: membership } = await memberClient.from('trip_members').select('id').eq('trip_id', parsed.data.tripId).eq('active', true).maybeSingle();
-  if (!membership) return json({ error: 'Trip Room access is unavailable.' }, 403);
+  const { data: identity, error: identityError } = await memberClient.auth.getUser();
+  if (identityError || !identity.user) return json({ error: 'Member session is invalid or expired.' }, 401);
+  const { data: membership, error: membershipError } = await memberClient.from('trip_members').select('id').eq('trip_id', parsed.data.tripId).eq('user_id', identity.user.id).eq('active', true).maybeSingle();
+  if (membershipError || !membership) return json({ error: 'Trip Room access is unavailable.' }, 403);
   const url = Deno.env.get('SUPABASE_URL'); const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !serviceKey) return json({ error: 'Function configuration is incomplete.' }, 500);
   const service = createClient(url, serviceKey, { auth: { persistSession: false } });
