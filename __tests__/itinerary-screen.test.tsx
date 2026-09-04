@@ -40,3 +40,12 @@ it('shows progress and a same-operation retry control after the timeout threshol
   expect(screen.getByTestId('itinerary-progress')).toBeTruthy();
   await waitFor(() => expect(screen.getByTestId('retry-itinerary-inline')).toBeTruthy());
 });
+
+it('shows one retry action and no new-generation action after a failed operation', async () => {
+  const state = { ...locked, operation: { idempotencyKey: operationKey, status: 'failed' as const, startedAt: '2026-09-02T10:00:00Z', error: 'The itinerary draft was not schema-valid. Retry generation.' } };
+  const screen = await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => state)} generateAction={jest.fn()} />);
+  expect(await screen.findByText('The itinerary draft was not schema-valid. Retry generation.')).toBeTruthy();
+  expect(screen.getByTestId('retry-itinerary-error')).toBeTruthy();
+  expect(screen.queryByTestId('retry-itinerary')).toBeNull();
+  expect(screen.queryByTestId('generate-itinerary')).toBeNull();
+});

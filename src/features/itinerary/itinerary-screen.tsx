@@ -48,9 +48,10 @@ export function ItineraryScreen({ tripId, onBack, onReview, loadAction = loadIti
   if (!state) return <Screen scroll={false}><View style={styles.center}><Text accessibilityRole="alert" style={styles.error}>{error ?? 'The itinerary is unavailable.'}</Text><View style={styles.action}><AppButton label="Try again" onPress={() => void refresh()} /></View></View></Screen>;
   const locked = state.lockedDestination;
   const retryKey = operationKey ?? createUuid();
-  return <Screen footer={locked && !version ? <View style={styles.footer}>
-    {!generating ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
-    {slow ? <AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary" variant="secondary" /> : null}
+  const retryPending = Boolean(operationKey) && slow;
+  return <Screen footer={locked && !version && !error ? <View style={styles.footer}>
+    {!generating && !retryPending ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
+    {!generating && retryPending ? <AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary" variant="secondary" /> : null}
   </View> : undefined} testID="itinerary-screen">
     <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.back}>‹ Destination vote</Text></Pressable>
     <Text style={styles.kicker}>AI ITINERARY</Text><Text style={styles.title}>{locked ? locked.name : 'Destination required'}</Text>
@@ -74,7 +75,7 @@ export function ItineraryScreen({ tripId, onBack, onReview, loadAction = loadIti
       </View>)}</View>
       <Text style={styles.source}>Draft confidence: {version.itinerary.confidence.level} ({version.itinerary.confidence.score}%). Verify opening hours, availability, prices, and accessibility directly before booking.</Text>
       {onReview ? <View style={styles.action}><AppButton label="Review, revise & share" onPress={onReview} testID="review-itinerary" /></View> : null}
-    </View> : locked && !generating ? <Text style={styles.intro}>Generate a schema-checked draft shaped by the group’s shared input. Private member details are not shown in explanations.</Text> : null}
+    </View> : locked && !generating && !error ? <Text style={styles.intro}>Generate a schema-checked draft shaped by the group’s shared input. Private member details are not shown in explanations.</Text> : null}
   </Screen>;
 }
 
