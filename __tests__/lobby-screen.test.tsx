@@ -82,4 +82,15 @@ describe('LobbyScreen', () => {
     expect(screen.queryByTestId(`remove-member-${memberId}`)).toBeNull();
     expect(screen.queryByText('Remove')).toBeNull();
   });
+
+  it('shows Enter preferences after this member completes locked constraints', async () => {
+    const startedLobby: Lobby = {
+      ...lobby, startedAt: '2026-09-01T01:00:00.000Z', constraintsLockedAt: '2026-09-01T01:15:00.000Z',
+      members: lobby.members.map((member) => ({ ...member, constraintComplete: member.memberId === organizerId })),
+    };
+    const onPreferences = jest.fn();
+    const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} onConstraints={jest.fn()} onPreferences={onPreferences} loadAction={jest.fn(async () => startedLobby)} readyAction={jest.fn()} removeAction={jest.fn()} startAction={jest.fn()} closeAction={jest.fn()} subscribeAction={subscription} />);
+    await waitFor(() => screen.getByTestId('open-preferences')); await fireEvent.press(screen.getByTestId('open-preferences'));
+    expect(onPreferences).toHaveBeenCalled(); expect(screen.queryByText('Add my constraints')).toBeNull();
+  });
 });

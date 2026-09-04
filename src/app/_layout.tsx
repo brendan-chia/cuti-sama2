@@ -26,10 +26,15 @@ export default function RootLayout() {
         <Stack.Screen name="recover" options={{ title: 'Recover room access' }} />
         <Stack.Screen name="invite/[token]" options={{ title: 'Trip invitation' }} />
         <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Lobby' }} />
+        <Stack.Screen name="trip/[tripId]/constraints" options={{ title: 'Trip constraints' }} />
+        <Stack.Screen name="trip/[tripId]/room" options={{ title: 'Preference table' }} />
         <Stack.Screen name="trip/[tripId]/share" options={{ title: 'Invite the group' }} />
         <Stack.Screen name="trip/[tripId]/reveal" options={{ title: 'Group match' }} />
         <Stack.Screen name="trip/[tripId]/destinations" options={{ title: 'Destinations' }} />
         <Stack.Screen name="trip/[tripId]/vote" options={{ title: 'Vote' }} />
+        <Stack.Screen name="trip/[tripId]/itinerary/index" options={{ title: 'Itinerary' }} />
+        <Stack.Screen name="trip/[tripId]/itinerary/revise" options={{ title: 'Revise itinerary' }} />
+        <Stack.Screen name="trip/[tripId]/itinerary/[version]" options={{ title: 'Itinerary version' }} />
       </Stack>
     </GestureHandlerRootView>
   );

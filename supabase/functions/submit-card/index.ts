@@ -11,11 +11,11 @@ Deno.serve(async (request) => {
   const parsed = SubmitCardPayloadSchema.safeParse(await requestJson(request));
   if (!parsed.success) return json({ error: 'Preference card is invalid.' }, 400);
   const input = parsed.data;
-  let claim; try { claim = await beginOperation(client, 'submit-card', input.idempotencyKey, { tripId: input.tripId, roundId: input.roundId, value: input.value }); }
+  let claim; try { claim = await beginOperation(client, 'submit-card', input.idempotencyKey, { tripId: input.tripId, roundId: input.roundId, roundType: input.roundType, choiceId: input.choiceId, customText: input.customText }); }
   catch (cause) { const code = cause instanceof Error ? cause.message : ''; return json({ error: code }, code === 'IDEMPOTENCY_KEY_REUSED' ? 409 : 500); }
   if (claim.replay) return json(claim.replay.body, claim.replay.status);
   if (claim.inProgress) return json({ error: 'OPERATION_IN_PROGRESS' }, 409);
-  const { data, error } = await client.rpc('submit_preference_card', { p_trip_id: input.tripId, p_round_id: input.roundId, p_value: input.value, p_idempotency_key: input.idempotencyKey });
+  const { data, error } = await client.rpc('submit_structured_preference_card', { p_trip_id: input.tripId, p_round_id: input.roundId, p_round_type: input.roundType, p_choice_id: input.choiceId, p_custom_text: input.customText, p_idempotency_key: input.idempotencyKey });
   if (error) {
     if (error.code === '42501') { const body = { error: error.message }; await completeOperation(claim, body, 403); return json(body, 403); }
     if (error.code === 'P0002') { const body = { error: error.message }; await completeOperation(claim, body, 404); return json(body, 404); }

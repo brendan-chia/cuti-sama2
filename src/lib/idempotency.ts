@@ -10,7 +10,21 @@ function stable(value: unknown): string {
 }
 const storageKey = (operation: string, scope: string) => `cutisama2.operation.${operation}.${scope}`;
 
-export function createIdempotencyStore(storage: AsyncStorageDriver, uuid = createUuid, digest = (value: string) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value), now = () => Date.now()) {
+export async function operationFingerprint(value: string) {
+  try { return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value); }
+  catch {
+    // WebCrypto is unavailable on LAN HTTP origins. This local fingerprint only
+    // compares pending retries; server-side idempotency still uses SHA-256.
+    let first = 0x811c9dc5; let second = 0x9e3779b9;
+    for (let index = 0; index < value.length; index += 1) {
+      const code = value.charCodeAt(index); first = Math.imul(first ^ code, 0x01000193); second = Math.imul(second ^ code, 0x85ebca6b);
+    }
+    const block = `${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}`;
+    return block.repeat(4);
+  }
+}
+
+export function createIdempotencyStore(storage: AsyncStorageDriver, uuid = createUuid, digest = operationFingerprint, now = () => Date.now()) {
   return {
     async keyFor(operation: string, scope: string, input: unknown) {
       const fingerprint = await digest(stable(input)); const target = storageKey(operation, scope);

@@ -24,13 +24,10 @@ describe('round state', () => {
     expect(canMemberSubmit({ participants, revealedAt: null, closedAt: null }, participants[2].memberId)).toBe(false);
   });
 
-  it('advances through all five round kinds', () => {
+  it('advances through the three illustrated card rounds', () => {
     expect(nextRoundKind(null)).toBe('vibe');
     expect(nextRoundKind('vibe')).toBe('pace');
     expect(nextRoundKind('pace')).toBe('must_have');
-    expect(nextRoundKind('must_have')).toBe('nice_to_have');
-    expect(nextRoundKind('nice_to_have')).toBe('avoid');
-    expect(nextRoundKind('avoid')).toBeNull();
+    expect(nextRoundKind('must_have')).toBeNull();
   });
 });
-

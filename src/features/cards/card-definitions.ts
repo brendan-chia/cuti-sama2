@@ -1,16 +1,31 @@
-import type { PreferenceCardDefinition } from '../../../packages/contracts/src/preferences';
+import type { PreferenceChoice, PreferenceRoundKind } from '../../../packages/contracts/src/preferences';
+import { colors } from '@/theme/tokens';
 
-export const preferenceCards: PreferenceCardDefinition[] = [
-  { kind: 'vibe', label: 'Vibe', example: 'e.g. quiet beach days with lively dinners', accessibleName: 'Vibe preference. Describe how you want the trip to feel.' },
-  { kind: 'pace', label: 'Pace', example: 'e.g. one main activity each day', accessibleName: 'Pace preference. Describe how full or relaxed each day should be.' },
-  { kind: 'must_have', label: 'Must-have', example: 'e.g. easy access to halal food', accessibleName: 'Must-have preference. Add one thing the trip needs to include.' },
-  { kind: 'nice_to_have', label: 'Nice-to-have', example: 'e.g. a hotel pool or sunset view', accessibleName: 'Nice-to-have preference. Add something valuable but optional.' },
-  { kind: 'avoid', label: 'Avoid / dealbreaker', example: 'e.g. overnight buses or shared bathrooms', accessibleName: 'Avoid or dealbreaker preference. Add something the trip must avoid.' },
+export const roundCopy: Record<PreferenceRoundKind, { title: string; instruction: string }> = {
+  vibe: { title: 'Vibe', instruction: 'Choose the atmosphere you want this trip to have.' },
+  pace: { title: 'Pace', instruction: 'Choose how full or flexible each day should feel.' },
+  must_have: { title: 'Must-Have', instruction: 'Choose one experience that would make this trip worthwhile for you.' },
+};
+const card = (value: PreferenceChoice) => value;
+export const preferenceChoices: PreferenceChoice[] = [
+  card({ id: 'quiet', roundType: 'vibe', title: 'Quiet', description: 'Peaceful places, privacy and fewer crowds', illustration: 'moon-cabin', accentColor: colors.sky, accessibilityLabel: 'Quiet vibe', accessibilityHint: 'Peaceful places, privacy, fewer crowds and calmer surroundings.', itineraryTags: ['quiet', 'privacy', 'low-crowd'], paceValue: null }),
+  card({ id: 'chill', roundType: 'vibe', title: 'Chill', description: 'Slow mornings, flexible plans and downtime', illustration: 'hammock', accentColor: colors.sand, accessibilityLabel: 'Chill vibe', accessibilityHint: 'Slow mornings, flexible plans, rest and plenty of downtime.', itineraryTags: ['rest', 'flexible', 'cafe'], paceValue: null }),
+  card({ id: 'lively', roundType: 'vibe', title: 'Lively', description: 'Markets, events, busy streets and nightlife', illustration: 'night-market', accentColor: colors.coral, accessibilityLabel: 'Lively vibe', accessibilityHint: 'Social places, busy streets, markets, events and nightlife.', itineraryTags: ['social', 'market', 'nightlife'], paceValue: null }),
+  card({ id: 'adventurous', roundType: 'vibe', title: 'Adventurous', description: 'Exploration, movement and energetic activities', illustration: 'mountain', accentColor: colors.gold, accessibilityLabel: 'Adventurous vibe', accessibilityHint: 'Exploration, physical experiences and energetic activities.', itineraryTags: ['exploration', 'active', 'outdoors'], paceValue: null }),
+  card({ id: 'balanced', roundType: 'vibe', title: 'Balanced', description: 'A mix of rest, exploration and social time', illustration: 'sun-and-trail', accentColor: colors.sky, accessibilityLabel: 'Balanced vibe', accessibilityHint: 'A combination of relaxation, exploration and social activities.', itineraryTags: ['balanced', 'rest', 'exploration'], paceValue: null }),
+  card({ id: 'slow_easy', roundType: 'pace', title: 'Slow & Easy', description: '1–2 main activities with generous rest time', illustration: 'sunrise', accentColor: colors.sand, accessibilityLabel: 'Slow and easy pace', accessibilityHint: 'Approximately one or two main activities each day with generous rest time.', itineraryTags: ['late-start', 'rest-heavy'], paceValue: 1 }),
+  card({ id: 'balanced', roundType: 'pace', title: 'Balanced', description: '2–3 activities with planned breaks', illustration: 'timeline', accentColor: colors.sky, accessibilityLabel: 'Balanced pace', accessibilityHint: 'Approximately two or three activities each day with planned breaks.', itineraryTags: ['mid-start', 'planned-breaks'], paceValue: 2 }),
+  card({ id: 'packed', roundType: 'pace', title: 'Packed', description: 'Several stops, earlier starts and fuller days', illustration: 'route-map', accentColor: colors.coral, accessibilityLabel: 'Packed pace', accessibilityHint: 'Several activities, earlier starts and a fuller daily schedule.', itineraryTags: ['early-start', 'high-density'], paceValue: 4 }),
+  card({ id: 'spontaneous', roundType: 'pace', title: 'Spontaneous', description: 'Fewer bookings and room for decisions', illustration: 'open-road', accentColor: colors.gold, accessibilityLabel: 'Spontaneous pace', accessibilityHint: 'Fewer fixed bookings and more room for decisions during the trip.', itineraryTags: ['flexible', 'low-booking'], paceValue: 0 }),
+  card({ id: 'food_hunt', roundType: 'must_have', title: 'Food Hunt', description: 'Local dishes, cafés, restaurants and markets', illustration: 'food-stall', accentColor: colors.coral, accessibilityLabel: 'Food Hunt must-have', accessibilityHint: 'Street food, restaurants, cafés, local dishes and markets.', itineraryTags: ['food', 'market', 'cafe'], paceValue: null }),
+  card({ id: 'nature', roundType: 'must_have', title: 'Nature', description: 'Beaches, waterfalls, forests and mountains', illustration: 'waterfall', accentColor: colors.sky, accessibilityLabel: 'Nature must-have', accessibilityHint: 'Beaches, waterfalls, forests, mountains and scenic places.', itineraryTags: ['nature', 'scenic', 'outdoors'], paceValue: null }),
+  card({ id: 'culture', roundType: 'must_have', title: 'Culture', description: 'Heritage, architecture and local traditions', illustration: 'heritage', accentColor: colors.gold, accessibilityLabel: 'Culture must-have', accessibilityHint: 'Museums, heritage areas, architecture and local traditions.', itineraryTags: ['culture', 'museum', 'heritage'], paceValue: null }),
+  card({ id: 'adventure', roundType: 'must_have', title: 'Adventure', description: 'Hiking, diving, rafting and active experiences', illustration: 'rafting', accentColor: colors.coral, accessibilityLabel: 'Adventure must-have', accessibilityHint: 'Diving, hiking, rafting, cycling and other active experiences.', itineraryTags: ['adventure', 'active', 'outdoors'], paceValue: null }),
+  card({ id: 'nightlife', roundType: 'must_have', title: 'Nightlife', description: 'Live music, bars and evening entertainment', illustration: 'music-night', accentColor: colors.sky, accessibilityLabel: 'Nightlife must-have', accessibilityHint: 'Bars, live music, evening entertainment and late-night areas.', itineraryTags: ['nightlife', 'music', 'evening'], paceValue: null }),
+  card({ id: 'shopping', roundType: 'must_have', title: 'Shopping', description: 'Markets, crafts, fashion and souvenirs', illustration: 'shopping-bag', accentColor: colors.sand, accessibilityLabel: 'Shopping must-have', accessibilityHint: 'Malls, local crafts, fashion, markets and souvenirs.', itineraryTags: ['shopping', 'crafts', 'market'], paceValue: null }),
+  card({ id: 'wellness', roundType: 'must_have', title: 'Wellness', description: 'Spas, hot springs and restorative time', illustration: 'hot-spring', accentColor: colors.gold, accessibilityLabel: 'Wellness must-have', accessibilityHint: 'Spas, retreats, hot springs and restorative experiences.', itineraryTags: ['wellness', 'spa', 'rest'], paceValue: null }),
+  card({ id: 'custom', roundType: 'must_have', title: 'Add Your Own', description: 'Create one specific experience card', illustration: 'postcard', accentColor: colors.sky, accessibilityLabel: 'Add your own Must-Have', accessibilityHint: 'Create a custom card for one specific experience.', itineraryTags: ['custom'], paceValue: null, custom: true }),
 ];
-
-export function preferenceCardFor(kind: PreferenceCardDefinition['kind']) {
-  const card = preferenceCards.find((candidate) => candidate.kind === kind);
-  if (!card) throw new Error(`Missing preference card for ${kind}.`);
-  return card;
-}
-
+export function choicesForRound(kind: PreferenceRoundKind) { return preferenceChoices.filter((item) => item.roundType === kind); }
+export function preferenceChoiceFor(kind: PreferenceRoundKind, id: string) { return preferenceChoices.find((item) => item.roundType === kind && item.id === id) ?? null; }
+export function roundLabel(kind: PreferenceRoundKind) { return roundCopy[kind].title; }

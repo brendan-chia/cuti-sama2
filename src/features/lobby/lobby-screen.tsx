@@ -19,6 +19,7 @@ type Props = {
   onAccessRevoked: () => void;
   onIdentityLost?: () => void;
   onConstraints?: () => void;
+  onPreferences?: () => void;
   loadAction?: typeof loadLobby;
   readyAction?: typeof setLobbyReady;
   removeAction?: typeof removeLobbyMember;
@@ -31,7 +32,7 @@ function initials(member: LobbyMember) {
   return member.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 }
 
-export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost, onConstraints, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
+export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost, onConstraints, onPreferences, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [onlineMembers, setOnlineMembers] = useState<Set<string>>(new Set());
   const [connected, setConnected] = useState(false);
@@ -110,7 +111,8 @@ export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost,
   return <Screen footer={<View style={styles.footerActions}>
     {!started ? <AppButton label={currentMember?.ready ? 'I need more time' : 'I’m ready'} loading={busy} onPress={() => void mutate(() => readyAction(tripId, !currentMember?.ready))} variant={currentMember?.ready ? 'secondary' : 'primary'} /> : null}
     {isOrganizer && !started ? <AppButton disabled={!allReady} label="Start planning" loading={busy} onPress={() => void mutate(() => startAction(tripId))} testID="start-planning" /> : null}
-    {started && onConstraints ? <AppButton label="Add my constraints" onPress={onConstraints} testID="open-constraints" /> : null}
+    {started && currentMember?.constraintComplete && lobby.constraintsLockedAt && onPreferences ? <AppButton label="Enter preferences" onPress={onPreferences} testID="open-preferences" /> : null}
+    {started && (!currentMember?.constraintComplete || !lobby.constraintsLockedAt) && onConstraints ? <AppButton label={currentMember?.constraintComplete ? 'Review my constraints' : 'Add my constraints'} onPress={onConstraints} testID="open-constraints" /> : null}
   </View>} testID="trip-lobby-screen">
     <View style={styles.headerRow}><View><Text style={styles.kicker}>TRIP LOBBY</Text><Text style={styles.tripName}>{lobby.tripName}</Text></View><View style={styles.connection}><View style={[styles.connectionDot, connected ? styles.online : null]} /><Text style={styles.connectionText}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
     <Text style={styles.mode}>{mode?.title}</Text>

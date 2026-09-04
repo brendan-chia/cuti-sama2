@@ -7,7 +7,7 @@ import { authenticatedClient, corsHeaders, json, requestJson } from '../_shared/
 const PayloadSchema = z.object({ tripId: z.uuid(), idempotencyKey: z.uuid() }).strict();
 type Constraint = { member_id: string; budget_max: number | null; currency: string | null; max_travel_minutes: number | null; accessibility_requirements: string | null; accessibility_visibility_consent: boolean; starts_on: string | null; ends_on: string | null; updated_at: string };
 type Round = { id: string; kind: 'vibe' | 'pace' | 'must_have' | 'nice_to_have' | 'avoid'; closed_at: string | null };
-type Submission = { round_id: string; value: string; updated_at: string };
+type Submission = { round_id: string; value: string; pace_value: number | null; updated_at: string };
 type HardConstraints = { budgetMaximum: number | null; currency: string | null; accessibilityRequirements: string[]; dealbreakers: string[]; maxTravelMinutes: number | null; startsOn: string | null; endsOn: string | null };
 
 const normalize = (value: string) => value.trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -100,10 +100,10 @@ Deno.serve(async (request) => {
   const trip = tripQuery.data;
   if (!trip.destination_locked_at || !trip.locked_destination_option_id || !trip.locked_destination_name) { await fail(service, operationId, 'Lock a destination before generating an itinerary.'); return json({ error: 'Lock a destination before generating an itinerary.' }, 409); }
   const roundIds = roundQuery.data.filter((round) => round.closed_at).map((round) => round.id);
-  const submissionQuery = roundIds.length ? await service.from('preference_submissions').select('round_id,value,updated_at').in('round_id', roundIds).order('round_id') : { data: [] as Submission[], error: null };
+  const submissionQuery = roundIds.length ? await service.from('preference_submissions').select('round_id,value,pace_value,updated_at').in('round_id', roundIds).order('round_id') : { data: [] as Submission[], error: null };
   if (submissionQuery.error) { await fail(service, operationId, 'Could not load group preferences.'); return json({ error: 'Could not load group preferences.' }, 500); }
   const rounds = roundQuery.data as Round[]; const submissions = submissionQuery.data as Submission[]; const roundById = new Map(rounds.map((round) => [round.id, round]));
-  const groupedSignals = submissions.filter((item) => roundById.get(item.round_id)?.kind !== 'avoid').map((item) => ({ kind: roundById.get(item.round_id)?.kind, value: item.value }));
+  const groupedSignals = submissions.filter((item) => roundById.get(item.round_id)?.kind !== 'avoid').map((item) => ({ kind: roundById.get(item.round_id)?.kind, value: item.value, paceValue: item.pace_value }));
   const dealbreakers = submissions.filter((item) => roundById.get(item.round_id)?.kind === 'avoid').map((item) => item.value);
   const constraints = constraintQuery.data as Constraint[]; const hard = hardConstraints(constraints, dealbreakers, { startsOn: trip.starts_on, endsOn: trip.ends_on });
   if (hard.currency === 'MIX' || (hard.startsOn && hard.endsOn && hard.startsOn > hard.endsOn)) {

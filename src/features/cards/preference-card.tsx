@@ -1,35 +1,49 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { PreferenceCardDefinition } from '../../../packages/contracts/src/preferences';
+import type { PreferenceChoice } from '../../../packages/contracts/src/preferences';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
-type Props = {
-  card: PreferenceCardDefinition;
-  value: string;
-  selected: boolean;
-  disabled?: boolean;
-  error?: string;
-  onChange: (value: string) => void;
+const sceneMarks: Record<string, string> = {
+  'moon-cabin': '☾ ⌂', hammock: '◡ ☼', 'night-market': '✦ ✦', mountain: '△ ↗', 'sun-and-trail': '☼ ≋',
+  sunrise: '☼ —', timeline: '● ┄ ●', 'route-map': '● ╱ ●', 'open-road': '◇ ↝', 'food-stall': '⌂ ♨',
+  waterfall: '≈ ↓', heritage: '▥ ◇', rafting: '≈ ▲', 'music-night': '♪ ✦', 'shopping-bag': '▢ ◇',
+  'hot-spring': '≋ ♨', postcard: '✦ ▱',
 };
 
-export function PreferenceCard({ card, value, selected, disabled = false, error, onChange }: Props) {
-  return <View style={[styles.card, selected ? styles.selected : null, error ? styles.errorBorder : null]} testID={`preference-card-${card.kind}`}>
-    <View accessibilityLabel={card.accessibleName} accessibilityState={{ disabled, selected }} accessible style={styles.topline} testID={`preference-card-accessible-${card.kind}`}><Text style={styles.label}>{card.label}</Text><Text style={styles.state}>{selected ? 'SELECTED' : 'YOUR CARD'}</Text></View>
-    <Text style={styles.example}>{card.example}</Text>
-    <TextInput accessibilityLabel={`${card.label} answer`} editable={!disabled} maxLength={240} multiline onChangeText={onChange} placeholder="Write a short, specific answer" placeholderTextColor={colors.disabled} selectionColor={colors.coral} style={styles.input} value={value} />
-    <Text style={styles.counter}>{value.length} / 240</Text>
-    {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-  </View>;
+type Props = { card: PreferenceChoice; selected: boolean; customText?: string | null; disabled?: boolean; onPress?: () => void; compact?: boolean };
+
+export function PreferenceCard({ card, selected, customText, disabled = false, onPress, compact = false }: Props) {
+  return <Pressable
+    accessibilityHint={`${card.accessibilityHint} Double tap to select this card.`}
+    accessibilityLabel={customText || card.accessibilityLabel}
+    accessibilityRole="radio"
+    accessibilityState={{ disabled, selected }}
+    disabled={disabled}
+    onPress={onPress}
+    style={({ pressed }) => [styles.card, compact ? styles.compact : null, { borderColor: selected ? card.accentColor : colors.border }, selected ? styles.selected : null, pressed ? styles.pressed : null]}
+    testID={`preference-card-${card.roundType}-${card.id}`}
+  >
+    <View style={[styles.illustration, { backgroundColor: `${card.accentColor}22` }]}>
+      <View style={[styles.sun, { backgroundColor: card.accentColor }]} />
+      <View style={[styles.horizon, { borderColor: card.accentColor }]} />
+      <Text style={[styles.sceneMark, { color: card.accentColor }]}>{sceneMarks[card.illustration] ?? '✦'}</Text>
+    </View>
+    <View style={styles.copy}>
+      <Text numberOfLines={2} style={styles.title}>{customText || card.title}</Text>
+      <Text numberOfLines={3} style={styles.description}>{customText ? 'Your personal Must-Have' : card.description}</Text>
+    </View>
+    {selected ? <Text style={[styles.selectedLabel, { color: card.accentColor }]}>SELECTED</Text> : null}
+  </Pressable>;
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.midnightRaised, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 2, minHeight: 220, padding: spacing.xl },
-  selected: { borderColor: colors.gold }, errorBorder: { borderColor: colors.danger },
-  topline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  label: { color: colors.white, flexShrink: 1, fontSize: typography.heading, fontWeight: '900' },
-  state: { color: colors.gold, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.2 },
-  example: { color: colors.textMuted, fontSize: typography.small, lineHeight: 20, marginTop: spacing.sm },
-  input: { color: colors.white, flexGrow: 1, fontSize: typography.body, lineHeight: 24, marginTop: spacing.xl, minHeight: 88, padding: 0, textAlignVertical: 'top' },
-  counter: { color: colors.textMuted, fontSize: typography.label, marginTop: spacing.sm, textAlign: 'right' },
-  error: { color: colors.danger, fontSize: typography.small, lineHeight: 19, marginTop: spacing.sm },
+  card: { backgroundColor: colors.midnightRaised, borderRadius: radius.md, borderWidth: 2, height: 232, overflow: 'hidden', width: 154 },
+  compact: { height: 206, width: 140 }, selected: { transform: [{ translateY: -6 }, { scale: 1.025 }] }, pressed: { opacity: 0.86 },
+  illustration: { height: 108, justifyContent: 'center', overflow: 'hidden', padding: spacing.md },
+  sun: { borderRadius: radius.pill, height: 36, opacity: 0.9, position: 'absolute', right: 14, top: 14, width: 36 },
+  horizon: { borderRadius: 70, borderTopWidth: 2, bottom: -34, height: 86, left: -8, position: 'absolute', right: -8 },
+  sceneMark: { fontSize: 29, fontWeight: '800', letterSpacing: 4 }, copy: { flex: 1, padding: spacing.md },
+  title: { color: colors.white, fontSize: typography.body, fontWeight: '900', letterSpacing: -0.2 },
+  description: { color: colors.textMuted, fontSize: 11, lineHeight: 16, marginTop: spacing.xs },
+  selectedLabel: { bottom: spacing.sm, fontSize: 9, fontWeight: '900', letterSpacing: 1.1, position: 'absolute', right: spacing.md },
 });
