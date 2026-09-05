@@ -24,6 +24,31 @@ const subscription = jest.fn(async (_lobby, callbacks) => {
 });
 
 describe('LobbyScreen', () => {
+  it('waits for pending subscription setup and removal before subscribing again', async () => {
+    let finishSetup!: (cleanup: () => Promise<void>) => void;
+    let finishRemoval!: () => void;
+    const removal = new Promise<void>((resolve) => { finishRemoval = resolve; });
+    const cleanup = jest.fn(() => removal);
+    const subscribeAction = jest.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { finishSetup = resolve; }))
+      .mockResolvedValue(async () => undefined);
+    const props = { tripId: lobby.tripId, onInvite: jest.fn(), onAccessRevoked: jest.fn(), loadAction: jest.fn(async () => lobby), subscribeAction };
+    const screen = await render(<LobbyScreen {...props} />);
+    await waitFor(() => expect(subscribeAction).toHaveBeenCalledTimes(1));
+    await screen.rerender(<LobbyScreen {...props} onAccessRevoked={jest.fn()} />);
+    expect(subscribeAction).toHaveBeenCalledTimes(1);
+    await act(async () => { finishSetup(cleanup); });
+    await waitFor(() => expect(cleanup).toHaveBeenCalledTimes(1));
+    expect(subscribeAction).toHaveBeenCalledTimes(1);
+    await act(async () => { finishRemoval(); });
+    await waitFor(() => expect(subscribeAction).toHaveBeenCalledTimes(2));
+  });
+
+  it('shows subscription failures without an unhandled rejection', async () => {
+    const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} loadAction={jest.fn(async () => lobby)} subscribeAction={jest.fn().mockRejectedValue(new Error('Realtime unavailable'))} />);
+    await waitFor(() => expect(screen.getByText('Realtime unavailable')).toBeTruthy());
+  });
+
   beforeEach(() => jest.clearAllMocks());
 
   it('shows the roster and a specific disabled-start explanation', async () => {
@@ -92,5 +117,22 @@ describe('LobbyScreen', () => {
     const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} onConstraints={jest.fn()} onPreferences={onPreferences} loadAction={jest.fn(async () => startedLobby)} readyAction={jest.fn()} removeAction={jest.fn()} startAction={jest.fn()} closeAction={jest.fn()} subscribeAction={subscription} />);
     await waitFor(() => screen.getByTestId('open-preferences')); await fireEvent.press(screen.getByTestId('open-preferences'));
     expect(onPreferences).toHaveBeenCalled(); expect(screen.queryByText('Add my constraints')).toBeNull();
+  });
+
+  it.each([false, true])('opens the quest before legacy constraint or preference routes (constraints complete: %s)', async (constraintComplete) => {
+    const startedLobby: Lobby = {
+      ...lobby, startedAt: '2026-09-01T01:00:00.000Z',
+      constraintsLockedAt: constraintComplete ? '2026-09-01T01:15:00.000Z' : null,
+      members: lobby.members.map((member) => ({ ...member, constraintComplete })),
+    };
+    const onQuest = jest.fn(); const onPreferences = jest.fn(); const onConstraints = jest.fn();
+    const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} onQuest={onQuest} onPreferences={onPreferences} onConstraints={onConstraints} loadAction={jest.fn(async () => startedLobby)} readyAction={jest.fn()} removeAction={jest.fn()} startAction={jest.fn()} closeAction={jest.fn()} subscribeAction={subscription} />);
+    await waitFor(() => expect(screen.getByTestId('open-trip-quest')).toBeTruthy());
+    expect(screen.queryByTestId('open-preferences')).toBeNull();
+    expect(screen.queryByTestId('open-constraints')).toBeNull();
+    await fireEvent.press(screen.getByTestId('open-trip-quest'));
+    expect(onQuest).toHaveBeenCalledTimes(1);
+    expect(onPreferences).not.toHaveBeenCalled();
+    expect(onConstraints).not.toHaveBeenCalled();
   });
 });

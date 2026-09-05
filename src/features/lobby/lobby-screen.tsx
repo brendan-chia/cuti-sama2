@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LobbySchema, memberLabel, type Lobby, type LobbyMember } from '../../../packages/contracts/src/lobby';
@@ -20,6 +20,7 @@ type Props = {
   onIdentityLost?: () => void;
   onConstraints?: () => void;
   onPreferences?: () => void;
+  onQuest?: () => void;
   loadAction?: typeof loadLobby;
   readyAction?: typeof setLobbyReady;
   removeAction?: typeof removeLobbyMember;
@@ -32,7 +33,7 @@ function initials(member: LobbyMember) {
   return member.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 }
 
-export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost, onConstraints, onPreferences, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
+export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost, onConstraints, onPreferences, onQuest, loadAction = loadLobby, readyAction = setLobbyReady, removeAction = removeLobbyMember, startAction = startTripPlanning, closeAction = closeInvitation, subscribeAction = subscribeToLobby }: Props) {
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [onlineMembers, setOnlineMembers] = useState<Set<string>>(new Set());
   const [connected, setConnected] = useState(false);
@@ -56,17 +57,32 @@ export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost,
 
   const subscribedTripId = lobby?.tripId;
   const subscribedMemberId = lobby?.currentMemberId;
+  const subscriptionLifecycle = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
     if (!subscribedTripId || !subscribedMemberId) return undefined;
     let cleanup: (() => Promise<unknown>) | undefined;
     let active = true;
-    void subscribeAction({ tripId: subscribedTripId, currentMemberId: subscribedMemberId }, {
-      onChanged: () => void refresh(),
-      onOnlineMembers: (members) => active && setOnlineMembers(members),
-      onConnection: (value) => active && setConnected(value),
-      onAccessRevoked,
-    }).then((value) => { if (active) cleanup = value; else void value(); });
-    return () => { active = false; if (cleanup) void cleanup(); };
+    // Supabase returns the existing channel for a topic until removal finishes.
+    // Serialize setup and teardown, including effect replays and pending auth.
+    const setup = subscriptionLifecycle.current.then(async () => {
+      if (!active) return;
+      cleanup = await subscribeAction({ tripId: subscribedTripId, currentMemberId: subscribedMemberId }, {
+        onChanged: () => { if (active) void refresh(); },
+        onOnlineMembers: (members) => { if (active) setOnlineMembers(members); },
+        onConnection: (value) => { if (active) setConnected(value); },
+        onAccessRevoked: () => { if (active) onAccessRevoked(); },
+      });
+    }).catch((cause) => {
+      if (active) {
+        setConnected(false);
+        setError(cause instanceof Error ? cause.message : 'Could not connect to the live lobby.');
+      }
+    });
+    subscriptionLifecycle.current = setup;
+    return () => {
+      active = false;
+      subscriptionLifecycle.current = setup.then(async () => { await cleanup?.(); }).catch(() => undefined);
+    };
   }, [subscribedMemberId, subscribedTripId, onAccessRevoked, refresh, subscribeAction]);
 
   const currentMember = useMemo(() => lobby?.members.find((member) => member.memberId === lobby.currentMemberId), [lobby]);
@@ -111,20 +127,21 @@ export function LobbyScreen({ tripId, onInvite, onAccessRevoked, onIdentityLost,
   return <Screen footer={<View style={styles.footerActions}>
     {!started ? <AppButton label={currentMember?.ready ? 'I need more time' : 'I’m ready'} loading={busy} onPress={() => void mutate(() => readyAction(tripId, !currentMember?.ready))} variant={currentMember?.ready ? 'secondary' : 'primary'} /> : null}
     {isOrganizer && !started ? <AppButton disabled={!allReady} label="Start planning" loading={busy} onPress={() => void mutate(() => startAction(tripId))} testID="start-planning" /> : null}
-    {started && currentMember?.constraintComplete && lobby.constraintsLockedAt && onPreferences ? <AppButton label="Enter preferences" onPress={onPreferences} testID="open-preferences" /> : null}
-    {started && (!currentMember?.constraintComplete || !lobby.constraintsLockedAt) && onConstraints ? <AppButton label={currentMember?.constraintComplete ? 'Review my constraints' : 'Add my constraints'} onPress={onConstraints} testID="open-constraints" /> : null}
+    {started && onQuest ? <AppButton label="Enter our trip quest" onPress={onQuest} testID="open-trip-quest" /> : null}
+    {started && !onQuest && currentMember?.constraintComplete && lobby.constraintsLockedAt && onPreferences ? <AppButton label="Enter preferences" onPress={onPreferences} testID="open-preferences" /> : null}
+    {started && !onQuest && (!currentMember?.constraintComplete || !lobby.constraintsLockedAt) && onConstraints ? <AppButton label={currentMember?.constraintComplete ? 'Review my constraints' : 'Add my constraints'} onPress={onConstraints} testID="open-constraints" /> : null}
   </View>} testID="trip-lobby-screen">
     <View style={styles.headerRow}><View><Text style={styles.kicker}>TRIP LOBBY</Text><Text style={styles.tripName}>{lobby.tripName}</Text></View><View style={styles.connection}><View style={[styles.connectionDot, connected ? styles.online : null]} /><Text style={styles.connectionText}>{connected ? 'Live' : 'Connecting'}</Text></View></View>
-    <Text style={styles.mode}>{mode?.title}</Text>
+    <Text style={styles.mode}>{onQuest ? 'Dates → Wishlist → Vote → Explore → Budget' : mode?.title}</Text>
     {stale || reconnecting ? <StaleStateBanner reconnecting={reconnecting} /> : null}
-    {started ? <View style={styles.startedBanner}><Text style={styles.startedTitle}>{lobby.constraintsLockedAt ? 'Constraints locked' : 'Planning has begun'}</Text><Text style={styles.body}>{lobby.constraintsLockedAt ? 'The group’s hard boundaries are ready for the next planning stage.' : `Hard constraints are next · ${constraintCount} of ${lobby.members.length} complete.`}</Text></View> : null}
+    {started ? <View style={styles.startedBanner}><Text style={styles.startedTitle}>{onQuest ? 'Your trip quest is open' : lobby.constraintsLockedAt ? 'Constraints locked' : 'Planning has begun'}</Text><Text style={styles.body}>{onQuest ? 'Five chapters to plan together. Start by finding a travel window that works for everyone. Joining closes when the quest opens.' : lobby.constraintsLockedAt ? 'The group’s hard boundaries are ready for the next planning stage.' : `Hard constraints are next · ${constraintCount} of ${lobby.members.length} complete.`}</Text></View> : null}
     <ScrollView contentContainerStyle={styles.playerRow} horizontal showsHorizontalScrollIndicator={false}>
       {lobby.members.map((member) => <View key={member.memberId} style={styles.player}><View style={[styles.avatar, member.ready ? styles.avatarReady : null]}><Text style={styles.avatarText}>{initials(member)}</Text><View style={[styles.presenceDot, (onlineMembers.has(member.memberId) || member.memberId === lobby.currentMemberId) ? styles.online : null]} /></View><Text numberOfLines={1} style={styles.playerName}>{memberLabel(member)}</Text><Text style={[styles.readyLabel, member.ready ? styles.ready : null]}>{member.ready ? 'READY' : 'GETTING READY'}</Text></View>)}
     </ScrollView>
     <View style={styles.table}><Text style={styles.tableKicker}>{lobby.members.length - notReadyCount} OF {lobby.members.length} READY</Text><Text style={styles.tableTitle}>{allReady ? 'The table is ready.' : 'Waiting for everyone.'}</Text><Text style={styles.body}>{allReady ? 'The organiser can start the planning flow.' : 'Start stays locked until every active member confirms they are ready.'}</Text></View>
     <View style={styles.rosterHeader}><Text style={styles.sectionTitle}>Travellers</Text><Text style={styles.count}>{lobby.members.length} / 8</Text></View>
     <View style={styles.roster}>{lobby.members.map((member) => <View key={member.memberId} style={styles.memberRow}><View style={styles.memberInfo}><Text style={styles.memberName}>{memberLabel(member)}{member.memberId === lobby.currentMemberId ? ' (you)' : ''}</Text><Text style={styles.memberMeta}>{member.role === 'organizer' ? 'Organiser' : member.ready ? 'Ready to begin' : 'Not ready yet'}</Text></View>{isOrganizer && member.role !== 'organizer' ? <Pressable accessibilityLabel={`Remove ${memberLabel(member)} from trip`} accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => confirmRemove(member)} testID={`remove-member-${member.memberId}`}><Text style={[styles.remove, busy ? styles.removeDisabled : null]}>{removingMemberId === member.memberId ? 'Removing…' : 'Remove'}</Text></Pressable> : null}</View>)}</View>
-    {isOrganizer ? <View style={styles.organizerActions}><AppButton label="Invite the group" onPress={onInvite} variant="secondary" />{lobby.joiningOpen ? <AppButton label="Close joining" loading={busy} onPress={confirmClose} variant="secondary" /> : <Text style={styles.closed}>Joining is closed</Text>}</View> : null}
+    {isOrganizer ? <View style={styles.organizerActions}>{!onQuest || !started ? <AppButton label="Invite the group" onPress={onInvite} variant="secondary" /> : null}{lobby.joiningOpen && (!onQuest || !started) ? <AppButton label="Close joining" loading={busy} onPress={confirmClose} variant="secondary" /> : <Text style={styles.closed}>{onQuest && started ? 'Your planning crew is set' : 'Joining is closed'}</Text>}</View> : null}
     {!allReady && isOrganizer && !started ? <Text accessibilityLiveRegion="polite" style={styles.startReason}>Start planning is disabled because {notReadyCount} active member{notReadyCount === 1 ? '' : 's'} still need to confirm.</Text> : null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
   </Screen>;

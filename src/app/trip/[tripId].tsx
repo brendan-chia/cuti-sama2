@@ -17,6 +17,7 @@ export default function TripLobbyRoute() {
       onInvite={() => router.push({ pathname: '/trip/[tripId]/share', params: { tripId: tripId ?? '' } })}
       onConstraints={() => router.push({ pathname: '/trip/[tripId]/constraints', params: { tripId: tripId ?? '' } })}
       onPreferences={() => router.push({ pathname: '/trip/[tripId]/room', params: { tripId: tripId ?? '' } })}
+      onQuest={() => router.push({ pathname: '/trip/[tripId]/quest', params: { tripId: tripId ?? '' } })}
       onIdentityLost={() => router.replace('/recover')}
       onAccessRevoked={() => {
         Alert.alert('Trip Room access ended', 'The organiser removed this membership or the room is no longer available.');

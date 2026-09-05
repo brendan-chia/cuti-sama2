@@ -1,15 +1,13 @@
 appId: com.cutisama2.app
-name: Create and restore a locked-destination Trip Room
+name: Create, restore, and open a Trip Quest
 ---
 - launchApp:
     clearState: true
 - assertVisible: "The group trip that finally leaves the chat."
 - tapOn: "Start a group trip"
-- assertVisible: "What kind of trip are you planning?"
+- assertVisible: "ONE CREW. FIVE LITTLE CHAPTERS."
 - tapOn: "Trip name"
 - inputText: "Langkawi long weekend"
-- tapOn: "Destination"
-- inputText: "Langkawi, Malaysia"
 - hideKeyboard
 - tapOn: "Create our Trip Room"
 - extendedWaitUntil:
@@ -22,3 +20,13 @@ name: Create and restore a locked-destination Trip Room
 - extendedWaitUntil:
     visible: "Langkawi long weekend"
     timeout: 10000
+- tapOn: "I’m ready"
+- tapOn: "Start planning"
+- extendedWaitUntil:
+    visible: "Enter our trip quest"
+    timeout: 10000
+- tapOn: "Enter our trip quest"
+- extendedWaitUntil:
+    visible: "Find your window."
+    timeout: 15000
+- assertVisible: "When could you get away?"

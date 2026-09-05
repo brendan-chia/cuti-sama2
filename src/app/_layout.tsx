@@ -26,6 +26,7 @@ export default function RootLayout() {
         <Stack.Screen name="recover" options={{ title: 'Recover room access' }} />
         <Stack.Screen name="invite/[token]" options={{ title: 'Trip invitation' }} />
         <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Lobby' }} />
+        <Stack.Screen name="trip/[tripId]/quest" options={{ headerShown: false }} />
         <Stack.Screen name="trip/[tripId]/constraints" options={{ title: 'Trip constraints' }} />
         <Stack.Screen name="trip/[tripId]/room" options={{ title: 'Preference table' }} />
         <Stack.Screen name="trip/[tripId]/share" options={{ title: 'Invite the group' }} />

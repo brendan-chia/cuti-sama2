@@ -1,31 +1,20 @@
 # CutiSama2
 
-CutiSama2 is an Expo React Native app for planning group trips from first invite to a shared, revisable itinerary. It combines private member input with deterministic matching and optional Groq-assisted wording and itinerary generation.
+CutiSama2 is an Expo React Native app that turns group trip planning into a five-chapter quest, from shared availability to a saved destination, attraction wishlist and budget.
 
 ## Current system
 
-The end-to-end planning journey is implemented:
+Name a room, invite the crew and confirm everyone is ready in the lobby. The quest then awards one shared stamp per chapter:
 
-1. An organiser creates a trip in one of three modes:
-   - **Destination locked** — enter one known destination and proceed toward itinerary planning.
-   - **Shortlist** — enter two to five destinations for group comparison and voting.
-   - **Undecided** — start from group constraints and discover suitable destinations.
-2. Guests join through private, expiring invitations using anonymous Supabase sessions.
-3. The realtime Lobby tracks active members, readiness, and organiser controls.
-4. Members privately submit dates, budget, origin, travel, accommodation, climate, visa, and accessibility constraints.
-5. The group completes three structured preference rounds: **Vibe**, **Pace**, and **Must-Have**.
-   - Cards are played directly by swiping upward from the hand.
-   - Double-tap remains available as an accessibility fallback.
-   - Must-Have supports a custom card of up to 60 characters.
-   - Choices remain hidden until each round is revealed.
-6. The group-match reveal calculates agreements, minority Must-Haves, and unresolved conflicts from submitted data. Groq may improve wording, but it cannot alter the deterministic facts.
-7. Destination handling follows the selected planning mode:
-   - A known destination is automatically locked when the trip is created.
-   - Shortlisted or discovered destinations can be evaluated, voted on, and locked by the organiser.
-8. A locked destination can be used to generate a schema-validated itinerary.
-9. Stored itineraries support version history, bounded revisions, semantic diffs, review, and activation.
+1. **Dates:** everyone submits availability. The organiser requests AI-ranked feasible travel windows, with a clearly labelled calendar fallback, then locks the dates.
+2. **Wishlist:** each traveller submits one to three countries from the 24-country collection. Picks stay private until all active travellers submit.
+3. **Vote:** the group’s unique countries become a swipe deck. Left means pass, right means agree; buttons provide an accessible alternative. Results reveal after all ballots. The most-liked country wins, ties go to the organiser, and zero likes reopen wishlists.
+4. **Explore:** the winning country opens on an interactive OpenStreetMap map, with 72 bundled attractions across the collection. The organiser selects the group’s stops.
+5. **Budget:** everyone enters a maximum whole-trip budget in MYR. The shared spending ceiling uses the lowest limit. The organiser completes the quest after all budgets arrive.
 
-Database migration `0015_lock_declared_destinations.sql` fixes older `destination_locked` trips by locking their sole declared destination and moves new trips of that mode directly into itinerary planning.
+The final plan saves the dates, country, attraction wishlist and budget. It is not a scheduled or priced itinerary. See [Trip quest mechanics and release notes](docs/trip-quest.md).
+
+Apply migration `0016_trip_quest.sql` and deploy the `suggest-trip-period` Edge Function before using the new quest. Existing preference, destination and itinerary routes remain available for older workflows; their data has not been migrated into quest records. New rooms use the quest flow.
 
 ## Technical stack
 

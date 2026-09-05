@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
         <Text style={styles.eyebrow}>PLAN TOGETHER. GO FURTHER.</Text>
         <Text style={styles.title}>The group trip that finally leaves the chat.</Text>
         <Text style={styles.subtitle}>
-          Bring dates, budgets, and travel vibes to one table—then make a decision everyone can see themselves in.
+          Find your dates. Play your dream destinations. Swipe, explore, and build a budget together—five little chapters to your next escape.
         </Text>
       </View>
 

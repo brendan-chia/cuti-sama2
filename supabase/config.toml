@@ -56,6 +56,9 @@ verify_jwt = true
 [functions.group-match]
 verify_jwt = true
 
+[functions.suggest-trip-period]
+verify_jwt = true
+
 [functions.recommend-destinations]
 verify_jwt = true
 

@@ -1,210 +1,52 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-
-import type { PlanningMode, TripSummary } from '../../../packages/contracts/src/trip';
+import type { TripSummary } from '../../../packages/contracts/src/trip';
 import { AppButton } from '@/components/app-button';
-import { DateField } from '@/components/date-field';
 import { FormField } from '@/components/form-field';
 import { Screen } from '@/components/screen';
-import { ModeCard } from '@/features/trips/mode-card';
-import { planningModeOptions } from '@/features/trips/planning-modes';
 import { createTrip } from '@/features/trips/service';
-import {
-  buildCreateTripRequest,
-  initialCreateTripForm,
-  readableValidationError,
-  type CreateTripErrors,
-  type CreateTripFormValues,
-} from '@/features/trips/validation';
+import { buildCreateTripRequest, initialCreateTripForm, readableValidationError } from '@/features/trips/validation';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { recoveryKind, recoveryMessage } from '@/features/recovery/errors';
-import { colors, radius, spacing, typography } from '@/theme/tokens';
+import { colors, radius, spacing } from '@/theme/tokens';
 
-type CreateTripScreenProps = {
-  onCreated: (trip: TripSummary) => void;
-  createTripAction?: typeof createTrip;
-  configured?: boolean;
-};
+type Props = { onCreated: (trip: TripSummary) => void; createTripAction?: typeof createTrip; configured?: boolean };
+const chapters = [
+  ['01', 'Find your window', 'Share availability and reveal suggested travel dates.'],
+  ['02', 'Play your wishlist', 'Everyone picks up to three favourite countries.'],
+  ['03', 'Swipe to decide', 'Vote on the group’s countries and reveal a winner.'],
+  ['04', 'Explore the map', 'Highlight the attractions you want to visit.'],
+  ['05', 'Find your comfort zone', 'Agree on a budget that fits everyone.'],
+];
 
-export function CreateTripScreen({
-  onCreated,
-  createTripAction = createTrip,
-  configured = isSupabaseConfigured,
-}: CreateTripScreenProps) {
-  const [values, setValues] = useState<CreateTripFormValues>(initialCreateTripForm);
-  const [errors, setErrors] = useState<CreateTripErrors>({});
+export function CreateTripScreen({ onCreated, createTripAction = createTrip, configured = isSupabaseConfigured }: Props) {
+  const [tripName, setTripName] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  function update<Field extends keyof CreateTripFormValues>(
-    field: Field,
-    value: CreateTripFormValues[Field],
-  ) {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
-  }
-
-  function selectMode(mode: PlanningMode) {
-    update('mode', mode);
-    setErrors({});
-  }
-
+  const inFlight = useRef(false);
   async function submit() {
-    const result = buildCreateTripRequest(values);
-    if (!result.success) {
-      setErrors(result.errors);
-      return;
-    }
-
-    setSubmitting(true);
-    setErrors({});
-    try {
-      const trip = await createTripAction(result.data);
-      onCreated(trip);
-    } catch (error) {
-      const kind = recoveryKind(error); setErrors({ form: kind === 'unknown' ? readableValidationError(error) : recoveryMessage(kind) });
-    } finally {
-      setSubmitting(false);
-    }
+    if (inFlight.current) return;
+    const result = buildCreateTripRequest({ ...initialCreateTripForm, mode: 'undecided', tripName });
+    if (!result.success) { setError(result.errors.tripName ?? result.errors.form ?? 'Give your trip a name.'); return; }
+    inFlight.current = true; setSubmitting(true); setError(null);
+    try { onCreated(await createTripAction(result.data)); }
+    catch (cause) { const kind = recoveryKind(cause); setError(kind === 'unknown' ? readableValidationError(cause) : recoveryMessage(kind)); }
+    finally { inFlight.current = false; setSubmitting(false); }
   }
-
-  return (
-    <Screen
-      footer={
-        <AppButton
-          disabled={!configured}
-          label="Create our Trip Room"
-          loading={submitting}
-          onPress={submit}
-          testID="create-trip-submit"
-        />
-      }
-      testID="create-trip-screen"
-    >
-      <View style={styles.progressRow}>
-        <Text style={styles.progressLabel}>TRIP SETUP</Text>
-        <Text style={styles.progressValue}>1 OF 3</Text>
-      </View>
-      <Text style={styles.title}>What kind of trip are you planning?</Text>
-      <Text style={styles.intro}>
-        Start with what the group already knows. You can change this before preference collection begins.
-      </Text>
-
-      {!configured ? (
-        <View accessibilityRole="alert" style={styles.notice}>
-          <Text style={styles.noticeTitle}>Connect Supabase to create a room</Text>
-          <Text style={styles.noticeBody}>
-            Copy .env.example to .env and add your project URL and publishable key.
-          </Text>
-        </View>
-      ) : null}
-
-      <View accessibilityRole="radiogroup" style={styles.modeList}>
-        {planningModeOptions.map((option) => (
-          <ModeCard
-            key={option.value}
-            onSelect={selectMode}
-            option={option}
-            selected={values.mode === option.value}
-          />
-        ))}
-      </View>
-
-      <View style={styles.divider} />
-      <View style={styles.formSection}>
-        <View style={styles.sectionHeading}>
-          <Text style={styles.sectionKicker}>THE BASICS</Text>
-          <Text style={styles.sectionTitle}>Name the plan</Text>
-        </View>
-        <FormField
-          autoCapitalize="words"
-          error={errors.tripName}
-          label="Trip name"
-          maxLength={80}
-          onChangeText={(value) => update('tripName', value)}
-          placeholder="e.g. Langkawi long weekend"
-          returnKeyType="next"
-          value={values.tripName}
-        />
-
-        {values.mode === 'destination_locked' ? (
-          <FormField
-            autoCapitalize="words"
-            error={errors.lockedDestination}
-            hint="Worldwide destinations are welcome. Data confidence is handled in a later step."
-            label="Destination"
-            maxLength={120}
-            onChangeText={(value) => update('lockedDestination', value)}
-            placeholder="e.g. Langkawi, Malaysia"
-            value={values.lockedDestination}
-          />
-        ) : null}
-
-        {values.mode === 'shortlist' ? (
-          <FormField
-            autoCapitalize="words"
-            error={errors.shortlist}
-            hint="Enter one destination per line, from two to five places."
-            label="Destination shortlist"
-            multiline
-            onChangeText={(value) => update('shortlist', value)}
-            placeholder={'Bangkok, Thailand\nDa Nang, Vietnam'}
-            value={values.shortlist}
-          />
-        ) : null}
-
-        {values.mode === 'undecided' ? (
-          <View style={styles.discoveryNote}>
-            <Text style={styles.discoveryLabel}>NO DESTINATION NEEDED YET</Text>
-            <Text style={styles.discoveryText}>
-              The group will add origins, dates, budgets, and travel constraints before discovery begins.
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.dateGroup}>
-          <DateField
-            error={errors.startsOn}
-            label="Start date"
-            onChange={(value) => update('startsOn', value)}
-            value={values.startsOn}
-          />
-          <DateField
-            error={errors.endsOn}
-            label="End date"
-            minimumDate={values.startsOn || undefined}
-            onChange={(value) => update('endsOn', value)}
-            value={values.endsOn}
-          />
-        </View>
-
-        {errors.form ? (
-          <Text accessibilityLiveRegion="assertive" style={styles.formError}>
-            {errors.form}
-          </Text>
-        ) : null}
-      </View>
-    </Screen>
-  );
+  return <Screen testID="create-trip-screen" footer={<AppButton label="Create our Trip Room" testID="create-trip-submit" disabled={!configured} loading={submitting} onPress={() => void submit()} />}>
+    <View style={styles.stack}>
+      <Text style={styles.kicker}>ONE CREW. FIVE LITTLE CHAPTERS.</Text>
+      <Text style={styles.title}>{'Big trip energy.\nStart with a name.'}</Text>
+      <Text style={styles.body}>Bring your people. Turn the planning into a game you play together, one decision at a time.</Text>
+      {!configured ? <View accessibilityRole="alert" style={styles.notice}><Text style={styles.heading}>Trip rooms are unavailable</Text><Text style={styles.body}>The planning service isn’t connected yet. Please try again once it’s available.</Text></View> : null}
+      <FormField label="Trip name" autoCapitalize="words" maxLength={80} placeholder="e.g. The annual escape" value={tripName} onChangeText={(value) => { setTripName(value); setError(null); }} />
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <View style={styles.chapters}>{chapters.map(([number, title, detail]) => <View key={number} style={styles.chapter}><View style={styles.number}><Text style={styles.numberText}>{number}</Text></View><View style={styles.chapterCopy}><Text style={styles.heading}>{title}</Text><Text style={styles.small}>{detail}</Text></View></View>)}</View>
+      <Text style={styles.small}>Invite up to 8 travellers, including you. Gather everyone in the lobby before starting your quest.</Text>
+    </View>
+  </Screen>;
 }
 
 const styles = StyleSheet.create({
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.lg },
-  progressLabel: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.8 },
-  progressValue: { color: colors.textMuted, fontSize: typography.label, fontWeight: '700' },
-  title: { color: colors.white, fontSize: typography.title, fontWeight: '800', letterSpacing: -0.7, lineHeight: 34, maxWidth: 520 },
-  intro: { color: colors.textMuted, fontSize: typography.body, lineHeight: 24, marginTop: spacing.md, maxWidth: 570 },
-  notice: { backgroundColor: colors.midnightRaised, borderColor: colors.sky, borderLeftWidth: 3, borderRadius: radius.md, gap: spacing.xs, marginTop: spacing.xl, padding: spacing.lg },
-  noticeTitle: { color: colors.white, fontSize: typography.body, fontWeight: '700' },
-  noticeBody: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
-  modeList: { gap: spacing.md, marginTop: spacing.xl },
-  divider: { backgroundColor: colors.border, height: StyleSheet.hairlineWidth, marginVertical: spacing.xxl },
-  formSection: { gap: spacing.xl },
-  sectionHeading: { gap: spacing.xs },
-  sectionKicker: { color: colors.coral, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.5 },
-  sectionTitle: { color: colors.white, fontSize: typography.heading, fontWeight: '800' },
-  discoveryNote: { backgroundColor: colors.midnightRaised, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
-  discoveryLabel: { color: colors.gold, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.2 },
-  discoveryText: { color: colors.textMuted, fontSize: typography.small, lineHeight: 20 },
-  dateGroup: { gap: spacing.lg },
-  formError: { backgroundColor: colors.midnightRaised, borderRadius: radius.sm, color: colors.danger, fontSize: typography.small, lineHeight: 19, padding: spacing.md },
+  stack: { gap: spacing.xl }, kicker: { color: colors.sky, fontSize: 10, fontWeight: '800', letterSpacing: 1.6 }, title: { color: colors.white, fontSize: 34, fontWeight: '900', lineHeight: 39, letterSpacing: -1 }, body: { color: colors.textMuted, fontSize: 15, lineHeight: 24 }, heading: { color: colors.white, fontSize: 15, fontWeight: '800' }, small: { color: colors.textMuted, fontSize: 12, lineHeight: 19 }, notice: { backgroundColor: colors.midnightRaised, padding: spacing.lg, borderRadius: radius.md, gap: spacing.sm }, error: { color: colors.danger, lineHeight: 20 }, chapters: { gap: spacing.xl }, chapter: { flexDirection: 'row', gap: spacing.lg, alignItems: 'center' }, number: { height: 38, width: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: colors.midnightSoft }, numberText: { color: colors.sky, fontWeight: '800', fontSize: 12 }, chapterCopy: { flex: 1, gap: spacing.xs },
 });
