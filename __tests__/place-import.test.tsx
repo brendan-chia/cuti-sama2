@@ -28,6 +28,8 @@ it('offers caption fallback when a link yields no places', async () => {
   const screen = await render(<PlaceImportPanel tripId="trip" countryName="Malaysia" importAction={jest.fn(async () => ({ ...result, candidates: [], status: 'needs_input' as const, message: 'Paste a caption with place names.' }))} onConfirmed={jest.fn()} />);
   await fireEvent.press(screen.getByText('＋ Add a travel post'));
   await fireEvent.changeText(screen.getByLabelText('Social post link'), 'https://instagram.com/reel/example/');
+  expect(screen.getByTestId('video-import-panel')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Switch to caption / screenshot reading'));
   await fireEvent.press(screen.getByText('Find the places'));
   await waitFor(() => expect(screen.getByText('Paste a caption with place names.')).toBeTruthy());
   expect(screen.queryByText('Confirm 0 places')).toBeNull();

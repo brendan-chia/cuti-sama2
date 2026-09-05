@@ -46,7 +46,10 @@ Deno.serve(async (request) => {
     }
     candidates = await translatePlacesToEnglish(candidates);
     const status = candidates.length ? 'ready' : 'needs_input';
-    const message = candidates.length ? 'Check the names and addresses, then confirm the places you meant. These are possible matches.'
+    const unreadable = Boolean(sourceUrl && !caption.trim() && !input.image);
+    const message = unreadable
+      ? 'The link did not provide a readable public caption. The post may require login, be private, or have no caption. Paste the caption or add a screenshot with visible place names.'
+      : candidates.length ? 'Check the names and addresses, then confirm the places you meant. These are possible matches.'
       : 'No places could be verified in your chosen country. Paste the caption or specific place names (one per line), or add a screenshot with visible names.';
     const { error: saveError } = await admin.from('trip_place_imports').update({ candidates, status, message }).eq('id', importId).eq('status', 'pending');
     if (saveError) throw new Error('Could not save the import. Please try again.');

@@ -82,3 +82,9 @@ verify_jwt = true
 
 [functions.import-trip-places]
 verify_jwt = true
+
+[functions.video-import]
+verify_jwt = true
+
+[functions.video-import-worker]
+verify_jwt = false

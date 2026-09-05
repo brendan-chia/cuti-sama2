@@ -8,11 +8,13 @@ import { AppButton } from '@/components/app-button';
 import { FormField } from '@/components/form-field';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { confirmTripPlaces, importTripPlaces } from './place-import-service';
+import { VideoImportPanel } from './video-import-panel';
 import { questStyles as s } from './quest-styles';
 
 type Props = { tripId: string; countryName: string; disabled?: boolean; onConfirmed: (room: QuestRoom) => void; importAction?: typeof importTripPlaces; confirmAction?: typeof confirmTripPlaces };
 export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, importAction = importTripPlaces, confirmAction = confirmTripPlaces }: Props) {
   const [open, setOpen] = useState(false);
+  const [videoMode, setVideoMode] = useState(false);
   const [sourceUrl, setSourceUrl] = useState('');
   const [text, setText] = useState('');
   const [image, setImage] = useState<string>();
@@ -55,9 +57,11 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     <Text style={s.heading}>Saw it. Saved it. Let’s find it.</Text>
     <Text style={s.body}>Bring a travel post to the map. Find the places in {countryName}, then check that we got them right.</Text>
     {!open ? <AppButton label="＋ Add a travel post" onPress={() => setOpen(true)} disabled={disabled} /> : <View style={s.stack}>
-      <FormField label="Social post link" placeholder="Paste a TikTok, Instagram, or YouTube link" autoCapitalize="none" autoCorrect={false} value={sourceUrl} editable={!busy && !disabled} onChangeText={(value) => { setSourceUrl(value); setResult(null); setSaved(false); }} />
+      <FormField label="Social post link" placeholder="Paste a TikTok, Instagram, or YouTube link" autoCapitalize="none" autoCorrect={false} value={sourceUrl} editable={!busy && !disabled} onChangeText={(value) => { setSourceUrl(value); if (/instagram\.com\/(?:[^/]+\/)?reels?\//i.test(value)) setVideoMode(true); setResult(null); setSaved(false); }} />
       <FormField label="Caption or place names" placeholder={'Paste the caption, or add one place per line\ne.g. Kek Lok Si Temple, Penang'} multiline maxLength={6000} value={text} editable={!busy && !disabled} onChangeText={(value) => { setText(value); setResult(null); setSaved(false); }} />
-      <Text style={s.small}>Public TikTok captions may be readable. For other or inaccessible posts, add the caption or a screenshot with visible place names. No social login needed.</Text>
+      <AppButton label={videoMode ? 'Switch to caption / screenshot reading' : 'Analyse a video’s audio & every frame'} variant="secondary" disabled={busy || disabled} onPress={() => setVideoMode(!videoMode)} />
+      {videoMode ? <VideoImportPanel tripId={tripId} sourceUrl={sourceUrl} caption={text} disabled={disabled} onConfirmed={onConfirmed} /> : <>
+      <Text style={s.small}>We can read available public captions from Instagram posts, Reels and TikTok. If names appear only in the video or images, paste them or add a screenshot. Private or login-required posts need a caption or screenshot.</Text>
       {image ? <View style={s.stack}><Image source={{ uri: image }} style={styles.screenshot} contentFit="contain" accessibilityLabel="Screenshot to read for place names" /><AppButton label="Remove screenshot" variant="secondary" disabled={busy || disabled} onPress={() => { setImage(undefined); setResult(null); }} /></View> : <AppButton label="Add a screenshot" variant="secondary" disabled={busy || disabled} onPress={() => void pickImage()} />}
       <Text style={s.small}>The text or screenshot you submit is sent to our AI reader. Only the places you confirm and the source link are shared with your crew.</Text>
       <AppButton label={busy ? 'Finding possible places…' : 'Find the places'} loading={busy} disabled={disabled || (!sourceUrl.trim() && !text.trim() && !image)} onPress={() => void find()} />
@@ -71,6 +75,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
         </View>)}
         {result.candidates.length ? <><Text style={s.small}>Choose the matching locations, not every alternative. Place data © OpenStreetMap contributors.</Text><AppButton label={`Confirm ${selected.length} ${selected.length === 1 ? 'place' : 'places'}`} disabled={disabled || !selected.length} loading={busy} onPress={() => void confirm()} /></> : null}
       </View> : null}
+      </>}
       {saved ? <Text accessibilityLiveRegion="polite" style={s.strong}>✓ Places confirmed. Your crew can now find them on the map.</Text> : null}
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
     </View>}

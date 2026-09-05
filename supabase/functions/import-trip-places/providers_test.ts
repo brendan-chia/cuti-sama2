@@ -9,8 +9,8 @@ Deno.test('rejects arbitrary URLs, credentials, insecure protocols and deceptive
   }
   assert(normalizeSocialUrl('https://www.instagram.com/reel/example/?tracking=secret#fragment') === 'https://www.instagram.com/reel/example/');
 });
-Deno.test('inaccessible platform links do not trigger scraping', async () => {
-  const result = await readPublicPost('https://www.instagram.com/reel/example/', (() => { throw new Error('Must not fetch'); }) as typeof fetch);
+Deno.test('Instagram profiles do not trigger a post fetch', async () => {
+  const result = await readPublicPost('https://www.instagram.com/example/', (() => { throw new Error('Must not fetch'); }) as typeof fetch);
   assert(result === '');
 });
 Deno.test('short-link redirects cannot reach internal addresses', async () => {

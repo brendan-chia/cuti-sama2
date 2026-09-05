@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { AvailabilitySchema, DatePreferencesSchema, type DatePreferences, type QuestAction, type QuestRoom, type TripPeriod } from '../../../packages/contracts/src/quest';
 import { AppButton } from '@/components/app-button';
@@ -10,6 +10,14 @@ export function periodLabel(period: Pick<TripPeriod, 'startsOn' | 'endsOn'>) {
   return `${format(period.startsOn)} – ${format(period.endsOn)}`;
 }
 const defaults = () => DatePreferencesSchema.parse({});
+// Compare calendar values, not JSON property or selection order.
+function proposalKey(startsOn: string, endsOn: string, preferences: DatePreferences) {
+  return JSON.stringify([
+    startsOn, endsOn, preferences.flexibility,
+    [...preferences.daysOff].sort((a, b) => a - b),
+    preferences.unavailable.map((range) => `${range.startsOn}:${range.endsOn}`).sort(),
+  ]);
+}
 const flexibilityOptions = [['exact', 'Exact dates'], ['3', 'Within 3 days'], ['7', 'Within a week'], ['month', 'Same start month']] as const;
 type Props = { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean>; recommend: () => Promise<void> };
 export function TimingStage({ room, busy, act, recommend }: Props) {
@@ -23,7 +31,21 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
   const days = (Date.parse(endsOn) - Date.parse(startsOn)) / 86400000 + 1;
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const valid = AvailabilitySchema.safeParse({ startsOn, endsOn }).success && startsOn > today && days >= 1 && days <= 30;
-  const dirty = startsOn !== room.ownAvailability?.startsOn || endsOn !== room.ownAvailability?.endsOn || JSON.stringify(preferences) !== JSON.stringify(room.ownDatePreferences ?? defaults());
+  const savedPreferences = room.ownDatePreferences ?? defaults();
+  const savedStart = room.ownAvailability?.startsOn ?? '';
+  const savedEnd = room.ownAvailability?.endsOn ?? '';
+  const savedKey = proposalKey(savedStart, savedEnd, savedPreferences);
+  const draftKey = proposalKey(startsOn, endsOn, preferences);
+  const previousSavedKey = useRef(savedKey);
+  useEffect(() => {
+    if (previousSavedKey.current === savedKey) return;
+    // Adopt a refreshed saved proposal only when the user has not edited this form.
+    if (draftKey === previousSavedKey.current) {
+      setStartsOn(savedStart); setEndsOn(savedEnd); setPreferences(savedPreferences);
+    }
+    previousSavedKey.current = savedKey;
+  }, [draftKey, savedKey, savedStart, savedEnd, savedPreferences]);
+  const dirty = draftKey !== savedKey;
   const pendingBlock = Boolean(blockedStart || blockedEnd);
   const validBlock = AvailabilitySchema.safeParse({ startsOn: blockedStart, endsOn: blockedEnd }).success && blockedEnd >= blockedStart;
   const recommendation = room.dateRecommendation;

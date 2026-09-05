@@ -11,7 +11,8 @@ Every active quest participant, including the organiser, can import and confirm 
 ## Sources and fallback
 
 - TikTok: the official oEmbed endpoint can provide public caption metadata. Short URLs are resolved with a bounded redirect chain and an exact HTTPS host allowlist. Embedded markup is never executed by the backend, and videos are not downloaded.
-- Instagram and YouTube: links are retained as inspiration references. Automatic extraction from these platforms is not implemented; users supply a caption or screenshot.
+- Instagram: public post/Reel captions are read from metadata when available. Full Reel/video processing uses the [local video worker](local-video-worker.md), with audio transcription, every-frame vision and video-upload fallback.
+- YouTube: links are retained as references; supply a caption, screenshot or upload a video for analysis.
 - Inaccessible/private/deleted links: the UI requests supplied text or an image. There is no social credential collection or login bypass.
 - Groq extracts up to four named places into validated JSON. It must not infer unnamed landmarks from appearance. Without text-model configuration, explicit newline-separated names still serve as search queries. Screenshot extraction requires the AI provider.
 - Photon resolves up to three alternatives per extracted name, and results are filtered to the quest's country. Coordinates and OSM identifiers are validated; AI coordinates are never accepted. Search results are possible matches, not automatic verification of what the post intended.

@@ -102,6 +102,37 @@ describe('trip quest shared planning flow', () => {
     expect(updateAction).toHaveBeenCalledWith(tripId, expect.objectContaining({ preferences: expect.objectContaining({ unavailable: [{ startsOn: '2027-12-10', endsOn: '2027-12-12' }] }) }));
   });
 
+  it('enables recommendations after saving semantically identical preferences in a different order', async () => {
+    const room = roomWith({ stage: 'timing', period: null, ownAvailability: { startsOn: '2027-12-04', endsOn: '2027-12-08' } });
+    const saved = { ...room, revision: 2, ownDatePreferences: { unavailable: [], daysOff: [6, 0], flexibility: '7' as const } };
+    const { screen } = await openQuest(room, { updateAction: jest.fn(async () => saved) });
+    await fireEvent.press(screen.getByTestId('save-quest-availability'));
+    await waitFor(() => expect(screen.getByTestId('suggest-trip-periods').props.accessibilityState.disabled).toBe(false));
+    expect(screen.queryByText('Save your changes before finding or confirming shared dates.')).toBeNull();
+  });
+
+  it('refreshes an untouched form when saved dates arrive from another device', async () => {
+    const room = roomWith({ stage: 'timing', period: null, ownAvailability: { startsOn: '2027-12-04', endsOn: '2027-12-08' } });
+    const updated = { ...room, revision: 2, ownAvailability: { startsOn: '2027-12-10', endsOn: '2027-12-14' } };
+    const loadAction = jest.fn().mockResolvedValueOnce(room).mockResolvedValue(updated);
+    const { screen, notify } = await openQuest(room, { loadAction });
+    await act(async () => notify());
+    await waitFor(() => expect(screen.getByLabelText('Proposed start date').props.value).toBe('2027-12-10'));
+    expect(screen.getByTestId('suggest-trip-periods').props.accessibilityState.disabled).toBe(false);
+  });
+
+  it('preserves actual unsaved edits during a saved-proposal refresh', async () => {
+    const room = roomWith({ stage: 'timing', period: null, ownAvailability: { startsOn: '2027-12-04', endsOn: '2027-12-08' } });
+    const updated = { ...room, revision: 2, ownAvailability: { startsOn: '2027-12-10', endsOn: '2027-12-14' } };
+    const loadAction = jest.fn().mockResolvedValueOnce(room).mockResolvedValue(updated);
+    const { screen, notify } = await openQuest(room, { loadAction });
+    await fireEvent.changeText(screen.getByLabelText('Proposed start date'), '2027-12-06');
+    await act(async () => notify());
+    await waitFor(() => expect(screen.getByText(/Your saved proposal:.*10 Dec 2027/)).toBeTruthy());
+    expect(screen.getByLabelText('Proposed start date').props.value).toBe('2027-12-06');
+    expect(screen.getByTestId('suggest-trip-periods').props.accessibilityState.disabled).toBe(true);
+  });
+
   it('caps wishlists at three countries and waits for the server to open voting', async () => {
     const saved = roomWith({ revision: 2, ownPicks: ['JP', 'TH', 'IT'], members: baseRoom.members.map((member) => ({ ...member, picksSubmitted: member.memberId === organizerId })) });
     const updateAction = jest.fn(async () => saved);

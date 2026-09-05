@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { readInstagramPost } from './instagram.ts';
 import { normalizeSocialUrl, PlaceCandidateSchema, type PlaceCandidate } from '../../../packages/contracts/src/place-import.ts';
 
 // Every destination is fixed or allowlisted. User links never become arbitrary fetches.
 export async function readPublicPost(input: string, fetcher = fetch): Promise<string> {
   let url = normalizeSocialUrl(input);
+  if (['instagram.com', 'www.instagram.com'].includes(new URL(url).hostname)) return readInstagramPost(url, fetcher);
   for (let hop = 0; hop < 3 && ['vm.tiktok.com', 'vt.tiktok.com'].includes(new URL(url).hostname); hop++) {
     const response = await fetcher(url, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
     await response.body?.cancel();
