@@ -1,0 +1,112 @@
+{
+  "version": "my-national-2026-2027-20260905-v1",
+  "coveredYears": [
+    2026,
+    2027
+  ],
+  "checkedAt": "2026-09-05",
+  "sourceUrl": "https://www.kabinet.gov.my/hari-kelepasan-am/",
+  "sources": [
+    "https://www.kabinet.gov.my/storage/2025/08/HKA-2026.pdf",
+    "https://www.kabinet.gov.my/storage/2026/08/HKA_2027.pdf"
+  ],
+  "notice": "Nationwide holidays only. State-specific and conditional substitute days are excluded. Published 2026\u20132027 schedules, subject to official changes. Leave is an estimate; confirm your employer\u2019s calendar.",
+  "holidays": [
+    {
+      "date": "2026-02-17",
+      "name": "Chinese New Year"
+    },
+    {
+      "date": "2026-03-21",
+      "name": "Hari Raya Aidilfitri"
+    },
+    {
+      "date": "2026-03-22",
+      "name": "Hari Raya Aidilfitri (second day)"
+    },
+    {
+      "date": "2026-05-01",
+      "name": "Labour Day"
+    },
+    {
+      "date": "2026-05-27",
+      "name": "Hari Raya Aidiladha"
+    },
+    {
+      "date": "2026-05-31",
+      "name": "Wesak Day"
+    },
+    {
+      "date": "2026-06-01",
+      "name": "Birthday of the Yang di-Pertuan Agong"
+    },
+    {
+      "date": "2026-06-17",
+      "name": "Awal Muharram"
+    },
+    {
+      "date": "2026-08-25",
+      "name": "Maulidur Rasul"
+    },
+    {
+      "date": "2026-08-31",
+      "name": "National Day"
+    },
+    {
+      "date": "2026-09-16",
+      "name": "Malaysia Day"
+    },
+    {
+      "date": "2026-12-25",
+      "name": "Christmas Day"
+    },
+    {
+      "date": "2027-02-06",
+      "name": "Chinese New Year"
+    },
+    {
+      "date": "2027-03-10",
+      "name": "Hari Raya Aidilfitri"
+    },
+    {
+      "date": "2027-03-11",
+      "name": "Hari Raya Aidilfitri (second day)"
+    },
+    {
+      "date": "2027-05-01",
+      "name": "Labour Day"
+    },
+    {
+      "date": "2027-05-17",
+      "name": "Hari Raya Aidiladha"
+    },
+    {
+      "date": "2027-05-20",
+      "name": "Wesak Day"
+    },
+    {
+      "date": "2027-06-06",
+      "name": "Awal Muharram"
+    },
+    {
+      "date": "2027-06-07",
+      "name": "Birthday of the Yang di-Pertuan Agong"
+    },
+    {
+      "date": "2027-08-15",
+      "name": "Maulidur Rasul"
+    },
+    {
+      "date": "2027-08-31",
+      "name": "National Day"
+    },
+    {
+      "date": "2027-09-16",
+      "name": "Malaysia Day"
+    },
+    {
+      "date": "2027-12-25",
+      "name": "Christmas Day"
+    }
+  ]
+}

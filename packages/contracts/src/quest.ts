@@ -11,6 +11,24 @@ export const TripPeriodSchema = AvailabilitySchema.extend({
 }).strict();
 export type TripPeriod = z.infer<typeof TripPeriodSchema>;
 
+export const DatePreferencesSchema = z.object({
+  flexibility: z.enum(['exact', '3', '7', 'month']).default('7'),
+  daysOff: z.array(z.number().int().min(0).max(6)).max(7).default([0, 6])
+    .refine((days) => new Set(days).size === days.length, 'Choose each day once.'),
+  unavailable: z.array(AvailabilitySchema.refine((range) => range.endsOn >= range.startsOn, 'Check the unavailable date range.')).max(20).default([]),
+}).strict();
+export type DatePreferences = z.infer<typeof DatePreferencesSchema>;
+export const DateRecommendationSchema = z.object({
+  periods: z.array(TripPeriodSchema.extend({
+    durationDays: z.number().int().min(1).max(30),
+    holidays: z.array(z.object({ date: z.iso.date(), name: z.string() }).strict()),
+    travellers: z.array(z.object({ memberId: z.uuid(), leaveDays: z.number().int().nonnegative(), shiftDays: z.number().int(), durationChange: z.number().int() }).strict()),
+  }).strict()).max(3),
+  source: z.enum(['groq', 'calendar']), message: z.string(),
+  calendarVersion: z.string(), calendarNotice: z.string(),
+}).strict();
+export type DateRecommendation = z.infer<typeof DateRecommendationSchema>;
+
 export const QuestCountryCodeSchema = z.enum([
   'MY', 'TH', 'ID', 'VN', 'JP', 'KR', 'SG', 'TW', 'PH', 'KH', 'LA', 'IN',
   'LK', 'NP', 'AU', 'NZ', 'GB', 'FR', 'IT', 'ES', 'TR', 'AE', 'US', 'CA',
@@ -20,7 +38,7 @@ const CountryPicksSchema = z.array(QuestCountryCodeSchema).min(1).max(3)
   .refine((codes) => new Set(codes).size === codes.length, 'Choose each country only once.');
 
 export const QuestActionSchema = z.discriminatedUnion('type', [
-  AvailabilitySchema.extend({ type: z.literal('availability') }).strict(),
+  AvailabilitySchema.extend({ type: z.literal('availability'), preferences: DatePreferencesSchema.optional() }).strict(),
   z.object({ type: z.literal('period'), period: TripPeriodSchema }).strict(),
   z.object({ type: z.literal('picks'), countryCodes: CountryPicksSchema }).strict(),
   z.object({ type: z.literal('vote'), countryCode: QuestCountryCodeSchema, agree: z.boolean() }).strict(),
@@ -47,6 +65,8 @@ export const QuestRoomSchema = z.object({
   }).strict()).min(1).max(8),
   dateProposals: z.array(AvailabilitySchema.extend({ memberId: z.uuid() }).strict()).max(8).optional(),
   ownAvailability: AvailabilitySchema.nullable(),
+  ownDatePreferences: DatePreferencesSchema.optional(),
+  dateRecommendation: DateRecommendationSchema.nullable().optional(),
   sharedAvailability: AvailabilitySchema.nullable(),
   period: TripPeriodSchema.nullable(),
   ownPicks: z.array(QuestCountryCodeSchema).max(3),

@@ -42,7 +42,7 @@ select is((pg_temp.room()->>'revision')::integer, 0, 'read-only reloads do not a
 select is(jsonb_array_length(pg_temp.room()->'members'), 3, 'quest snapshots all three active participants');
 select is((select count(*)::integer from public.trip_quest_inputs), 1, 'RLS exposes only the caller input row');
 select is(pg_temp.room()->'dateProposals', '[]'::jsonb, 'proposals are hidden until everyone submits');
-select throws_ok('select pg_temp.act(pg_temp.period_action(50,54))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'host cannot choose dates before everyone submits');
+select throws_ok('select pg_temp.act(pg_temp.period_action(50,54))', '22023', 'Generate a fresh recommendation after everyone submits, then confirm one of its periods.', 'host cannot choose dates before everyone submits');
 
 reset role;
 select ok((select bool_and(revoked_at is not null) from public.invites where trip_id = (select id from quest_test_trip)), 'initializing the quest closes existing invitations');
@@ -73,9 +73,15 @@ select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_d
 select is(jsonb_array_length(pg_temp.room()->'dateProposals'), 3, 'all three proposals are shared after everyone submits');
 select is(pg_temp.room()->'sharedAvailability', 'null'::jsonb, 'proposals do not need to overlap');
 select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
-select throws_ok('select pg_temp.act(pg_temp.period_action(40,44))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'a period nobody proposed is rejected');
-select throws_ok('select pg_temp.act(pg_temp.period_action(50,64))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'an altered proposal cannot be selected');
-select throws_ok('select pg_temp.act(pg_temp.period_action(50,50))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'a truncated proposal cannot be selected');
+select throws_ok('select pg_temp.act(pg_temp.period_action(40,44))', '22023', 'Generate a fresh recommendation after everyone submits, then confirm one of its periods.', 'a period nobody proposed is rejected');
+select throws_ok('select pg_temp.act(pg_temp.period_action(50,64))', '22023', 'Generate a fresh recommendation after everyone submits, then confirm one of its periods.', 'an altered proposal cannot be selected');
+select throws_ok('select pg_temp.act(pg_temp.period_action(50,50))', '22023', 'Generate a fresh recommendation after everyone submits, then confirm one of its periods.', 'a truncated proposal cannot be selected');
+reset role;
+select public.save_date_recommendation((select id from quest_test_trip),
+  (select organizer_member_id from public.trips where id = (select id from quest_test_trip)),
+  (select revision from public.trip_quests where trip_id = (select id from quest_test_trip)),
+  jsonb_build_object('calendarVersion', (select version from public.national_holiday_calendar where id = 1), 'periods', jsonb_build_array(pg_temp.period_action(50,54)->'period')));
+set local role authenticated;
 select pg_temp.act(pg_temp.period_action(50,54));
 select is(pg_temp.room()->>'stage', 'picks', 'a valid shared period unlocks destination picks');
 select throws_ok($$select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+50,'endsOn',current_date+80))$$,
@@ -160,6 +166,12 @@ reset role;
 update public.trips set planning_started_at = now() where id = (select id from quest_test_trip);
 set local role authenticated;
 select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+50,'endsOn',current_date+54));
+reset role;
+select public.save_date_recommendation((select id from quest_test_trip),
+  (select organizer_member_id from public.trips where id = (select id from quest_test_trip)),
+  (select revision from public.trip_quests where trip_id = (select id from quest_test_trip)),
+  jsonb_build_object('calendarVersion', (select version from public.national_holiday_calendar where id = 1), 'periods', jsonb_build_array(pg_temp.period_action(50,54)->'period')));
+set local role authenticated;
 select pg_temp.act(pg_temp.period_action(50,54));
 select pg_temp.act('{"type":"picks","countryCodes":["JP","MY"]}');
 select pg_temp.act('{"type":"vote","countryCode":"MY","agree":false}');
