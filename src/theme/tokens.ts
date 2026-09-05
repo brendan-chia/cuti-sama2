@@ -1,18 +1,13 @@
+// Sky, boarding-pass paper and sun-yellow details, shared by every trip screen.
 export const colors = {
-  midnight: '#062D25',
-  midnightRaised: '#0B3A2F',
-  midnightSoft: '#124839',
-  coral: '#E9783E',
-  coralPressed: '#CB6334',
-  sand: '#F1ECD9',
-  sky: '#94BE76',
-  gold: '#E0B94F',
-  white: '#FAF6E9',
-  textMuted: '#A9BCB0',
-  border: '#285B49',
-  danger: '#FF9274',
-  disabled: '#688378',
-  overlay: 'rgba(3, 31, 25, 0.82)',
+  background: '#EDF6FA', surface: '#FFFFFF', surfaceTint: '#DEEEF3',
+  ink: '#15394B', paper: '#FFFFFF',
+  coral: '#BC532F', coralPressed: '#A94524', sand: '#FFF2C4',
+  sky: '#176B80', gold: '#916412', sun: '#FFD16B',
+  textMuted: '#496779', border: '#BCD3DD', danger: '#B43939',
+  disabled: '#718894', overlay: 'rgba(237, 246, 250, 0.94)',
+  // Compatibility for older native helpers; new UI uses semantic surface names.
+  midnight: '#EDF6FA', midnightRaised: '#FFFFFF', midnightSoft: '#DEEEF3', white: '#15394B',
 } as const;
 
 export const spacing = {
@@ -26,9 +21,9 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 18,
+  sm: 10,
+  md: 16,
+  lg: 24,
   pill: 999,
 } as const;
 

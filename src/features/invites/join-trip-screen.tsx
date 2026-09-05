@@ -59,10 +59,10 @@ export function JoinTripScreen({ token, onJoined, resolveAction = resolveInvitat
 const styles = StyleSheet.create({
   center: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
   kicker: { color: colors.coral, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.7 },
-  title: { color: colors.white, fontSize: typography.title, fontWeight: '900', lineHeight: 35, marginTop: spacing.md, textAlign: 'center' },
+  title: { color: colors.ink, fontSize: typography.title, fontWeight: '900', lineHeight: 35, marginTop: spacing.md, textAlign: 'center' },
   body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.sm, textAlign: 'center' },
-  panel: { backgroundColor: colors.midnightRaised, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.lg, marginTop: spacing.xxl, padding: spacing.xl },
-  panelTitle: { color: colors.white, fontSize: typography.heading, fontWeight: '800', textAlign: 'center' },
+  panel: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.lg, marginTop: spacing.xxl, padding: spacing.xl },
+  panelTitle: { color: colors.ink, fontSize: typography.heading, fontWeight: '800', textAlign: 'center' },
   duplicate: { gap: spacing.md },
   error: { color: colors.danger, fontSize: typography.small, lineHeight: 19, textAlign: 'center' },
   privacy: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19, marginTop: spacing.xl, textAlign: 'center' },

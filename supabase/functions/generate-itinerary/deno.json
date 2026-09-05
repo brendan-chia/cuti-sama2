@@ -1,6 +1,8 @@
 {
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.4",
-    "zod": "npm:zod@4.5.4"
+    "zod": "npm:zod@4.5.4",
+    "../../../packages/contracts/src/quest": "../../../packages/contracts/src/quest.ts",
+    "../../../packages/contracts/src/place-import": "../../../packages/contracts/src/place-import.ts"
   }
 }

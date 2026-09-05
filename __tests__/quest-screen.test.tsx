@@ -191,14 +191,17 @@ describe('trip quest shared planning flow', () => {
   it('summarizes the saved destination, dates, stops and per-person ceiling', async () => {
     const country = countryByCode('JP')!;
     const room = roomWith({ stage: 'complete', selectedCountryCode: 'JP', attractionIds: country.attractions.slice(0, 2).map((place) => place.id), budgetSummary: { submittedCount: 2, comfortablePerPerson: 1500, currency: 'MYR' } });
-    const { screen } = await openQuest(room);
-    expect(screen.getByLabelText('5 of 5 stages completed')).toBeTruthy();
+    const onItinerary = jest.fn();
+    const { screen } = await openQuest(room, { onItinerary });
+    expect(screen.getByLabelText('5 of 5 stages completed. Journey complete')).toBeTruthy();
     expect(screen.getByText('From group chat to game plan.')).toBeTruthy();
     expect(screen.getByText(/4 Dec 2027.*8 Dec 2027/)).toBeTruthy();
     expect(screen.getByText(new RegExp(`01\\s+${country.attractions[0].name}`))).toBeTruthy();
     expect(screen.getByText(new RegExp(`02\\s+${country.attractions[1].name}`))).toBeTruthy();
     expect(screen.getByText('RM 1,500')).toBeTruthy();
     expect(screen.getByText('per person · 2 travellers · whole trip')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('open-quest-itinerary'));
+    expect(onItinerary).toHaveBeenCalledTimes(1);
   });
 
   it('ignores an older delayed room response after a newer stage arrives', async () => {

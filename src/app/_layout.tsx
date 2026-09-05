@@ -9,14 +9,14 @@ export const unstable_settings = { initialRouteName: 'index' };
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          contentStyle: { backgroundColor: colors.midnight },
+          contentStyle: { backgroundColor: colors.background },
           headerBackButtonDisplayMode: 'minimal',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.midnightRaised },
-          headerTintColor: colors.white,
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.ink,
           headerTitleStyle: { fontWeight: '700' },
         }}
       >

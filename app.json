@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cutisama2",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.cutisama2.app"
@@ -30,15 +30,23 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#182033",
+          "backgroundColor": "#EDF6FA",
           "dark": {
-            "backgroundColor": "#182033"
+            "backgroundColor": "#EDF6FA"
           },
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a travel screenshot to find its places.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

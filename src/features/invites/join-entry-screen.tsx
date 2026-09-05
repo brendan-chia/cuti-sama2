@@ -15,4 +15,4 @@ export function JoinEntryScreen({ onToken }: { onToken: (token: string) => void 
     <View style={styles.form}><FormField autoCapitalize="none" autoCorrect={false} error={error} label="Invitation link" onChangeText={(text) => { setValue(text); setError(undefined); }} placeholder="https://…/invite/…" value={value} /></View>
   </Screen>;
 }
-const styles = StyleSheet.create({ kicker: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.7 }, title: { color: colors.white, fontSize: typography.title, fontWeight: '900', lineHeight: 35, marginTop: spacing.md }, body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.sm }, form: { marginTop: spacing.xxl } });
+const styles = StyleSheet.create({ kicker: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.7 }, title: { color: colors.ink, fontSize: typography.title, fontWeight: '900', lineHeight: 35, marginTop: spacing.md }, body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.sm }, form: { marginTop: spacing.xxl } });

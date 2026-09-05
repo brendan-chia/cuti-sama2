@@ -42,7 +42,7 @@ export function ModeCard({ option, selected, onSelect }: ModeCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.midnightRaised,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  selectedEyebrow: { color: colors.midnightSoft },
+  selectedEyebrow: { color: colors.surfaceTint },
   radio: {
     alignItems: 'center',
     borderColor: colors.disabled,
@@ -86,12 +86,12 @@ const styles = StyleSheet.create({
     width: 12,
   },
   title: {
-    color: colors.white,
+    color: colors.ink,
     fontSize: typography.heading,
     fontWeight: '800',
     lineHeight: 26,
   },
-  selectedText: { color: colors.midnight },
+  selectedText: { color: colors.background },
   description: { color: colors.textMuted, fontSize: typography.small, lineHeight: 20 },
-  selectedDescription: { color: colors.midnightSoft },
+  selectedDescription: { color: colors.surfaceTint },
 });

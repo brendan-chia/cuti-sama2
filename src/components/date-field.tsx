@@ -51,11 +51,11 @@ export function DateField({ error, label, minimumDate, onChange, required = fals
           onChange={(event) => onChange(event.currentTarget.value)}
           required={required}
           style={{
-            backgroundColor: colors.midnightRaised,
+            backgroundColor: colors.surface,
             border: `1px solid ${error ? colors.danger : colors.border}`,
             borderRadius: radius.md,
             boxSizing: 'border-box',
-            color: colors.white,
+            color: colors.ink,
             colorScheme: 'dark',
             fontFamily: 'inherit',
             fontSize: typography.body,
@@ -126,11 +126,11 @@ export function DateField({ error, label, minimumDate, onChange, required = fals
 
 const styles = StyleSheet.create({
   group: { gap: spacing.sm },
-  label: { color: colors.white, fontSize: typography.body, fontWeight: '700' },
+  label: { color: colors.ink, fontSize: typography.body, fontWeight: '700' },
   hint: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
   input: {
     alignItems: 'center',
-    backgroundColor: colors.midnightRaised,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: colors.danger },
   pressed: { opacity: 0.82 },
-  value: { color: colors.white, fontSize: typography.body },
+  value: { color: colors.ink, fontSize: typography.body },
   placeholder: { color: colors.disabled, fontSize: typography.body },
   calendar: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.1 },
   clearButton: { alignSelf: 'flex-start', paddingVertical: spacing.xs },

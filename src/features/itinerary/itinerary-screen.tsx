@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ItineraryState, StoredItinerary } from '../../../packages/contracts/src/itinerary';
@@ -22,6 +22,7 @@ type Props = {
   loadAction?: typeof loadItineraryState;
   generateAction?: typeof generateItinerary;
   slowAfterMs?: number;
+  autoGenerate?: boolean;
 };
 
 const toMinutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
@@ -49,23 +50,25 @@ function itineraryStats(version: StoredItinerary) {
   };
 }
 
-export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onMore, loadAction = loadItineraryState, generateAction = generateItinerary, slowAfterMs = 30_000 }: Props) {
+export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onMore, loadAction = loadItineraryState, generateAction = generateItinerary, slowAfterMs = 30_000, autoGenerate = false }: Props) {
   const [state, setState] = useState<ItineraryState | null>(null); const [version, setVersion] = useState<StoredItinerary | null>(null);
   const [operationKey, setOperationKey] = useState<string | null>(null); const [loading, setLoading] = useState(true); const [generating, setGenerating] = useState(false); const [slow, setSlow] = useState(false); const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
+  const autoStarted = useRef(false);
   const refresh = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const next = await loadAction(tripId); setState(next); setVersion(next.latest);
       if (next.operation?.status === 'pending') { setOperationKey(next.operation.idempotencyKey); setSlow(Date.now() - Date.parse(next.operation.startedAt) >= slowAfterMs); }
       else if (next.operation?.status === 'failed') { setOperationKey(next.operation.idempotencyKey); setError(next.operation.error); setSlow(true); }
+      else { setOperationKey(null); setSlow(false); }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not restore the itinerary.'); }
     finally { setLoading(false); }
   }, [loadAction, slowAfterMs, tripId]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   const run = useCallback(async (requestedKey?: string) => {
-    const key = requestedKey ?? await generationOperationKey(tripId);
+    const key = requestedKey ?? await generationOperationKey(tripId, state?.lockedDestination?.lockedAt);
     const sequence = ++requestSequence.current; setOperationKey(key); setGenerating(true); setSlow(false); setError(null);
     const timer = setTimeout(() => { if (requestSequence.current === sequence) setSlow(true); }, slowAfterMs);
     try {
@@ -74,13 +77,26 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
     } catch (cause) {
       if (requestSequence.current === sequence) { setError(cause instanceof Error ? cause.message : 'Could not generate the itinerary.'); setSlow(true); }
     } finally { clearTimeout(timer); if (requestSequence.current === sequence) setGenerating(false); }
-  }, [generateAction, refresh, slowAfterMs, tripId]);
+  }, [generateAction, refresh, slowAfterMs, tripId, state?.lockedDestination?.lockedAt]);
+
+  useEffect(() => {
+    if (autoGenerate && !autoStarted.current && !loading && !error && state?.currentRole === 'organizer' && state.lockedDestination && !state.latest && !state.operation && !generating) {
+      autoStarted.current = true;
+      void run();
+    }
+  }, [autoGenerate, loading, error, state, generating, run]);
+
+  useEffect(() => {
+    if (state?.currentRole !== 'member' || version) return;
+    const timer = setInterval(() => void refresh(), 15000);
+    return () => clearInterval(timer);
+  }, [state?.currentRole, version, refresh]);
 
   if (loading && !state) return <Screen scroll={false}><View style={styles.center}><Text style={styles.title}>Restoring itinerary…</Text></View></Screen>;
   if (!state) return <Screen scroll={false}><View style={styles.center}><Text accessibilityRole="alert" style={styles.error}>{error ?? 'The itinerary is unavailable.'}</Text><View style={styles.action}><AppButton label="Try again" onPress={() => void refresh()} /></View></View></Screen>;
 
   const locked = state.lockedDestination; const retryKey = operationKey ?? createUuid(); const retryPending = Boolean(operationKey) && slow;
-  const footer = version ? <TripBottomNav onHome={onHome ?? onBack} onItinerary={() => undefined} onOpen={() => onReview?.(1)} onGroup={onGroup} onMore={onMore ?? onBack} /> : locked && !error ? <View style={styles.generateFooter}>
+  const footer = version ? <TripBottomNav onHome={onHome ?? onBack} onItinerary={() => undefined} onOpen={() => onReview?.(1)} onGroup={onGroup} onMore={onMore ?? onBack} /> : locked && !error && state.currentRole === 'organizer' ? <View style={styles.generateFooter}>
     {!generating && !retryPending ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
     {!generating && retryPending ? <AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary" variant="secondary" /> : null}
   </View> : undefined;
@@ -90,8 +106,8 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
     {!locked ? <View style={styles.padded}><Text style={styles.kicker}>TRIP PLAN</Text><Text style={styles.title}>Destination required</Text><View style={styles.notice} testID="destination-required"><Text style={styles.sectionTitle}>Lock a destination first</Text><Text style={styles.body}>Generation stays unavailable until the group has locked its final destination.</Text></View></View> : null}
     {locked && !version ? <View style={styles.padded}><Text style={styles.kicker}>AI ITINERARY</Text><Text style={styles.title}>{locked.name}</Text>
       {generating ? <View style={styles.notice} testID="itinerary-progress"><Text style={styles.sectionTitle}>{slow ? 'Still building your draft…' : 'Building your trip…'}</Text><Text accessibilityLiveRegion="polite" style={styles.body}>{slow ? 'This is taking longer than expected. You can safely retry the same request.' : 'Balancing the group’s pace, budget, and must-haves.'}</Text>{slow ? <View style={styles.action}><AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary-inline" variant="secondary" /></View> : null}</View> : null}
-      {error ? <View style={styles.errorBox}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><View style={styles.action}><AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary-error" variant="secondary" /></View></View> : null}
-      {!generating && !error ? <Text style={styles.intro}>Generate a practical shared plan from the group’s choices. Private member details stay private.</Text> : null}
+      {error ? <View style={styles.errorBox}><Text accessibilityRole="alert" style={styles.error}>{error}</Text>{state.currentRole === 'organizer' ? <View style={styles.action}><AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary-error" variant="secondary" /></View> : null}</View> : null}
+      {!generating && !error ? <Text style={styles.intro}>{state.currentRole === 'organizer' ? 'Build a day-by-day plan using your dates, selected places, traveller count and group budget.' : 'Your organiser will generate the shared itinerary. It will appear here when it is ready.'}</Text> : null}
     </View> : null}
     {version ? <View testID="stored-itinerary">
       <View style={styles.hero}>
@@ -125,11 +141,11 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 0, paddingTop: 0 }, padded: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl }, center: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: spacing.xl },
-  action: { marginTop: spacing.lg, width: '100%' }, generateFooter: { gap: spacing.md }, kicker: { color: colors.coral, fontSize: typography.label, fontWeight: '900', letterSpacing: 1.5 }, title: { color: colors.white, fontSize: typography.title, fontWeight: '900', marginTop: spacing.sm }, intro: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.lg },
-  notice: { backgroundColor: colors.midnightRaised, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.sm, marginTop: spacing.xl, padding: spacing.xl }, sectionTitle: { color: colors.white, fontSize: typography.heading, fontWeight: '800' }, body: { color: colors.textMuted, fontSize: typography.small, lineHeight: 18 }, errorBox: { backgroundColor: colors.midnightRaised, borderColor: colors.danger, borderRadius: radius.lg, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg }, error: { color: colors.danger, fontSize: typography.small, lineHeight: 19, textAlign: 'center' },
-  hero: { backgroundColor: colors.midnightSoft, height: 176, overflow: 'hidden', position: 'relative' }, heroShade: { backgroundColor: 'rgba(1, 29, 23, .25)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 }, heroCopy: { bottom: spacing.lg, left: spacing.lg, position: 'absolute' }, heroTitle: { color: colors.white, fontSize: 24, fontWeight: '900', letterSpacing: -.6, textShadowColor: 'rgba(0,0,0,.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 }, activeChip: { alignSelf: 'flex-start', backgroundColor: colors.sky, borderRadius: radius.sm, marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: 3 }, activeText: { color: colors.midnight, fontSize: 9, fontWeight: '800' },
-  stats: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }, stat: { alignItems: 'center', backgroundColor: colors.sand, borderRadius: radius.sm, flex: 1, flexDirection: 'row', gap: 6, minHeight: 48, paddingHorizontal: spacing.sm }, statIcon: { color: colors.disabled, fontSize: 15 }, statValue: { color: colors.midnight, fontSize: 10, fontWeight: '900' }, statLabel: { color: colors.disabled, fontSize: 8, marginTop: 2 },
-  tabs: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.xl, paddingHorizontal: spacing.lg }, tab: { color: colors.textMuted, fontSize: 10, paddingBottom: spacing.md, paddingTop: spacing.sm }, activeTab: { borderBottomColor: colors.sky, borderBottomWidth: 2, color: colors.white, fontWeight: '800' },
-  days: { gap: spacing.md, paddingBottom: spacing.xl, paddingHorizontal: spacing.md, paddingTop: spacing.lg }, day: { backgroundColor: colors.midnightRaised, borderRadius: radius.md, overflow: 'hidden', padding: spacing.md }, pressed: { opacity: .78, transform: [{ scale: .995 }] }, dayMeta: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' }, dayLabel: { color: colors.sky, fontSize: 9, fontWeight: '800', letterSpacing: .7 }, dayTitle: { color: colors.sand, fontSize: typography.body, fontWeight: '800', marginTop: spacing.sm }, dayPrice: { backgroundColor: colors.midnight, borderColor: colors.gold, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: spacing.sm, paddingVertical: 4 }, dayPriceText: { color: colors.gold, fontSize: 8, fontWeight: '800' },
-  timeline: { marginTop: spacing.md }, activity: { flexDirection: 'row', minHeight: 104 }, timelineRail: { alignItems: 'center', width: 44 }, activityIcon: { alignItems: 'center', backgroundColor: colors.sky, borderRadius: radius.pill, height: 34, justifyContent: 'center', width: 34 }, activityIconWarm: { backgroundColor: colors.coral }, activityGlyph: { color: colors.midnight, fontSize: 15, fontWeight: '900' }, railLine: { backgroundColor: colors.border, flex: 1, marginVertical: 3, width: 1 }, activityCopy: { flex: 1, paddingBottom: spacing.md }, time: { color: colors.sky, fontSize: 9, fontWeight: '800' }, activityTitle: { color: colors.white, fontSize: 12, fontWeight: '800', marginTop: 3 }, location: { color: colors.sand, fontSize: 9, marginTop: 3 }, estimate: { alignSelf: 'flex-start', backgroundColor: colors.midnightSoft, borderRadius: 4, color: colors.gold, fontSize: 8, fontWeight: '800', marginTop: 5, overflow: 'hidden', paddingHorizontal: 5, paddingVertical: 2 }, warning: { color: colors.gold, fontSize: typography.small, lineHeight: 18 }, source: { color: colors.textMuted, fontSize: 9, lineHeight: 15, marginTop: spacing.md, textAlign: 'center' },
+  action: { marginTop: spacing.lg, width: '100%' }, generateFooter: { gap: spacing.md }, kicker: { color: colors.coral, fontSize: typography.label, fontWeight: '900', letterSpacing: 1.5 }, title: { color: colors.ink, fontSize: typography.title, fontWeight: '900', marginTop: spacing.sm }, intro: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.lg },
+  notice: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.sm, marginTop: spacing.xl, padding: spacing.xl }, sectionTitle: { color: colors.ink, fontSize: typography.heading, fontWeight: '800' }, body: { color: colors.textMuted, fontSize: typography.small, lineHeight: 18 }, errorBox: { backgroundColor: colors.surface, borderColor: colors.danger, borderRadius: radius.lg, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg }, error: { color: colors.danger, fontSize: typography.small, lineHeight: 19, textAlign: 'center' },
+  hero: { backgroundColor: colors.surfaceTint, height: 176, overflow: 'hidden', position: 'relative' }, heroShade: { backgroundColor: 'rgba(1, 29, 23, .25)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 }, heroCopy: { bottom: spacing.lg, left: spacing.lg, position: 'absolute' }, heroTitle: { color: colors.paper, fontSize: 24, fontWeight: '900', letterSpacing: -.6, textShadowColor: 'rgba(0,0,0,.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 }, activeChip: { alignSelf: 'flex-start', backgroundColor: colors.sky, borderRadius: radius.sm, marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: 3 }, activeText: { color: colors.paper, fontSize: 9, fontWeight: '800' },
+  stats: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }, stat: { alignItems: 'center', backgroundColor: colors.sand, borderRadius: radius.sm, flex: 1, flexDirection: 'row', gap: 6, minHeight: 48, paddingHorizontal: spacing.sm }, statIcon: { color: colors.disabled, fontSize: 15 }, statValue: { color: colors.ink, fontSize: 10, fontWeight: '900' }, statLabel: { color: colors.disabled, fontSize: 8, marginTop: 2 },
+  tabs: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.xl, paddingHorizontal: spacing.lg }, tab: { color: colors.textMuted, fontSize: 10, paddingBottom: spacing.md, paddingTop: spacing.sm }, activeTab: { borderBottomColor: colors.sky, borderBottomWidth: 2, color: colors.ink, fontWeight: '800' },
+  days: { gap: spacing.md, paddingBottom: spacing.xl, paddingHorizontal: spacing.md, paddingTop: spacing.lg }, day: { backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden', padding: spacing.md }, pressed: { opacity: .78, transform: [{ scale: .995 }] }, dayMeta: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' }, dayLabel: { color: colors.sky, fontSize: 9, fontWeight: '800', letterSpacing: .7 }, dayTitle: { color: colors.sky, fontSize: typography.body, fontWeight: '800', marginTop: spacing.sm }, dayPrice: { backgroundColor: colors.background, borderColor: colors.gold, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: spacing.sm, paddingVertical: 4 }, dayPriceText: { color: colors.gold, fontSize: 8, fontWeight: '800' },
+  timeline: { marginTop: spacing.md }, activity: { flexDirection: 'row', minHeight: 104 }, timelineRail: { alignItems: 'center', width: 44 }, activityIcon: { alignItems: 'center', backgroundColor: colors.sky, borderRadius: radius.pill, height: 34, justifyContent: 'center', width: 34 }, activityIconWarm: { backgroundColor: colors.coral }, activityGlyph: { color: colors.ink, fontSize: 15, fontWeight: '900' }, railLine: { backgroundColor: colors.border, flex: 1, marginVertical: 3, width: 1 }, activityCopy: { flex: 1, paddingBottom: spacing.md }, time: { color: colors.sky, fontSize: 9, fontWeight: '800' }, activityTitle: { color: colors.ink, fontSize: 12, fontWeight: '800', marginTop: 3 }, location: { color: colors.sky, fontSize: 9, marginTop: 3 }, estimate: { alignSelf: 'flex-start', backgroundColor: colors.surfaceTint, borderRadius: 4, color: colors.gold, fontSize: 8, fontWeight: '800', marginTop: 5, overflow: 'hidden', paddingHorizontal: 5, paddingVertical: 2 }, warning: { color: colors.gold, fontSize: typography.small, lineHeight: 18 }, source: { color: colors.textMuted, fontSize: 9, lineHeight: 15, marginTop: spacing.md, textAlign: 'center' },
 });

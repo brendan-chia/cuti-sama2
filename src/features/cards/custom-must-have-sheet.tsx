@@ -19,9 +19,9 @@ export function CustomMustHaveSheet({ visible, initialValue, onCancel, onCreate 
 }
 
 const styles = StyleSheet.create({
-  scrim: { backgroundColor: colors.overlay, flex: 1, justifyContent: 'flex-end' }, sheet: { backgroundColor: colors.midnightRaised, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, paddingBottom: spacing.xxl },
+  scrim: { backgroundColor: colors.overlay, flex: 1, justifyContent: 'flex-end' }, sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, paddingBottom: spacing.xxl },
   handle: { alignSelf: 'center', backgroundColor: colors.border, borderRadius: radius.pill, height: 4, marginBottom: spacing.xl, width: 42 }, kicker: { color: colors.sky, fontSize: typography.label, fontWeight: '900', letterSpacing: 1.3 },
-  title: { color: colors.white, fontSize: typography.heading, fontWeight: '900', marginTop: spacing.sm }, body: { color: colors.textMuted, fontSize: typography.small, lineHeight: 20, marginTop: spacing.sm },
-  input: { backgroundColor: colors.midnight, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, color: colors.white, fontSize: typography.body, marginTop: spacing.xl, minHeight: 54, paddingHorizontal: spacing.lg }, count: { color: colors.textMuted, fontSize: typography.label, marginTop: spacing.sm, textAlign: 'right' },
+  title: { color: colors.ink, fontSize: typography.heading, fontWeight: '900', marginTop: spacing.sm }, body: { color: colors.textMuted, fontSize: typography.small, lineHeight: 20, marginTop: spacing.sm },
+  input: { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, color: colors.ink, fontSize: typography.body, marginTop: spacing.xl, minHeight: 54, paddingHorizontal: spacing.lg }, count: { color: colors.textMuted, fontSize: typography.label, marginTop: spacing.sm, textAlign: 'right' },
   error: { color: colors.danger, fontSize: typography.small, marginTop: spacing.sm }, actions: { gap: spacing.md, marginTop: spacing.lg }, cancel: { alignItems: 'center', justifyContent: 'center', minHeight: 44 }, cancelText: { color: colors.textMuted, fontSize: typography.body, fontWeight: '700' },
 });

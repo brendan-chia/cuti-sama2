@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { countries, countryByCode, searchCountries } from '../../../packages/contracts/src/countries';
 import type { QuestAction, QuestCountryCode, QuestRoom } from '../../../packages/contracts/src/quest';
@@ -8,6 +9,14 @@ import { colors, radius, spacing } from '@/theme/tokens';
 import { questStyles as s } from './quest-styles';
 
 type Props = { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean> };
+
+function CountryPhoto({ country }: { country: (typeof countries)[number] }) {
+  const [failed, setFailed] = useState(false);
+  return <View style={styles.photo}>
+    <Text style={styles.photoFallback}>{country.flag}</Text>
+    {!failed ? <Image source={{ uri: country.imageUrl }} accessibilityLabel={`Scenery in ${country.name}`} style={StyleSheet.absoluteFill} contentFit="cover" transition={180} cachePolicy="memory-disk" onError={() => setFailed(true)} /> : null}
+  </View>;
+}
 
 export function CountryPicks({ room, busy, act }: Props) {
   const [selected, setSelected] = useState<QuestCountryCode[]>(room.ownPicks);
@@ -29,7 +38,7 @@ export function CountryPicks({ room, busy, act }: Props) {
       {[0, 1, 2].map((index) => {
         const country = countryByCode(selected[index]);
         return <Pressable key={index} accessibilityRole="button" accessibilityLabel={country ? `Remove ${country.name}` : `Empty country slot ${index + 1}`} disabled={!country || busy} onPress={() => toggle(country!.code)} style={[styles.slot, country && styles.filled]}>
-          <Text style={styles.slotIcon}>{country?.flag ?? '+'}</Text><Text numberOfLines={1} style={styles.slotLabel}>{country?.name ?? `Pick ${index + 1}`}</Text>
+          {country ? <><CountryPhoto key={country.code} country={country} /><View style={styles.slotCaption}><Text numberOfLines={1} style={styles.selectedSlotLabel}>{country.name}</Text></View></> : <><Text style={styles.slotIcon}>+</Text><Text numberOfLines={1} style={styles.slotLabel}>{`Pick ${index + 1}`}</Text></>}
         </Pressable>;
       })}
     </View>
@@ -38,7 +47,8 @@ export function CountryPicks({ room, busy, act }: Props) {
     <View style={styles.grid}>{visible.map((country) => {
       const chosen = selected.includes(country.code); const disabled = busy || (!chosen && selected.length >= 3);
       return <Pressable key={country.code} accessibilityRole="checkbox" accessibilityLabel={country.name} accessibilityState={{ checked: chosen, disabled }} disabled={disabled} onPress={() => toggle(country.code)} style={({ pressed }) => [styles.country, chosen && styles.chosen, disabled && !chosen && s.disabled, pressed && s.pressed]}>
-        <Text style={styles.flag}>{country.flag}</Text><Text style={[styles.countryName, chosen && { color: colors.midnight }]}>{country.name}</Text><Text style={chosen ? styles.check : s.small}>{chosen ? '✓' : '+'}</Text>
+        <View style={styles.countryPhoto}><CountryPhoto key={country.code} country={country} /><View style={[styles.selection, chosen && styles.selectionChosen]}><Text style={[styles.selectionText, chosen && styles.check]}>{chosen ? '✓' : '+'}</Text></View></View>
+        <View style={styles.caption}><Text style={[styles.countryName, chosen && styles.check]}>{country.name}</Text></View>
       </Pressable>;
     })}</View>
     {!visible.length ? <Text style={s.body}>No country found in this collection. Try another name.</Text> : null}
@@ -49,10 +59,19 @@ export function CountryPicks({ room, busy, act }: Props) {
 
 const styles = StyleSheet.create({
   slots: { flexDirection: 'row', gap: spacing.sm },
-  slot: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.midnightRaised, borderColor: colors.border, borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.md, minHeight: 106, padding: spacing.sm },
-  filled: { borderStyle: 'solid', borderColor: colors.sky, backgroundColor: colors.midnightSoft },
-  slotIcon: { fontSize: 30, color: colors.textMuted }, slotLabel: { color: colors.white, fontSize: 12, fontWeight: '700' },
+  slot: { flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.md, minHeight: 106, padding: spacing.sm },
+  filled: { borderStyle: 'solid', borderColor: colors.sky, backgroundColor: colors.surfaceTint },
+  slotIcon: { fontSize: 30, color: colors.textMuted }, slotLabel: { color: colors.ink, fontSize: 12, fontWeight: '700' },
   grid: { gap: spacing.sm, flexDirection: 'row', flexWrap: 'wrap' },
-  country: { width: '48%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 62, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.midnightRaised },
-  chosen: { backgroundColor: colors.sky }, flag: { fontSize: 23 }, countryName: { color: colors.white, flex: 1, fontWeight: '600', fontSize: 13 }, check: { color: colors.midnight, fontWeight: '900' },
+  country: { width: '48%', flexGrow: 1, maxWidth: '50%', overflow: 'hidden', borderWidth: 2, borderColor: colors.surface, borderRadius: radius.md, backgroundColor: colors.surface },
+  countryPhoto: { aspectRatio: 1.35 },
+  photo: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
+  photoFallback: { fontSize: 36, color: colors.textMuted },
+  caption: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 48, justifyContent: 'center' },
+  selection: { position: 'absolute', top: spacing.sm, right: spacing.sm, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+  selectionChosen: { backgroundColor: colors.sky },
+  selectionText: { color: colors.ink, fontSize: 19, fontWeight: '700' },
+  slotCaption: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.sky, paddingVertical: spacing.sm, paddingHorizontal: 4 },
+  selectedSlotLabel: { color: colors.paper, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  chosen: { backgroundColor: colors.sky, borderColor: colors.sky }, countryName: { color: colors.ink, fontWeight: '700', fontSize: 14 }, check: { color: colors.paper, fontWeight: '900' },
 });

@@ -37,6 +37,7 @@ export function Screen({ children, contentStyle, footer, scroll = true, testID }
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cloud} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
@@ -51,9 +52,11 @@ export function Screen({ children, contentStyle, footer, scroll = true, testID }
 }
 
 const styles = StyleSheet.create({
+  cloud: { position: 'absolute', right: -70, top: 90, width: 220, height: 80, borderRadius: 80, backgroundColor: colors.paper, opacity: 0.35, transform: [{ rotate: '-18deg' }] },
   safeArea: {
     flex: 1,
-    backgroundColor: colors.midnight,
+    overflow: 'hidden',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -71,7 +74,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   footer: {
-    backgroundColor: colors.midnight,
+    backgroundColor: colors.background,
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.lg,

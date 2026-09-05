@@ -39,7 +39,7 @@ export function AppButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.midnight : colors.white} />
+        <ActivityIndicator color={variant === 'primary' ? colors.paper : colors.ink} />
       ) : (
         <View style={styles.labelRow}>
           {leading}
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sky,
   },
   secondary: {
-    backgroundColor: colors.midnightRaised,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
   },
@@ -81,13 +81,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    color: colors.white,
+    color: colors.ink,
     fontSize: typography.body,
     fontWeight: '700',
     letterSpacing: 0.1,
   },
   primaryLabel: {
-    color: colors.midnight,
+    color: colors.paper,
     fontWeight: '800',
   },
 });

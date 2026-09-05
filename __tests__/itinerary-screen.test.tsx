@@ -13,6 +13,25 @@ const stored = { versionId: '77e3c78c-a1e0-41c2-9f1c-582ed656d770', version: 1, 
 const locked: ItineraryState = { tripId, tripName: 'Penang escape', currentRole: 'organizer', lockedDestination: { name: 'Penang', country: 'Malaysia', lockedAt: '2026-09-02T09:00:00Z' }, latest: null, operation: null };
 afterEach(async () => { jest.clearAllMocks(); await cleanup(); });
 
+it('generates once from the completed quest and reopens an existing itinerary without generating again', async () => {
+  const loadAction = jest.fn().mockResolvedValueOnce(locked).mockResolvedValue({ ...locked, latest: stored });
+  const generateAction = jest.fn(async () => ({ tripId, version: stored }));
+  const screen = await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} autoGenerate loadAction={loadAction} generateAction={generateAction} />);
+  await waitFor(() => expect(screen.getByTestId('stored-itinerary')).toBeTruthy());
+  expect(generateAction).toHaveBeenCalledTimes(1);
+  await cleanup();
+  await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} autoGenerate loadAction={loadAction} generateAction={generateAction} />);
+  expect(generateAction).toHaveBeenCalledTimes(1);
+});
+
+it('lets members wait for the shared result without starting generation', async () => {
+  const generateAction = jest.fn();
+  const screen = await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} autoGenerate loadAction={jest.fn(async () => ({ ...locked, currentRole: 'member' as const }))} generateAction={generateAction} />);
+  expect(await screen.findByText(/Your organiser will generate/)).toBeTruthy();
+  expect(screen.queryByTestId('generate-itinerary')).toBeNull();
+  expect(generateAction).not.toHaveBeenCalled();
+});
+
 it('keeps generation unavailable until a destination is locked', async () => {
   const screen = await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => ({ ...locked, lockedDestination: null }))} />);
   expect(await screen.findByTestId('destination-required')).toBeTruthy();

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { QuestAction, QuestRoom, TripPeriod } from '../../../packages/contracts/src/quest';
 import { AppButton } from '@/components/app-button';
 import { DateField } from '@/components/date-field';
@@ -15,7 +15,7 @@ type Props = { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Pro
 export function TimingStage({ room, busy, act, suggestAction = suggestTripPeriods }: Props) {
   const [startsOn, setStartsOn] = useState(room.ownAvailability?.startsOn ?? '');
   const [endsOn, setEndsOn] = useState(room.ownAvailability?.endsOn ?? '');
-  const [duration, setDuration] = useState(5);
+  const duration = 5;
   const [result, setResult] = useState<{ key: string; data: Awaited<ReturnType<typeof suggestTripPeriods>> } | null>(null);
   const [loadingRequest, setLoadingRequest] = useState<{ key: string; version: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +50,6 @@ export function TimingStage({ room, busy, act, suggestAction = suggestTripPeriod
     </View>
     {allReady && !room.sharedAvailability ? <View style={s.success}><Text style={s.heading}>Let’s make some room.</Text><Text style={s.body}>Your available dates don’t overlap yet. Compare calendars together and update your availability above.</Text></View> : null}
     {organizer ? <View style={s.stack}>
-      <Text style={s.heading}>How long is the escape?</Text>
-      <View style={s.row}>{[2, 3, 5, 7, 10, 14].map((days) => <Pressable key={days} accessibilityRole="radio" accessibilityLabel={`${days} days`} accessibilityState={{ selected: duration === days, disabled: busy || loading }} disabled={busy || loading} onPress={() => setDuration(days)} style={[s.chip, duration === days && s.chipSelected]}><Text style={[s.chipText, duration === days && s.chipTextSelected]}>{days} days</Text></Pressable>)}</View>
       <AppButton label="Find our best travel windows" testID="suggest-trip-periods" disabled={!allReady || !room.sharedAvailability || busy} loading={loading} onPress={() => void suggest()} />
       <Text style={s.small}>{allReady ? 'AI can help rank feasible dates. Calendar suggestions are available if AI is unavailable. Dates use your shared availability and a Monday–Friday work week.' : 'Date suggestions unlock once everyone saves their availability.'}</Text>
     </View> : <Text style={s.body}>{allReady ? 'The organiser can now find and choose a travel window for the group.' : 'Once everyone shares their availability, the organiser can reveal suggested travel windows.'}</Text>}

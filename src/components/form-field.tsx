@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    color: colors.white,
+    color: colors.ink,
     fontSize: typography.body,
     fontWeight: '700',
   },
@@ -45,11 +45,11 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   input: {
-    backgroundColor: colors.midnightRaised,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
-    color: colors.white,
+    color: colors.ink,
     fontSize: typography.body,
     minHeight: 52,
     paddingHorizontal: spacing.lg,

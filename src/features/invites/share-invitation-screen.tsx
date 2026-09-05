@@ -64,7 +64,7 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
       {state?.status.status === 'closed' ? <View style={styles.panel}><Text style={styles.panelTitle}>Invitations are closed</Text><Text style={styles.body}>Previous links no longer work. Members already inside are unaffected.</Text><AppButton label="Create a new link" loading={busy} onPress={() => void create(issueAction)} /></View> : null}
       {state?.status.status === 'open' && !invitation ? <View style={styles.panel}><Text style={styles.panelTitle}>The active link is not on this device</Text><Text style={styles.body}>For security, the raw link is only kept on the device that created it. Replace it to share from here.</Text><AppButton label="Replace with a new link" loading={busy} onPress={confirmRotate} /></View> : null}
       {invitation && shareUrl ? <View style={styles.panel}>
-        <View style={styles.qr}><QRCode backgroundColor={colors.white} color={colors.midnight} size={190} value={shareUrl} /></View>
+        <View style={styles.qr}><QRCode backgroundColor={colors.ink} color={colors.background} size={190} value={shareUrl} /></View>
         <Text selectable style={styles.url}>{shareUrl}</Text>
         <Text style={styles.expiry}>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</Text>
         <AppButton label="Share invitation" onPress={() => void Share.share({ message: `Join our CutiSama2 Trip Room: ${shareUrl}`, url: shareUrl })} />
@@ -78,12 +78,12 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
 
 const styles = StyleSheet.create({
   kicker: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.7 },
-  title: { color: colors.white, fontSize: typography.title, fontWeight: '900', lineHeight: 35, marginTop: spacing.md },
+  title: { color: colors.ink, fontSize: typography.title, fontWeight: '900', lineHeight: 35, marginTop: spacing.md },
   body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.sm },
-  panel: { backgroundColor: colors.midnightRaised, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, marginTop: spacing.xxl, padding: spacing.xl },
-  panelTitle: { color: colors.white, fontSize: typography.heading, fontWeight: '800' },
-  qr: { alignSelf: 'center', backgroundColor: colors.white, borderRadius: radius.md, padding: spacing.lg },
+  panel: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, marginTop: spacing.xxl, padding: spacing.xl },
+  panelTitle: { color: colors.ink, fontSize: typography.heading, fontWeight: '800' },
+  qr: { alignSelf: 'center', backgroundColor: colors.paper, borderRadius: radius.md, padding: spacing.lg },
   url: { color: colors.sky, fontSize: typography.small, lineHeight: 19, textAlign: 'center' },
   expiry: { color: colors.textMuted, fontSize: typography.small, textAlign: 'center' },
-  error: { backgroundColor: colors.midnightRaised, borderRadius: radius.sm, color: colors.danger, marginTop: spacing.xl, padding: spacing.md },
+  error: { backgroundColor: colors.surface, borderRadius: radius.sm, color: colors.danger, marginTop: spacing.xl, padding: spacing.md },
 });

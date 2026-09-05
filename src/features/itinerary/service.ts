@@ -8,7 +8,7 @@ import { createUuid } from '@/lib/uuid';
 
 export async function loadItineraryState(tripId: string) {
   await ensureAnonymousSession();
-  const { data, error } = await requireSupabase().rpc('get_itinerary_state', { p_trip_id: tripId });
+  const { data, error } = await requireSupabase().rpc('get_planning_itinerary_state', { p_trip_id: tripId });
   if (error) throw new Error(error.message);
   return ItineraryStateSchema.parse(data);
 }
@@ -29,4 +29,4 @@ export async function generateItinerary(tripId: string, idempotencyKey = createU
   return result;
 }
 
-export function generationOperationKey(tripId: string) { return idempotency.keyFor('generate', tripId, { tripId }); }
+export function generationOperationKey(tripId: string, lockedAt?: string) { return idempotency.keyFor('generate', tripId, { tripId, lockedAt }); }

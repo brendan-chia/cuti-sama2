@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ConfirmedPlaceSchema } from './place-import';
 
 export const QuestStageSchema = z.enum(['timing', 'picks', 'voting', 'explore', 'budget', 'complete']);
 export type QuestStage = z.infer<typeof QuestStageSchema>;
@@ -54,6 +55,7 @@ export const QuestRoomSchema = z.object({
   tiedCountryCodes: z.array(QuestCountryCodeSchema),
   selectedCountryCode: QuestCountryCodeSchema.nullable(),
   attractionIds: z.array(z.string()),
+  importedPlaces: z.array(ConfirmedPlaceSchema).optional(),
   ownBudget: z.number().int().positive().nullable(),
   budgetSummary: z.object({
     submittedCount: z.number().int().nonnegative(), comfortablePerPerson: z.number().int().positive(),
