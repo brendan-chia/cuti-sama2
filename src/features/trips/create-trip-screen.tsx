@@ -13,7 +13,7 @@ import { colors, radius, spacing } from '@/theme/tokens';
 
 type Props = { onCreated: (trip: TripSummary) => void; createTripAction?: typeof createTrip; configured?: boolean };
 const chapters = [
-  ['01', 'Find your window', 'Share availability and reveal suggested travel dates.'],
+  ['01', 'Find your window', 'Propose travel dates and compare everyone’s suggestions.'],
   ['02', 'Play your wishlist', 'Everyone picks up to three favourite countries.'],
   ['03', 'Swipe to decide', 'Vote on the group’s countries and reveal a winner.'],
   ['04', 'Explore the map', 'Highlight the attractions you want to visit.'],

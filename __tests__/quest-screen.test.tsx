@@ -3,7 +3,6 @@ import { useEffect, type ComponentProps } from 'react';
 
 import { countryByCode } from '../packages/contracts/src/countries';
 import type { QuestRoom, TripPeriod } from '../packages/contracts/src/quest';
-import type { TripPeriodSuggestions } from '../packages/contracts/src/trip-period';
 import { QuestScreen } from '@/features/quest/quest-screen';
 
 const mockUseEffect = useEffect;
@@ -52,37 +51,40 @@ async function openQuest(room: QuestRoom, overrides: Partial<ComponentProps<type
   let notify = () => {};
   const loadAction = overrides.loadAction ?? jest.fn(async () => room);
   const updateAction = overrides.updateAction ?? jest.fn(async () => room);
-  const suggestAction = overrides.suggestAction ?? jest.fn();
   const subscribeAction = jest.fn(async (_tripId: string, onChanged: () => void) => {
     notify = onChanged; return async () => undefined;
   });
-  const screen = await render(<QuestScreen tripId={tripId} onBack={jest.fn()} loadAction={loadAction} updateAction={updateAction} suggestAction={suggestAction} subscribeAction={subscribeAction} {...overrides} />);
+  const screen = await render(<QuestScreen tripId={tripId} onBack={jest.fn()} loadAction={loadAction} updateAction={updateAction} subscribeAction={subscribeAction} {...overrides} />);
   await waitFor(() => expect(screen.getByTestId('trip-quest-screen')).toBeTruthy());
   return { screen, loadAction, updateAction, notify: () => notify() };
 }
 
 describe('trip quest shared planning flow', () => {
-  it('waits for everyone’s availability before unlocking suggestions', async () => {
-    const room = roomWith({ stage: 'timing', period: null, sharedAvailability: null, members: baseRoom.members.map((member) => ({ ...member, availabilitySubmitted: member.memberId === organizerId })) });
-    const suggestAction = jest.fn();
-    const { screen } = await openQuest(room, { suggestAction });
-    expect(screen.getByTestId('suggest-trip-periods').props.accessibilityState.disabled).toBe(true);
-    await fireEvent.press(screen.getByTestId('suggest-trip-periods'));
-    expect(suggestAction).not.toHaveBeenCalled();
-    expect(screen.getByText('Date suggestions unlock once everyone saves their availability.')).toBeTruthy();
+  it('collects a proposal and hides the compiled list until everyone submits', async () => {
+    const room = roomWith({ stage: 'timing', period: null, ownAvailability: null, members: baseRoom.members.map((member) => ({ ...member, availabilitySubmitted: member.memberId === organizerId })) });
+    const { screen, updateAction } = await openQuest(room);
+    expect(screen.queryByTestId('suggest-trip-periods')).toBeNull();
+    expect(screen.queryByTestId('date-proposals')).toBeNull();
+    expect(screen.getByText(/1 of 2 proposals received/)).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Proposed start date'), '2027-12-04');
+    await fireEvent.changeText(screen.getByLabelText('Proposed end date'), '2027-12-08');
+    await fireEvent.press(screen.getByTestId('save-quest-availability'));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'availability', startsOn: '2027-12-04', endsOn: '2027-12-08' });
   });
 
-  it('labels calendar fallback honestly and saves the selected dates before unlocking wishlists', async () => {
-    const room = roomWith({ stage: 'timing', period: null });
-    const suggestAction = jest.fn(async (): Promise<TripPeriodSuggestions> => ({ periods: [period], source: 'calendar', message: 'Shared calendar options.' }));
+  it('shows every proposal even without overlap and lets the organiser confirm one', async () => {
+    const room = roomWith({ stage: 'timing', period: null, sharedAvailability: null, dateProposals: [
+      { memberId: organizerId, startsOn: '2027-12-04', endsOn: '2027-12-08' },
+      { memberId, startsOn: '2028-01-10', endsOn: '2028-01-15' },
+    ] });
     const updateAction = jest.fn(async () => roomWith({ revision: 2 }));
-    const { screen } = await openQuest(room, { suggestAction, updateAction });
-    await fireEvent.press(screen.getByTestId('suggest-trip-periods'));
-    await waitFor(() => expect(screen.getByText('CALENDAR TRAVEL WINDOWS')).toBeTruthy());
-    expect(screen.queryByText('AI-RANKED TRAVEL WINDOWS')).toBeNull();
-    expect(suggestAction).toHaveBeenCalledWith(tripId, 5);
-    await fireEvent.press(screen.getByText('Lock these dates & unlock wishlists'));
-    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'period', period });
+    const { screen } = await openQuest(room, { updateAction });
+    expect(screen.getByText('Organiser (you)')).toBeTruthy();
+    expect(screen.getByText(/10 Jan 2028.*15 Jan 2028/)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`choose-proposal-${memberId}`));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'period', period: {
+      startsOn: '2028-01-10', endsOn: '2028-01-15', label: 'Crew-proposed travel dates', reason: 'Chosen by the organiser from the crew’s proposed dates.',
+    } });
     await waitFor(() => expect(screen.getByLabelText('Find a country')).toBeTruthy());
   });
 
@@ -217,16 +219,14 @@ describe('trip quest shared planning flow', () => {
     expect(screen.queryByLabelText('Find a country')).toBeNull();
   });
 
-  it('discards in-flight date suggestions when the shared calendar changes', async () => {
-    const room = roomWith({ stage: 'timing', period: null });
-    const pending = deferred<TripPeriodSuggestions>();
-    const loadAction = jest.fn().mockResolvedValueOnce(room).mockResolvedValue({ ...room, revision: 2, sharedAvailability: { startsOn: '2028-01-01', endsOn: '2028-01-31' } });
-    const suggestAction = jest.fn(() => pending.promise);
-    const { screen, notify } = await openQuest(room, { loadAction, suggestAction });
-    await fireEvent.press(screen.getByTestId('suggest-trip-periods'));
+  it('shares revised proposals with members without exposing organiser controls', async () => {
+    const room = roomWith({ stage: 'timing', period: null, currentRole: 'member', currentMemberId: memberId, dateProposals: [{ memberId: organizerId, startsOn: '2027-12-04', endsOn: '2027-12-08' }, { memberId, startsOn: '2028-01-10', endsOn: '2028-01-15' }] });
+    const loadAction = jest.fn().mockResolvedValueOnce(room).mockResolvedValue({ ...room, revision: 2, dateProposals: room.dateProposals?.map((proposal) => ({ ...proposal, startsOn: '2028-02-10', endsOn: '2028-02-15' })) });
+    const { screen, notify } = await openQuest(room, { loadAction });
+    expect(screen.getByTestId('date-proposals')).toBeTruthy();
+    expect(screen.queryByTestId(`choose-proposal-${organizerId}`)).toBeNull();
     await act(async () => notify());
-    await act(async () => pending.resolve({ periods: [period], source: 'groq', message: 'Obsolete suggestions.' }));
-    expect(screen.queryByText('Obsolete suggestions.')).toBeNull();
-    expect(screen.queryByText('Lock these dates & unlock wishlists')).toBeNull();
+    await waitFor(() => expect(screen.getAllByText(/10 Feb 2028.*15 Feb 2028/)).toHaveLength(2));
+    expect(screen.queryByText(/10 Jan 2028.*15 Jan 2028/)).toBeNull();
   });
 });

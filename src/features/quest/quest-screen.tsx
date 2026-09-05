@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { countryByCode } from '../../../packages/contracts/src/countries';
 import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/quest';
+import { BrandLogo } from '@/components/brand-logo';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { FlightPath } from '@/components/flight-path';
@@ -14,18 +15,17 @@ import { CountryPicks } from './country-picks';
 import { CountryVote } from './country-vote';
 import { questStyles as s } from './quest-styles';
 import { loadQuest, subscribeToQuest, updateQuest } from './service';
-import { suggestTripPeriods } from './timing';
 import { periodLabel, TimingStage } from './timing-stage';
 
 export const questSteps = [
-  { stage: 'timing', label: 'Dates', title: 'Find your window.', description: 'A little calendar magic. Find a time the whole group can get away.' },
+  { stage: 'timing', label: 'Dates', title: 'Propose your trip dates.', description: 'Each traveller suggests a period. See everyone’s proposals together once the crew has submitted.' },
   { stage: 'picks', label: 'Wishlist', title: 'Where’s your heart set?', description: 'Play up to three favourite countries. Every traveller gets the same number of slots.' },
   { stage: 'voting', label: 'Vote', title: 'Swipe for your next stop.', description: 'One shared deck. One vote per country, per person. See where your group lands.' },
   { stage: 'explore', label: 'Explore', title: 'Pin the good stuff.', description: 'Your destination is decided. Explore the map together and let the organiser save your must-see stops.' },
   { stage: 'budget', label: 'Budget', title: 'Great memories. Happy wallets.', description: 'One last card to play. Find a spending ceiling everyone feels comfortable with.' },
 ] as const;
 
-type Props = { tripId: string; onBack: () => void; onItinerary?: () => void; loadAction?: typeof loadQuest; updateAction?: typeof updateQuest; subscribeAction?: typeof subscribeToQuest; suggestAction?: typeof suggestTripPeriods };
+type Props = { tripId: string; onBack: () => void; onItinerary?: () => void; loadAction?: typeof loadQuest; updateAction?: typeof updateQuest; subscribeAction?: typeof subscribeToQuest };
 
 function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean>; onConfirmed: (room: QuestRoom) => void }) {
   const country = countryByCode(room.selectedCountryCode);
@@ -64,7 +64,7 @@ function QuestSummary({ room, onItinerary }: { room: QuestRoom; onItinerary?: ()
   </View>;
 }
 
-export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQuest, updateAction = updateQuest, subscribeAction = subscribeToQuest, suggestAction = suggestTripPeriods }: Props) {
+export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQuest, updateAction = updateQuest, subscribeAction = subscribeToQuest }: Props) {
   const [room, setRoom] = useState<QuestRoom | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +107,7 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
   const ready = field ? room.members.filter((member) => member[field]).length : room.members.length;
   return <Screen testID="trip-quest-screen">
     <View style={s.stack}>
-      <View style={s.between}><Pressable accessibilityRole="button" onPress={onBack}><Text style={s.link}>‹ Trip lobby</Text></Pressable><Text style={s.kicker}>CUTISAMA2 AIR CLUB</Text></View>
+      <View style={s.between}><Pressable accessibilityRole="button" onPress={onBack}><Text style={s.link}>‹ Trip lobby</Text></Pressable><BrandLogo compact /></View>
       {!voting ? <Text numberOfLines={1} style={s.small}>{room.tripName}</Text> : null}
       <FlightPath stage={index} />
       <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? 'From group chat to game plan.' : step.title}</Text>{!voting ? <Text style={s.body}>{completed ? 'You made the big decisions. Together.' : step.description}</Text> : null}</View>
@@ -116,7 +116,7 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
         {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName} numberOfLines={1}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}
       </ScrollView> : null}</View> : null}
       {room.period && !completed && !voting ? <Text style={s.small}>✓ {periodLabel(room.period)}{room.selectedCountryCode ? ` · ${countryByCode(room.selectedCountryCode)?.name}` : ''}</Text> : null}
-      {room.stage === 'timing' ? <TimingStage room={room} busy={busy || unavailable} act={act} suggestAction={suggestAction} /> : null}
+      {room.stage === 'timing' ? <TimingStage room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'picks' ? <CountryPicks room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'voting' ? <CountryVote room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'explore' ? <ExploreStage room={room} busy={busy || unavailable} act={act} onConfirmed={accept} /> : null}

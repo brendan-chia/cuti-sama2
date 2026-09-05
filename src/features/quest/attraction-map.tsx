@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   collectionCount: { color: colors.sky, fontSize: typography.small, fontWeight: '800' },
   map: { height: MAP_HEIGHT, width: '100%', backgroundColor: colors.sand, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   mapControls: { position: 'absolute', right: spacing.sm, top: spacing.sm, gap: spacing.xs },
-  mapControl: { backgroundColor: colors.paper, borderWidth: 1, borderColor: '#D5D8C9', borderRadius: radius.sm, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  mapControl: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   controlText: { color: colors.ink, fontSize: 27, lineHeight: 30, fontWeight: '600' },
   recenterText: { color: colors.ink, fontSize: 26 },
   attribution: { position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.paper, minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },

@@ -41,8 +41,8 @@ select is(pg_temp.room()->>'stage', 'timing', 'first load initializes the timing
 select is((pg_temp.room()->>'revision')::integer, 0, 'read-only reloads do not advance revision');
 select is(jsonb_array_length(pg_temp.room()->'members'), 3, 'quest snapshots all three active participants');
 select is((select count(*)::integer from public.trip_quest_inputs), 1, 'RLS exposes only the caller input row');
-select is(pg_temp.room()->'sharedAvailability', 'null'::jsonb, 'unsubmitted availability is not exposed');
-select throws_ok('select pg_temp.act(pg_temp.period_action(50,54))', '22023', 'Choose a future 2–14 day period inside every member’s submitted availability.', 'host cannot choose dates before everyone submits');
+select is(pg_temp.room()->'dateProposals', '[]'::jsonb, 'proposals are hidden until everyone submits');
+select throws_ok('select pg_temp.act(pg_temp.period_action(50,54))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'host cannot choose dates before everyone submits');
 
 reset role;
 select ok((select bool_and(revoked_at is not null) from public.invites where trip_id = (select id from quest_test_trip)), 'initializing the quest closes existing invitations');
@@ -59,27 +59,27 @@ select is(public.manage_invite((select id from quest_test_trip), 'status', null,
 select lives_ok($$select public.manage_invite((select id from quest_test_trip), 'close', null, null, extensions.gen_random_uuid())$$, 'closing invitations remains a safe idempotent action');
 select is(public.get_trip_lobby((select id from quest_test_trip))->'joiningOpen', 'false'::jsonb, 'the lobby reports that joining is closed');
 select throws_ok($$select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date,'endsOn',current_date+10))$$,
-  '22023', 'Availability must be in the future and within the next three years.', 'availability rejects today and past dates');
+  '22023', 'Propose a future trip of 1–30 days within the next three years.', 'availability rejects today and past dates');
 select throws_ok($$select pg_temp.act('{"type":"availability","startsOn":"2030-02-30","endsOn":"2030-03-02"}')$$,
-  '22023', 'Enter valid availability dates.', 'calendar-invalid dates are rejected');
-select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+30,'endsOn',current_date+70));
-select is(pg_temp.room()->'sharedAvailability', 'null'::jsonb, 'one member does not reveal the group intersection');
+  '22023', 'Enter valid proposed dates.', 'calendar-invalid dates are rejected');
+select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+50,'endsOn',current_date+54));
+select is(pg_temp.room()->'dateProposals', '[]'::jsonb, 'one submission does not reveal proposals before the others submit');
 select set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', true);
 select is(pg_temp.room()->'ownAvailability', 'null'::jsonb, 'another member never sees the host private dates');
-select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+40,'endsOn',current_date+80));
+select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+60,'endsOn',current_date+64));
 select throws_ok('select pg_temp.act(pg_temp.period_action(50,54))', '42501', 'Only the organiser can advance this quest stage.', 'members cannot lock the trip period');
 select set_config('request.jwt.claim.sub', '33333333-3333-4333-8333-333333333333', true);
-select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+45,'endsOn',current_date+75));
-select is(pg_temp.room()->'sharedAvailability'->>'startsOn', (current_date+45)::text, 'shared availability uses the latest start');
-select is(pg_temp.room()->'sharedAvailability'->>'endsOn', (current_date+70)::text, 'shared availability uses the earliest end');
+select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+70,'endsOn',current_date+74));
+select is(jsonb_array_length(pg_temp.room()->'dateProposals'), 3, 'all three proposals are shared after everyone submits');
+select is(pg_temp.room()->'sharedAvailability', 'null'::jsonb, 'proposals do not need to overlap');
 select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
-select throws_ok('select pg_temp.act(pg_temp.period_action(40,44))', '22023', 'Choose a future 2–14 day period inside every member’s submitted availability.', 'a period outside one member availability is rejected');
-select throws_ok('select pg_temp.act(pg_temp.period_action(50,64))', '22023', 'Choose a future 2–14 day period inside every member’s submitted availability.', '15-day periods cannot bypass the supported maximum');
-select throws_ok('select pg_temp.act(pg_temp.period_action(50,50))', '22023', 'Choose a future 2–14 day period inside every member’s submitted availability.', 'single-day periods cannot bypass the minimum');
+select throws_ok('select pg_temp.act(pg_temp.period_action(40,44))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'a period nobody proposed is rejected');
+select throws_ok('select pg_temp.act(pg_temp.period_action(50,64))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'an altered proposal cannot be selected');
+select throws_ok('select pg_temp.act(pg_temp.period_action(50,50))', '22023', 'Wait for everyone to propose dates, then choose one of their future 1–30 day proposals.', 'a truncated proposal cannot be selected');
 select pg_temp.act(pg_temp.period_action(50,54));
 select is(pg_temp.room()->>'stage', 'picks', 'a valid shared period unlocks destination picks');
 select throws_ok($$select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+50,'endsOn',current_date+80))$$,
-  '22023', 'Availability is locked after the trip period is chosen.', 'later changes cannot invalidate the chosen dates');
+  '22023', 'Date proposals are locked after the trip period is chosen.', 'later changes cannot invalidate the chosen dates');
 select throws_ok($$select pg_temp.act('{"type":"picks","countryCodes":[]}')$$, '22023', 'Choose one to three different supported countries.', 'at least one pick is required');
 select throws_ok($$select pg_temp.act('{"type":"picks","countryCodes":["MY","MY"]}')$$, '22023', 'Choose one to three different supported countries.', 'duplicate picks are rejected');
 select throws_ok($$select pg_temp.act('{"type":"picks","countryCodes":["MY","TH","JP","FR"]}')$$, '22023', 'Choose one to three different supported countries.', 'four picks are rejected');
@@ -159,7 +159,7 @@ update quest_test_trip set id = (select id from public.trips where name = 'Solo 
 reset role;
 update public.trips set planning_started_at = now() where id = (select id from quest_test_trip);
 set local role authenticated;
-select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+30,'endsOn',current_date+80));
+select pg_temp.act(jsonb_build_object('type','availability','startsOn',current_date+50,'endsOn',current_date+54));
 select pg_temp.act(pg_temp.period_action(50,54));
 select pg_temp.act('{"type":"picks","countryCodes":["JP","MY"]}');
 select pg_temp.act('{"type":"vote","countryCode":"MY","agree":false}');

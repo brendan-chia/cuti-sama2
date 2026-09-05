@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { BrandLogo } from '@/components/brand-logo';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { getLastTripId } from '@/features/trips/service';
@@ -27,8 +28,7 @@ export default function WelcomeScreen() {
   return (
     <Screen testID="welcome-screen">
       <View style={styles.brandRow}>
-        <View style={styles.brandMark}><Text style={styles.brandPlane}>✈</Text></View>
-        <Text style={styles.wordmark}>CUTISAMA2</Text>
+        <BrandLogo />
       </View>
 
       <View style={styles.hero}>
@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  brandRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  brandRow: { alignItems: 'center', backgroundColor: colors.paper, borderRadius: radius.lg, padding: spacing.md },
   brandMark: { height: 36, width: 36, borderRadius: 12, backgroundColor: colors.sky, alignItems: 'center', justifyContent: 'center' },
   brandPlane: { color: colors.paper, fontSize: 25 },
   brandDot: {
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   postcard: { width: '64%', maxWidth: 290, backgroundColor: colors.paper, padding: 8, paddingBottom: 12, borderRadius: 5, transform: [{ rotate: '-5deg' }] },
   postcardImage: { height: 125, borderRadius: 3 }, postcardCaption: { color: colors.ink, fontSize: 13, fontWeight: '800', marginTop: 9, marginHorizontal: 4 }, postcardSmall: { color: colors.textMuted, fontSize: 8, letterSpacing: 1.2, marginTop: 5, marginHorizontal: 4 },
   miniPostcard: { position: 'absolute', right: 0, top: 45, width: '48%', backgroundColor: colors.paper, padding: 7, paddingBottom: 12, borderRadius: 5, transform: [{ rotate: '7deg' }] }, miniImage: { height: 100, borderRadius: 3 },
-  sunSticker: { position: 'absolute', top: -7, right: 4, backgroundColor: colors.sun, width: 73, height: 73, borderRadius: 37, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '12deg' }] }, stickerText: { color: colors.ink, textAlign: 'center', fontSize: 10, lineHeight: 15, fontWeight: '900', letterSpacing: 0.6 },
+  sunSticker: { position: 'absolute', top: -7, right: 4, backgroundColor: colors.orange, width: 73, height: 73, borderRadius: 37, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '12deg' }] }, stickerText: { color: colors.ink, textAlign: 'center', fontSize: 10, lineHeight: 15, fontWeight: '900', letterSpacing: 0.6 },
   boardingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderStyle: 'dashed', borderColor: colors.border, marginBottom: 3 }, boardingLabel: { fontSize: 9, color: colors.textMuted, letterSpacing: 1.3, fontWeight: '800' },
   actionPanel: { gap: spacing.md, backgroundColor: colors.surface, padding: 20, borderRadius: 24 },
   promiseRow: {

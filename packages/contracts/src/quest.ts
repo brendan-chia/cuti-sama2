@@ -45,6 +45,7 @@ export const QuestRoomSchema = z.object({
     availabilitySubmitted: z.boolean(), picksSubmitted: z.boolean(),
     votesSubmitted: z.boolean(), budgetSubmitted: z.boolean(),
   }).strict()).min(1).max(8),
+  dateProposals: z.array(AvailabilitySchema.extend({ memberId: z.uuid() }).strict()).max(8).optional(),
   ownAvailability: AvailabilitySchema.nullable(),
   sharedAvailability: AvailabilitySchema.nullable(),
   period: TripPeriodSchema.nullable(),
