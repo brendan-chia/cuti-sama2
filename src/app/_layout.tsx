@@ -15,7 +15,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.midnight },
           headerBackButtonDisplayMode: 'minimal',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.midnight },
+          headerStyle: { backgroundColor: colors.midnightRaised },
           headerTintColor: colors.white,
           headerTitleStyle: { fontWeight: '700' },
         }}
@@ -32,9 +32,9 @@ export default function RootLayout() {
         <Stack.Screen name="trip/[tripId]/reveal" options={{ title: 'Group match' }} />
         <Stack.Screen name="trip/[tripId]/destinations" options={{ title: 'Destinations' }} />
         <Stack.Screen name="trip/[tripId]/vote" options={{ title: 'Vote' }} />
-        <Stack.Screen name="trip/[tripId]/itinerary/index" options={{ title: 'Itinerary' }} />
+        <Stack.Screen name="trip/[tripId]/itinerary/index" options={{ headerShown: false }} />
         <Stack.Screen name="trip/[tripId]/itinerary/revise" options={{ title: 'Revise itinerary' }} />
-        <Stack.Screen name="trip/[tripId]/itinerary/[version]" options={{ title: 'Itinerary version' }} />
+        <Stack.Screen name="trip/[tripId]/itinerary/[version]" options={{ headerShown: false }} />
       </Stack>
     </GestureHandlerRootView>
   );

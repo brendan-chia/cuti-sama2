@@ -1,11 +1,16 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert } from 'react-native';
+import { z } from 'zod';
 
+import { InviteTokenSchema } from '../../../packages/contracts/src/invite';
 import { LobbyScreen } from '@/features/lobby/lobby-screen';
 
 export default function TripLobbyRoute() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const router = useRouter();
+  const inviteToken = InviteTokenSchema.safeParse(tripId);
+  if (inviteToken.success) return <Redirect href={{ pathname: '/invite/[token]', params: { token: inviteToken.data } }} />;
+  if (!z.uuid().safeParse(tripId).success) return <Redirect href="/join" />;
   return (
     <LobbyScreen
       tripId={tripId ?? ''}

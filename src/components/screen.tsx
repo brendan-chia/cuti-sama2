@@ -5,6 +5,8 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,12 +16,13 @@ type ScreenProps = PropsWithChildren<{
   footer?: ReactNode;
   scroll?: boolean;
   testID?: string;
+  contentStyle?: StyleProp<ViewStyle>;
 }>;
 
-export function Screen({ children, footer, scroll = true, testID }: ScreenProps) {
+export function Screen({ children, contentStyle, footer, scroll = true, testID }: ScreenProps) {
   const content = scroll ? (
     <ScrollView
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       testID={testID}
@@ -27,7 +30,7 @@ export function Screen({ children, footer, scroll = true, testID }: ScreenProps)
       {children}
     </ScrollView>
   ) : (
-    <View style={styles.content} testID={testID}>
+    <View style={[styles.content, contentStyle]} testID={testID}>
       {children}
     </View>
   );
@@ -58,19 +61,20 @@ const styles = StyleSheet.create({
   maxWidth: {
     alignSelf: 'center',
     flex: 1,
-    maxWidth: 720,
+    maxWidth: 560,
     width: '100%',
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   footer: {
+    backgroundColor: colors.midnight,
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },

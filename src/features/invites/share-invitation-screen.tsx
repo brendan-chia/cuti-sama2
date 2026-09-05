@@ -1,12 +1,13 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
-import { Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Share, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import type { CachedInvitation, InvitationStatus } from '../../../packages/contracts/src/invite';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { closeInvitation, getInvitationStatus, issueInvitation, rotateInvitation } from '@/features/invites/service';
+import { invitationUrlForOrigin } from '@/features/invites/validation';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type State = { status: InvitationStatus; invitation: CachedInvitation | null };
@@ -50,6 +51,8 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
   }
 
   const invitation = state?.invitation;
+  const currentOrigin = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : null;
+  const shareUrl = invitation ? invitationUrlForOrigin(invitation, currentOrigin) : null;
   return (
     <Screen testID="share-invitation-screen">
       <Text style={styles.kicker}>INVITE THE GROUP</Text>
@@ -60,12 +63,12 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
       {state?.status.status === 'never_issued' ? <View style={styles.panel}><Text style={styles.panelTitle}>No invitation link yet</Text><Text style={styles.body}>Create an expiring link when you are ready to invite the group.</Text><AppButton label="Create invitation link" loading={busy} onPress={() => void create(issueAction)} /></View> : null}
       {state?.status.status === 'closed' ? <View style={styles.panel}><Text style={styles.panelTitle}>Invitations are closed</Text><Text style={styles.body}>Previous links no longer work. Members already inside are unaffected.</Text><AppButton label="Create a new link" loading={busy} onPress={() => void create(issueAction)} /></View> : null}
       {state?.status.status === 'open' && !invitation ? <View style={styles.panel}><Text style={styles.panelTitle}>The active link is not on this device</Text><Text style={styles.body}>For security, the raw link is only kept on the device that created it. Replace it to share from here.</Text><AppButton label="Replace with a new link" loading={busy} onPress={confirmRotate} /></View> : null}
-      {invitation ? <View style={styles.panel}>
-        <View style={styles.qr}><QRCode backgroundColor={colors.white} color={colors.midnight} size={190} value={invitation.inviteUrl} /></View>
-        <Text selectable style={styles.url}>{invitation.inviteUrl}</Text>
+      {invitation && shareUrl ? <View style={styles.panel}>
+        <View style={styles.qr}><QRCode backgroundColor={colors.white} color={colors.midnight} size={190} value={shareUrl} /></View>
+        <Text selectable style={styles.url}>{shareUrl}</Text>
         <Text style={styles.expiry}>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</Text>
-        <AppButton label="Share invitation" onPress={() => void Share.share({ message: `Join our CutiSama2 Trip Room: ${invitation.inviteUrl}`, url: invitation.inviteUrl })} />
-        <AppButton label="Copy link" variant="secondary" onPress={() => void Clipboard.setStringAsync(invitation.inviteUrl)} />
+        <AppButton label="Share invitation" onPress={() => void Share.share({ message: `Join our CutiSama2 Trip Room: ${shareUrl}`, url: shareUrl })} />
+        <AppButton label="Copy link" variant="secondary" onPress={() => void Clipboard.setStringAsync(shareUrl)} />
         <AppButton label="Replace link" variant="secondary" loading={busy} onPress={confirmRotate} />
         <AppButton label="Close invitations" variant="secondary" loading={busy} onPress={confirmClose} />
       </View> : null}

@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   primary: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.sky,
   },
   secondary: {
     backgroundColor: colors.midnightRaised,
@@ -88,5 +88,6 @@ const styles = StyleSheet.create({
   },
   primaryLabel: {
     color: colors.midnight,
+    fontWeight: '800',
   },
 });

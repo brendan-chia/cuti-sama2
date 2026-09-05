@@ -4,5 +4,13 @@ import { ItineraryScreen } from '@/features/itinerary/itinerary-screen';
 
 export default function ItineraryRoute() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>(); const router = useRouter();
-  return <ItineraryScreen tripId={tripId ?? ''} onBack={() => router.back()} onReview={() => router.push({ pathname: '/trip/[tripId]/itinerary/[version]' as never, params: { tripId: tripId ?? '', version: 'latest' } })} />;
+  const id = tripId ?? '';
+  return <ItineraryScreen
+    tripId={id}
+    onBack={() => router.back()}
+    onReview={(day = 1) => router.push({ pathname: '/trip/[tripId]/itinerary/[version]' as never, params: { tripId: id, version: 'latest', day: String(day) } })}
+    onHome={() => router.push({ pathname: '/trip/[tripId]' as never, params: { tripId: id } })}
+    onGroup={() => router.push({ pathname: '/trip/[tripId]/room' as never, params: { tripId: id } })}
+    onMore={() => router.push({ pathname: '/trip/[tripId]/destinations' as never, params: { tripId: id } })}
+  />;
 }

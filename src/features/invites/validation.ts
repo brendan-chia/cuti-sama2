@@ -1,4 +1,5 @@
 import { InviteTokenSchema } from '../../../packages/contracts/src/invite';
+import type { CachedInvitation } from '../../../packages/contracts/src/invite';
 
 export function extractInviteToken(value: string) {
   const trimmed = value.trim();
@@ -14,5 +15,16 @@ export function extractInviteToken(value: string) {
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
+  }
+}
+
+export function invitationUrlForOrigin(invitation: CachedInvitation, origin?: string | null) {
+  if (!origin) return invitation.inviteUrl;
+  try {
+    const url = new URL(origin);
+    if (!['http:', 'https:'].includes(url.protocol)) return invitation.inviteUrl;
+    return `${url.origin}/invite/${encodeURIComponent(invitation.token)}`;
+  } catch {
+    return invitation.inviteUrl;
   }
 }
