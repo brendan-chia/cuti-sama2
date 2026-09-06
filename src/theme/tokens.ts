@@ -1,14 +1,14 @@
-// Otter identity: leaf green, cocoa brown, warm paper and backpack orange.
+// Palette from assets/images/yellow otter.png: leaf, cocoa, cream and orange.
 export const colors = {
-  background: '#F8F7EF', surface: '#FFFEFA', surfaceTint: '#EAF1D8',
-  ink: '#563D2D', paper: '#FFFFFF',
-  coral: '#AC4D10', coralPressed: '#883A0A', sand: '#F8E7BF',
-  sky: '#4F7125', gold: '#86571E', sun: '#F6BB68',
-  textMuted: '#776452', border: '#D7DDC5', danger: '#AE3C32',
-  disabled: '#919582', overlay: 'rgba(248, 247, 239, 0.96)',
-  leaf: '#8EBA46', orange: '#F58A24', cocoa: '#563D2D',
+  background: '#FFFBF3', surface: '#FFFFFF', surfaceTint: '#EDF4DB',
+  ink: '#5B402E', paper: '#FFFFFF',
+  coral: '#A64B08', coralPressed: '#813805', sand: '#FCE6BE',
+  sky: '#4F7027', gold: '#85571F', sun: '#F6C777',
+  textMuted: '#78614F', border: '#D9DFC5', danger: '#AE3C32',
+  disabled: '#969482', overlay: 'rgba(255, 251, 243, 0.96)',
+  leaf: '#91B947', orange: '#F58A20', cocoa: '#5B402E',
   // Compatibility aliases let all existing screens share the otter palette.
-  midnight: '#F8F7EF', midnightRaised: '#FFFEFA', midnightSoft: '#EAF1D8', white: '#563D2D',
+  midnight: '#FFFBF3', midnightRaised: '#FFFFFF', midnightSoft: '#EDF4DB', white: '#5B402E',
 } as const;
 
 export const spacing = {

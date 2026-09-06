@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
-const artwork = require('../../assets/images/cutisama2-logo-transparent.png');
+const artwork = require('../../assets/images/yellow-otter-logo.png');
 
 export function BrandLogo({ compact = false }: { compact?: boolean }) {
   return <View testID="brand-logo" style={[styles.frame, compact && styles.compact]}>
@@ -10,6 +10,6 @@ export function BrandLogo({ compact = false }: { compact?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  frame: { width: '100%', maxWidth: 400, aspectRatio: 1442 / 432 },
+  frame: { width: '100%', maxWidth: 400, aspectRatio: 1443 / 431 },
   compact: { width: 148 },
 });

@@ -13,7 +13,7 @@ it('requires explicit selection and persists only the confirmed candidate IDs', 
   const confirmAction = jest.fn(async () => savedRoom); const onConfirmed = jest.fn();
   const screen = await render(<PlaceImportPanel tripId="trip" countryName="Malaysia" importAction={importAction} confirmAction={confirmAction} onConfirmed={onConfirmed} />);
   await fireEvent.press(screen.getByText('＋ Add a travel post'));
-  await fireEvent.changeText(screen.getByLabelText('Caption or place names'), 'Kek Lok Si Temple, Penang');
+  await fireEvent.changeText(screen.getByLabelText('Social post link'), 'https://instagram.com/p/example/');
   await fireEvent.press(screen.getByText('Find the places'));
   await waitFor(() => expect(screen.getByText('Kek Lok Si Temple')).toBeTruthy());
   expect(screen.getByRole('button', { name: 'Confirm 0 places' }).props.accessibilityState.disabled).toBe(true);
@@ -24,14 +24,15 @@ it('requires explicit selection and persists only the confirmed candidate IDs', 
   expect(confirmAction).toHaveBeenCalledWith(result.importId, ['osm-node-123']);
 });
 
-it('offers caption fallback when a link yields no places', async () => {
+it('automatically analyses Reel URLs without extra input controls', async () => {
   const screen = await render(<PlaceImportPanel tripId="trip" countryName="Malaysia" importAction={jest.fn(async () => ({ ...result, candidates: [], status: 'needs_input' as const, message: 'Paste a caption with place names.' }))} onConfirmed={jest.fn()} />);
   await fireEvent.press(screen.getByText('＋ Add a travel post'));
   await fireEvent.changeText(screen.getByLabelText('Social post link'), 'https://instagram.com/reel/example/');
   expect(screen.getByTestId('video-import-panel')).toBeTruthy();
-  await fireEvent.press(screen.getByText('Switch to caption / screenshot reading'));
-  await fireEvent.press(screen.getByText('Find the places'));
-  await waitFor(() => expect(screen.getByText('Paste a caption with place names.')).toBeTruthy());
+  expect(screen.queryByLabelText('Caption or place names')).toBeNull();
+  expect(screen.queryByText('Upload a video')).toBeNull();
+  expect(screen.queryByText('Add a screenshot')).toBeNull();
+  expect(screen.queryByText('Switch to caption / screenshot reading')).toBeNull();
   expect(screen.queryByText('Confirm 0 places')).toBeNull();
 });
 

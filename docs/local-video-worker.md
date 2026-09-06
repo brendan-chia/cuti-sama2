@@ -1,8 +1,8 @@
 # Local full-video imports
 
-In Explore, paste an Instagram Reel URL. The importer switches to full-video mode. For video posts using `/p/`, choose **Analyse a video's audio & every frame**. Alternatively select **Upload a video**. Caption/screenshot mode remains available for image posts and carousels.
+In Explore, paste an Instagram Reel URL. The importer automatically shows **Analyse audio & every frame**. The interface accepts only a URL: there are no upload, screenshot, caption or mode-switch controls. Other post links use the public-caption reader.
 
-The local worker downloads an available public video with yt-dlp, or downloads your private upload from Supabase Storage. Instagram sometimes refuses video access even when a caption is public. Use an upload in that case. The worker never collects Instagram credentials, reads browser cookies, or bypasses login requirements.
+The local worker downloads an available public video with yt-dlp. Unknown duration metadata is allowed through the download filter; ffprobe enforces the actual two-minute limit afterward. A downloader exit without a file produces a readable error instead of exposing a local filesystem path. Instagram can still refuse public video access; those failures can be retried. The worker never collects Instagram credentials, reads browser cookies, or bypasses login requirements. Backend storage support remains only for compatibility with existing uploaded jobs.
 
 FFmpeg reads the primary video stream and extracts every frame using timestamp passthrough: no FPS sampling, scene filtering, frame deduplication or silent truncation. Frames are resized to fit 720×720 for the vision model. The complete primary audio track is converted to mono 16 kHz MP3 and sent to Whisper. Videos without audio are marked as having no audio. The current explicit limits are two minutes, 150 MB, 7,200 frames and 4K input resolution. Larger videos fail with an actionable message.
 

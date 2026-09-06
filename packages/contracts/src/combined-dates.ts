@@ -33,11 +33,11 @@ export function buildCombinedCandidates(inputs: DateInput[], holidays: NationalH
     const end = start + durationDays - 1;
     if (inputs.some((input) => (input.preferences.flexibility === 'exact' && (start !== day(input.startsOn) || end !== day(input.endsOn))) || input.preferences.unavailable.some((range) => start <= day(range.endsOn) && end >= day(range.startsOn)))) continue;
     const travellers = inputs.map((input) => {
-      let leaveDays = 0;
+      const leaveDates: string[] = [];
       for (let current = start; current <= end; current++) {
-        if (!input.preferences.daysOff.includes(new Date(current * DAY).getUTCDay()) && !holidayDates.has(iso(current))) leaveDays++;
+        if (!input.preferences.daysOff.includes(new Date(current * DAY).getUTCDay()) && !holidayDates.has(iso(current))) leaveDates.push(iso(current));
       }
-      return { memberId: input.memberId, leaveDays, shiftDays: start - day(input.startsOn), durationChange: durationDays - (day(input.endsOn) - day(input.startsOn) + 1) };
+      return { memberId: input.memberId, leaveDays: leaveDates.length, leaveDates, shiftDays: start - day(input.startsOn), durationChange: durationDays - (day(input.endsOn) - day(input.startsOn) + 1) };
     });
     const startsOn = iso(start); const endsOn = iso(end);
     const includedHolidays = holidays.filter((holiday) => holiday.date >= startsOn && holiday.date <= endsOn);

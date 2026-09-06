@@ -53,8 +53,10 @@ export async function downloadVideo(job,directory,python,projectUrl){
  }else{
   const url=new URL(job.sourceUrl);
   if(url.protocol!=='https:'||url.hostname!=='www.instagram.com'||!/^\/(p|reel|tv)\/[A-Za-z0-9_-]+\/$/.test(url.pathname))throw new Error('Unsupported video link.');
-  try{await command(python,['-m','yt_dlp','--ignore-config','--no-playlist','--use-extractors','Instagram','--socket-timeout','15','--retries','1','--max-filesize','150M','--match-filters','duration <= 120','-f','best[ext=mp4]/best','-o',file,'--',url.toString()]);}
-  catch{throw new Error('Instagram did not expose a downloadable public video. Use Upload a video in the app.');}
+  try{await command(python,['-m','yt_dlp','--ignore-config','--no-playlist','--use-extractors','Instagram','--socket-timeout','15','--retries','1','--max-filesize','150M','--match-filters','duration <=? 120','-f','best[ext=mp4]/best','-o',file,'--',url.toString()]);}
+  catch{throw new Error('Instagram did not expose a downloadable public video for this link. Please try again later.');}
  }
- if((await stat(file)).size>157286400)throw new Error('Video exceeds 150 MB.');return file;
+ let size;try{size=(await stat(file)).size;}catch{throw new Error('The video was not downloaded. It may exceed the 2-minute or 150 MB limit, or Instagram may not expose the video.');}
+ if(!size)throw new Error('Instagram returned an empty video. Please try again later.');
+ if(size>157286400)throw new Error('Video exceeds 150 MB.');return file;
 }

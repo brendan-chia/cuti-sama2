@@ -14,7 +14,7 @@
     "android": {
       "package": "com.cutisama2.app",
       "adaptiveIcon": {
-        "backgroundColor": "#8EBA46",
+        "backgroundColor": "#91B947",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -30,9 +30,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F8F7EF",
+          "backgroundColor": "#FFFBF3",
           "dark": {
-            "backgroundColor": "#F8F7EF"
+            "backgroundColor": "#FFFBF3"
           },
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76

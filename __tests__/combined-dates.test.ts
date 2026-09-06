@@ -22,6 +22,15 @@ it('counts different work schedules and holidays without double counting', () =>
   const second = input(b); second.preferences.daysOff = [5, 6];
   const [c] = buildCombinedCandidates([first, second], [holiday, holiday], today);
   expect(c.travellers.map((t) => t.leaveDays)).toEqual([4, 3]);
+  expect(c.travellers.map((t) => t.leaveDates)).toEqual([
+    ['2026-09-14', '2026-09-15', '2026-09-17', '2026-09-18'],
+    ['2026-09-14', '2026-09-15', '2026-09-17'],
+  ]);
+});
+it('returns no leave dates when the trip falls entirely on holidays', () => {
+  const i = input(a, '2026-09-16', '2026-09-16'); i.preferences.flexibility = 'exact';
+  const [c] = buildCombinedCandidates([i], [holiday], today);
+  expect(c.travellers[0]).toEqual(expect.objectContaining({ leaveDays: 0, leaveDates: [] }));
 });
 it('returns no answer for conflicting exact dates or blackout covering all options', () => {
   const first = input(); first.preferences.flexibility = 'exact';

@@ -77,7 +77,7 @@ describe('trip quest shared planning flow', () => {
       dateProposals: [{ memberId: organizerId, startsOn: '2027-12-04', endsOn: '2027-12-08' }, { memberId, startsOn: '2027-12-10', endsOn: '2027-12-14' }] });
     const suggested = { startsOn: '2027-12-07', endsOn: '2027-12-11', label: '5 days together', reason: 'Fits the crew preferences.' };
     const suggestAction = jest.fn(async (): Promise<QuestRoom> => ({ ...room, revision: 2, dateRecommendation: {
-      periods: [{ ...suggested, durationDays: 5, holidays: [], travellers: [{ memberId, leaveDays: 4, shiftDays: -3, durationChange: 0 }] }],
+      periods: [{ ...suggested, durationDays: 5, holidays: [], travellers: [{ memberId, leaveDays: 4, leaveDates: ['2027-12-07', '2027-12-08', '2027-12-09', '2027-12-10'], shiftDays: -3, durationChange: 0 }] }],
       source: 'groq', message: 'Shared dates for your crew.', calendarVersion: 'test', calendarNotice: 'Nationwide holidays only.',
     } }));
     const updateAction = jest.fn(async () => roomWith({ revision: 3 }));
@@ -86,6 +86,11 @@ describe('trip quest shared planning flow', () => {
     await fireEvent.press(screen.getByTestId('suggest-trip-periods'));
     await waitFor(() => expect(screen.getByText('Recommended for your crew')).toBeTruthy());
     expect(suggestAction).toHaveBeenCalledWith(tripId);
+    expect(screen.getByText('Annual leave to request')).toBeTruthy();
+    expect(screen.getByText('Aina · 4 days')).toBeTruthy();
+    for (const date of ['2027-12-07', '2027-12-08', '2027-12-09', '2027-12-10']) {
+      expect(screen.getByText(new Date(`${date}T12:00:00`).toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))).toBeTruthy();
+    }
     await fireEvent.press(screen.getByTestId('confirm-recommendation-0'));
     expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'period', period: suggested });
     await waitFor(() => expect(screen.getByLabelText('Find a country')).toBeTruthy());

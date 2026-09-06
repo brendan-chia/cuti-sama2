@@ -87,7 +87,13 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
           <Text style={s.heading}>{periodLabel(period)}</Text><Text style={s.strong}>{period.durationDays} days</Text>
           <Text style={s.body}>{period.reason}</Text>
           {period.holidays.map((holiday) => <Text key={`${holiday.date}:${holiday.name}`} style={s.small}>{holiday.name} · {holiday.date}</Text>)}
-          {period.travellers.map((traveller) => <Text key={traveller.memberId} style={s.small}>{nameFor(traveller.memberId)}: {traveller.leaveDays} estimated leave days · {traveller.shiftDays === 0 ? 'same start' : `${Math.abs(traveller.shiftDays)} days ${traveller.shiftDays < 0 ? 'earlier' : 'later'}`}{traveller.durationChange ? ` · ${Math.abs(traveller.durationChange)} days ${traveller.durationChange < 0 ? 'shorter' : 'longer'}` : ''}</Text>)}
+          <Text style={s.strong}>Annual leave to request</Text>
+          <Text style={s.small}>Based on each person’s usual days off and Malaysian national holidays.</Text>
+          {period.travellers.map((traveller) => <View key={traveller.memberId}>
+            <Text style={s.strong}>{nameFor(traveller.memberId)} · {traveller.leaveDays} {traveller.leaveDays === 1 ? 'day' : 'days'}</Text>
+            {traveller.leaveDays === 0 ? <Text style={s.small}>No annual leave needed.</Text> : traveller.leaveDates ? traveller.leaveDates.map((date) => <Text key={date} style={s.small}>{new Date(`${date}T12:00:00`).toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</Text>) : <Text style={s.small}>Refresh the trip to load the specific leave dates.</Text>}
+            <Text style={s.small}>{traveller.shiftDays === 0 ? 'Same proposed start' : `Starts ${Math.abs(traveller.shiftDays)} days ${traveller.shiftDays < 0 ? 'earlier' : 'later'}`}{traveller.durationChange ? ` · ${Math.abs(traveller.durationChange)} days ${traveller.durationChange < 0 ? 'shorter' : 'longer'}` : ''}</Text>
+          </View>)}
           {room.currentRole === 'organizer' ? <AppButton label="Confirm these dates & unlock wishlists" testID={`confirm-recommendation-${index}`} disabled={busy || dirty || pendingBlock} onPress={() => void act({ type: 'period', period: { startsOn: period.startsOn, endsOn: period.endsOn, label: period.label, reason: period.reason } })} /> : <Text style={s.small}>Review these dates together. Your organiser confirms the group’s choice.</Text>}
         </View>)}
         {recommendation.periods.length > 1 ? <AppButton label={showAlternatives ? 'Hide alternatives' : 'Compare alternatives'} variant="secondary" onPress={() => setShowAlternatives(!showAlternatives)} /> : null}

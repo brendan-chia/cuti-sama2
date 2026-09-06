@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { command, prepareVideo, validateVideoProbe, removeJobDirectory } from './media.mjs';
+test('unknown Instagram duration passes while known over-limit duration is rejected',async()=>{
+ const python=path.resolve('.tmp/video-worker-venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
+ await command(python,['-c',"from yt_dlp.utils import match_filter_func; f=match_filter_func('duration <=? 120'); assert f({'duration': None}) is None; assert f({'duration': 112}) is None; assert f({'duration': 121}) is not None"]);
+});
 test('rejects long or non-video files without silently sampling',()=>{
  assert.throws(()=>validateVideoProbe({streams:[],format:{duration:30}}));
  assert.throws(()=>validateVideoProbe({streams:[{codec_type:'video',width:640,height:480}],format:{duration:121}}));

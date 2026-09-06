@@ -9,7 +9,7 @@ it('queues video analysis and shows offline status without claiming completion',
  const screen=await render(<VideoImportPanel tripId="trip" sourceUrl="https://instagram.com/reel/example/" caption="Tokyo" onConfirmed={jest.fn()}/>);
  await fireEvent.press(screen.getByText('Analyse audio & every frame'));
  await waitFor(()=>expect(screen.getByText('Waiting for worker.')).toBeTruthy());
- expect(startVideoImport).toHaveBeenCalledWith('trip','https://instagram.com/reel/example/','Tokyo',undefined);
+ expect(startVideoImport).toHaveBeenCalledWith('trip','https://instagram.com/reel/example/','Tokyo');
  expect(screen.getByText(/local worker is offline/)).toBeTruthy();
  expect(screen.queryByText('Confirm 0 places')).toBeNull();
 });
