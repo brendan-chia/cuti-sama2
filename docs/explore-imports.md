@@ -1,19 +1,18 @@
 # Travel-post discovery in Explore
 
-Implemented scope: public-link/caption/screenshot input → candidate place extraction → real place lookup → explicit member confirmation. This feature does not generate routes, schedules, transit connections, fares, or bookings.
+Implemented scope: public video URL → metadata/caption → timestamped audio and selected key scenes → candidate places → OpenStreetMap lookup → explicit member confirmation. This feature does not generate routes, schedules, transit connections, fares, or bookings.
 
 ## Using it
 
-After the crew chooses a country, open **Explore → Add a travel post**. Paste a TikTok, Instagram, or YouTube URL, a caption, or place names. A screenshot with visible names is another input. Check each candidate's address and OpenStreetMap record, select the correct alternatives, and confirm. Candidates start unselected. Confirmed places appear on the crew's discovery map, with a Locate action. The organiser can include them in the existing final stop collection.
+After the crew chooses a country, open **Explore → Add a travel post**. Paste an Instagram or TikTok video URL and choose **Analyse Reel**. Check each candidate's address, evidence and OpenStreetMap record, select the correct alternatives, and confirm. Candidates start unselected. Confirmed places appear on the crew's discovery map, with a Locate action. The organiser can include them in the existing final stop collection. See [the shared video pipeline](local-video-worker.md) for setup and limits.
 
 Every active quest participant, including the organiser, can import and confirm their own results. Unconfirmed candidates are private to their importer. Confirmed places and source links are shared with active participants. Confirmation identifies a location; it is not a group vote or a promise that the crew will visit. The existing country ballot gives the organiser the same votes as everyone else; only tied-result resolution is organiser-specific.
 
 ## Sources and fallback
 
-- TikTok: the official oEmbed endpoint can provide public caption metadata. Short URLs are resolved with a bounded redirect chain and an exact HTTPS host allowlist. Embedded markup is never executed by the backend, and videos are not downloaded.
-- Instagram: public post/Reel captions are read from metadata when available. Full Reel/video processing uses the [local video worker](local-video-worker.md), with audio transcription, every-frame vision and video-upload fallback.
-- YouTube: links are retained as references; supply a caption, screenshot or upload a video for analysis.
-- Inaccessible/private/deleted links: the UI requests supplied text or an image. There is no social credential collection or login bypass.
+- TikTok and Instagram: one common ingestion format and one downstream pipeline; public captions, audio and 8–20 selected key scenes are combined. No browser cookies or social credentials are collected.
+- YouTube retains the existing non-video reader path; full video ingestion is limited to Instagram and TikTok.
+- Inaccessible/private/deleted links: the UI reports the failure and allows retry. It does not request an upload or additional text.
 - Groq extracts up to four named places into validated JSON. It must not infer unnamed landmarks from appearance. Without text-model configuration, explicit newline-separated names still serve as search queries. Screenshot extraction requires the AI provider.
 - Photon resolves up to three alternatives per extracted name, and results are filtered to the quest's country. Coordinates and OSM identifiers are validated; AI coordinates are never accepted. Search results are possible matches, not automatic verification of what the post intended.
 - Photon public service is suitable only for modest usage and has no availability guarantee. `PHOTON_API_URL` can point to an operated Photon service when usage grows. The UI includes OpenStreetMap attribution and record links.

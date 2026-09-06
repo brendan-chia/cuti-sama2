@@ -13,7 +13,7 @@ it('requires explicit selection and persists only the confirmed candidate IDs', 
   const confirmAction = jest.fn(async () => savedRoom); const onConfirmed = jest.fn();
   const screen = await render(<PlaceImportPanel tripId="trip" countryName="Malaysia" importAction={importAction} confirmAction={confirmAction} onConfirmed={onConfirmed} />);
   await fireEvent.press(screen.getByText('＋ Add a travel post'));
-  await fireEvent.changeText(screen.getByLabelText('Social post link'), 'https://instagram.com/p/example/');
+  await fireEvent.changeText(screen.getByLabelText('Social post link'), 'https://youtube.com/watch?v=example');
   await fireEvent.press(screen.getByText('Find the places'));
   await waitFor(() => expect(screen.getByText('Kek Lok Si Temple')).toBeTruthy());
   expect(screen.getByRole('button', { name: 'Confirm 0 places' }).props.accessibilityState.disabled).toBe(true);
@@ -24,10 +24,10 @@ it('requires explicit selection and persists only the confirmed candidate IDs', 
   expect(confirmAction).toHaveBeenCalledWith(result.importId, ['osm-node-123']);
 });
 
-it('automatically analyses Reel URLs without extra input controls', async () => {
+it.each(['https://instagram.com/reel/example/','https://instagram.com/p/example/','https://www.tiktok.com/@traveller/video/12345','https://vm.tiktok.com/AbCd/'])('automatically analyses %s without extra input controls', async (url) => {
   const screen = await render(<PlaceImportPanel tripId="trip" countryName="Malaysia" importAction={jest.fn(async () => ({ ...result, candidates: [], status: 'needs_input' as const, message: 'Paste a caption with place names.' }))} onConfirmed={jest.fn()} />);
   await fireEvent.press(screen.getByText('＋ Add a travel post'));
-  await fireEvent.changeText(screen.getByLabelText('Social post link'), 'https://instagram.com/reel/example/');
+  await fireEvent.changeText(screen.getByLabelText('Social post link'), url);
   expect(screen.getByTestId('video-import-panel')).toBeTruthy();
   expect(screen.queryByLabelText('Caption or place names')).toBeNull();
   expect(screen.queryByText('Upload a video')).toBeNull();

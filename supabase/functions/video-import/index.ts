@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { authenticatedClient, corsHeaders, json, requestJson } from '../_shared/invites.ts';
-import { instagramPostUrl } from '../import-trip-places/instagram.ts';
+import { normalizeVideoUrl } from '../../../packages/contracts/src/social-video.ts';
 const RequestSchema=z.discriminatedUnion('action',[
  z.object({action:z.literal('create'),tripId:z.uuid(),requestId:z.uuid(),sourceUrl:z.string().max(2000).default(''),caption:z.string().max(6000).default(''),upload:z.boolean().default(false)}).strict(),
  z.object({action:z.enum(['status','uploaded','cancel','retry']),importId:z.uuid()}).strict(),
@@ -16,8 +16,9 @@ Deno.serve(async request=>{
   const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   let importId:string;
   if(input.action==='create'){
-   const sourceUrl=input.sourceUrl?instagramPostUrl(input.sourceUrl):null;
-   if(!input.upload&&!sourceUrl)return json({error:'Use an Instagram post or Reel URL, or upload the video.'},400);
+   let sourceUrl:string|null=null;
+   try{sourceUrl=input.sourceUrl?normalizeVideoUrl(input.sourceUrl).url:null;}catch{return json({error:'Use an Instagram or TikTok video link.'},400);}
+   if(!input.upload&&!sourceUrl)return json({error:'Use an Instagram or TikTok video link.'},400);
    const reserved=await client.rpc('begin_place_import',{p_trip_id:input.tripId,p_request_id:input.requestId,p_source_url:sourceUrl});
    if(reserved.error)return json({error:reserved.error.message},400);
    importId=reserved.data.id;
@@ -56,6 +57,6 @@ Deno.serve(async request=>{
    if(r.error)return json({error:'This import cannot be restarted in its current state.'},409);job=r.data;
   }
   const presence=await admin.from('video_worker_presence').select('seen_at').eq('id',1).maybeSingle();
-  return json({importId,state:job.state,processedFrames:job.processed_frames,totalFrames:job.total_frames,audioDone:job.audio_done,message:job.message,workerOnline:Boolean(presence.data&&Date.now()-Date.parse(presence.data.seen_at)<180000),candidates:job.state==='done'?owned.data.candidates:[]});
+  return json({importId,state:job.state,pipelineVersion:job.pipeline_version,processedFrames:job.processed_frames,totalFrames:job.total_frames,audioDone:job.audio_done,message:job.message,workerOnline:Boolean(presence.data&&Date.now()-Date.parse(presence.data.seen_at)<180000),candidates:job.state==='done'?owned.data.candidates:[]});
  }catch{return json({error:'Could not update the video import. Please try again.'},400);}
 });

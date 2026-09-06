@@ -20,14 +20,14 @@ export function VideoImportPanel({tripId,sourceUrl,caption,disabled,onConfirmed}
  async function change(action:'cancel'|'retry'){if(!job||busy)return;setBusy(true);try{setJob(await videoStatus(job.importId,action));setError(null);}catch(cause){setError(cause instanceof Error?cause.message:'Could not update the import.');}finally{setBusy(false);}}
  async function confirm(){if(!job||busy)return;setBusy(true);try{onConfirmed(await confirmTripPlaces(job.importId,selected));setJob(null);setSelected([]);}catch(cause){setError(cause instanceof Error?cause.message:'Could not confirm places.');}finally{setBusy(false);}}
  return <View style={s.stack} testID="video-import-panel">
-  <Text style={s.heading}>Read the whole video</Text>
-  <Text style={s.small}>We�ll read the audio and every frame from your Reel link to find places. Videos up to 2 minutes.</Text>
-  <Text style={s.small}>Audio and frames are analysed by AI. Check the matches before sharing them with your crew.</Text>
-  {!active?<AppButton label="Analyse audio & every frame" disabled={disabled||busy||!sourceUrl.trim()} loading={busy} onPress={()=>void start()}/>:null}
+  <Text style={s.heading}>Find places from your Reel</Text>
+  <Text style={s.small}>We’ll analyze the Reel’s audio, captions, and key scenes to find places.</Text>
+  <Text style={s.small}>Videos up to 2 minutes. AI reads the available audio and 8–20 selected scenes, or fewer for very short videos. Check the matches before sharing them with your crew.</Text>
+  {!active?<AppButton label="Analyse Reel" disabled={disabled||busy||!sourceUrl.trim()} loading={busy} onPress={()=>void start()}/>:null}
   {job?<View style={s.success}>
    <Text accessibilityLiveRegion="polite" style={s.body}>{job.message}</Text>
    {active&&!job.workerOnline?<Text style={s.small}>The local worker is offline. Start it on your computer; this job will wait in the queue.</Text>:null}
-   {job.totalFrames>0?<Text style={s.strong}>{job.processedFrames} / {job.totalFrames} frames · Audio {job.audioDone?'complete':'pending'}</Text>:null}
+   {job.totalFrames>0?<Text style={s.strong}>{job.processedFrames} / {job.totalFrames} {job.pipelineVersion===1?'frames':'selected scenes'} · Audio {job.audioDone?'complete':'pending'}</Text>:null}
    {active||job.state==='failed'?<AppButton label="Cancel video analysis" variant="secondary" disabled={busy} onPress={()=>void change('cancel')}/>:null}
    {job.state==='failed'?<AppButton label="Retry & resume" variant="secondary" disabled={busy||disabled} onPress={()=>void change('retry')}/>:null}
   </View>:null}

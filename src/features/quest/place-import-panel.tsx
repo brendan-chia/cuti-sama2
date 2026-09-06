@@ -7,13 +7,14 @@ import { FormField } from '@/components/form-field';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { confirmTripPlaces, importTripPlaces } from './place-import-service';
 import { VideoImportPanel } from './video-import-panel';
+import { isSocialVideoUrl } from '../../../packages/contracts/src/social-video';
 import { questStyles as s } from './quest-styles';
 
 type Props = { tripId: string; countryName: string; disabled?: boolean; onConfirmed: (room: QuestRoom) => void; importAction?: typeof importTripPlaces; confirmAction?: typeof confirmTripPlaces };
 export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, importAction = importTripPlaces, confirmAction = confirmTripPlaces }: Props) {
   const [open, setOpen] = useState(false);
   const [sourceUrl, setSourceUrl] = useState('');
-  const videoMode = /instagram\.com\/(?:[^/]+\/)?reels?\//i.test(sourceUrl);
+  const videoMode = isSocialVideoUrl(sourceUrl);
   const [result, setResult] = useState<PlaceImportResult | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -45,7 +46,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     {!open ? <AppButton label="＋ Add a travel post" onPress={() => setOpen(true)} disabled={disabled} /> : <View style={s.stack}>
       <FormField label="Social post link" placeholder="Paste a TikTok, Instagram, or YouTube link" autoCapitalize="none" autoCorrect={false} value={sourceUrl} editable={!busy && !disabled} onChangeText={(value) => { setSourceUrl(value); setResult(null); setSaved(false); }} />
       {videoMode ? <VideoImportPanel tripId={tripId} sourceUrl={sourceUrl} caption="" disabled={disabled} onConfirmed={onConfirmed} /> : <>
-      <Text style={s.small}>We�ll read the public post for place names. Only places you confirm are shared with your crew.</Text>
+      <Text style={s.small}>We’ll read the public post for place names. Only places you confirm are shared with your crew.</Text>
       <AppButton label={busy ? 'Finding possible places…' : 'Find the places'} loading={busy} disabled={disabled || !sourceUrl.trim()} onPress={() => void find()} />
       {result ? <View style={s.stack}>
         <Text accessibilityLiveRegion="polite" style={s.body}>{result.message}</Text>

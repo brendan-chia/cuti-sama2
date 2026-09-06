@@ -2,6 +2,7 @@ import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { downloadVideo, prepareVideo, removeJobDirectory } from './media.mjs';
+import { ingestPost, downloadPost } from './ingestion.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 process.loadEnvFile(path.join(root,'.env.video-worker.local'));
 const projectUrl=process.env.VIDEO_WORKER_SUPABASE_URL;const token=process.env.VIDEO_WORKER_TOKEN;
@@ -32,15 +33,22 @@ try{while(!stopping){
  const heartbeat=setInterval(()=>void api({...base,action:'heartbeat'},false).catch(e=>{if(e.permanent)leaseLost=true;}),30000);
  try{
   console.log(`Processing import ${job.import_id}`);
-  const file=await downloadVideo(job,directory,python,projectUrl);const media=await prepareVideo(file,directory);
-  const checkpoint=await api({...base,action:'start',hash:media.hash,totalFrames:media.frames.length});
+  let file;
+  if(job.downloadUrl){file=await downloadVideo(job,directory,python,projectUrl);}
+  else{
+   const post=await ingestPost(job.sourceUrl,directory,python);
+   await api({...base,action:'ingest',post});
+   file=await downloadPost(post,directory,python);
+  }
+  const media=await prepareVideo(file,directory);
+  const checkpoint=await api({...base,action:'start',hash:media.hash,totalFrames:media.frames.length,pipelineVersion:2});
   if(!checkpoint.audioDone){await api({...base,action:'audio',...(media.audio?{audio:(await readFile(media.audio)).toString('base64')}:{noAudio:true})});}
   for(let index=checkpoint.processedFrames;index<media.frames.length;index++){
    if(stopping||leaseLost)throw new Error('Worker stopped. Retry the import to resume.');
    const frame=media.frames[index];await api({...base,action:'frame',index,seconds:frame.seconds,image:`data:image/jpeg;base64,${(await readFile(frame.file)).toString('base64')}`});
-   if((index+1)%30===0)console.log(`Frames: ${index+1}/${media.frames.length}`);
+   console.log(`Selected scenes: ${index+1}/${media.frames.length}`);
   }
-  await api({...base,action:'finish'});console.log('Full-video analysis complete.');
+  await api({...base,action:'finish'});console.log('Caption, audio and key-scene analysis complete.');
  }catch(error){console.error(error.message);try{await api({...base,action:'fail',message:String(error.message).slice(0,500)},false);}catch{}}
  finally{clearInterval(heartbeat);await removeJobDirectory(workRoot,directory);}
  if(process.argv.includes('--once'))break;

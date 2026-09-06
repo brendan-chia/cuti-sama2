@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { parseScenes, selectSceneFrames } from './scenes.mjs';
 export async function command(executable,args,timeoutMs=180000){
  return new Promise((resolve,reject)=>{
   const child=spawn(executable,args,{windowsHide:true,stdio:['ignore','pipe','pipe']});let output='';let errors='';
@@ -23,17 +24,21 @@ export async function prepareVideo(file,directory){
  const info=validateVideoProbe(probe);
  const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);
  const frameDir=path.join(directory,'frames');await mkdir(frameDir,{recursive:true});
- // Passthrough timestamps: do not apply fps sampling, scene selection or duplicate removal.
+ // Read timestamps locally; only selected scenes are sent to vision.
  const manifest=JSON.parse(await command('ffprobe',['-v','error','-protocol_whitelist','file,pipe','-select_streams','v:0','-show_frames','-show_entries','frame=best_effort_timestamp_time','-of','json',file]));
- if(!manifest.frames.length||manifest.frames.length>7200)throw new Error('Choose a video with at most 7,200 frames. No frames were skipped.');
- await command('ffmpeg',['-nostdin','-hide_banner','-loglevel','error','-y','-protocol_whitelist','file,pipe','-i',file,'-map','0:v:0','-vf','scale=720:720:force_original_aspect_ratio=decrease','-fps_mode','passthrough','-q:v','3','-start_number','0',path.join(frameDir,'%06d.jpg')]);
- const frames=(await readdir(frameDir)).filter(f=>/^\d{6}\.jpg$/.test(f)).sort();
- if(frames.length!==manifest.frames.length)throw new Error('Frame extraction was incomplete. No partial result will be published.');
+ if(!manifest.frames.length)throw new Error('No video frames were found.');
  const times=manifest.frames.map(f=>Number(f.best_effort_timestamp_time));const origin=times[0];
  if(times.some(t=>!Number.isFinite(t)))throw new Error('Could not read every frame timestamp.');
+ const sceneOutput=await command('ffmpeg',['-nostdin','-hide_banner','-loglevel','error','-protocol_whitelist','file,pipe','-i',file,'-map','0:v:0','-vf',"scale=160:-2,select='gt(scene,0.25)',metadata=mode=print:file=-",'-an','-f','null','-']);
+ const selected=selectSceneFrames(times.map(t=>t-origin),parseScenes(sceneOutput).map(s=>({...s,seconds:s.seconds-origin})),info.duration);
+ const expression=selected.map(frame=>`eq(n,${frame.index})`).join('+');
+ await command('ffmpeg',['-nostdin','-hide_banner','-loglevel','error','-y','-protocol_whitelist','file,pipe','-i',file,'-map','0:v:0','-vf',`select='${expression}',scale=720:720:force_original_aspect_ratio=decrease`,'-fps_mode','passthrough','-q:v','3','-start_number','0',path.join(frameDir,'%06d.jpg')]);
+ const frames=(await readdir(frameDir)).filter(f=>/^\d{6}\.jpg$/.test(f)).sort();
+ if(frames.length!==selected.length)throw new Error('Selected scene extraction was incomplete. Retry the import.');
  const audio=path.join(directory,'audio.mp3');
  if(info.hasAudio)await command('ffmpeg',['-nostdin','-hide_banner','-loglevel','error','-y','-protocol_whitelist','file,pipe','-i',file,'-map','0:a:0','-vn','-ac','1','-ar','16000','-b:a','64k',audio]);
- return {hash:hash.digest('hex'),frames:frames.map((name,index)=>({file:path.join(frameDir,name),seconds:Math.max(0,times[index]-origin)})),audio:info.hasAudio?audio:null};
+ hash.update(JSON.stringify({version:2,selected}));
+ return {hash:hash.digest('hex'),duration:info.duration,sourceFrames:times.length,frames:frames.map((name,index)=>({file:path.join(frameDir,name),...selected[index]})),audio:info.hasAudio?audio:null};
 }
 export async function removeJobDirectory(root,directory){
  const absoluteRoot=path.resolve(root);const absolute=path.resolve(directory);
