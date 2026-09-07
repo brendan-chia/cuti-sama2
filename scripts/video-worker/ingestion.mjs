@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
 import { normalizeVideoUrl } from '../../packages/contracts/src/social-video.ts';
 import { command } from './media.mjs';
 
@@ -28,9 +28,17 @@ export async function ingestPost(sourceUrl, directory, python) {
 
 export async function downloadPost(post, directory, python) {
   await command(python, [script, 'download', post.platform, post.sourceUrl, directory]);
+  if (post.platform === 'instagram' && new URL(post.sourceUrl).pathname.startsWith('/p/')) {
+    const assets = JSON.parse(await readFile(path.join(directory, 'media-files.json'), 'utf8'));
+    if (!Array.isArray(assets) || !assets.length || assets.length > 20) throw new Error('Invalid post media manifest.');
+    return assets.map((asset, index) => {
+      if (!['image', 'video'].includes(asset.kind) || asset.file !== `item-${index}.${asset.kind === 'video' ? 'mp4' : 'jpg'}`) throw new Error('Unexpected media file.');
+      return { kind: asset.kind, file: path.join(directory, asset.file) };
+    });
+  }
   const file = path.join(directory, 'video.mp4');
   const size = await stat(file).then(info => info.size).catch(() => 0);
   if (!size) throw new Error('No video was downloaded. The post may be unavailable or exceed 150 MB.');
   if (size > 157286400) throw new Error('Video exceeds 150 MB.');
-  return file;
+  return [{ kind: 'video', file }];
 }

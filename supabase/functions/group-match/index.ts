@@ -1,7 +1,8 @@
+import { llmConfig } from '../_shared/llm.ts';
 import { createClient } from '@supabase/supabase-js';
 
 import { authenticatedClient, corsHeaders, json, requestJson } from '../_shared/invites.ts';
-import { requestGroqWording } from '../_shared/groq.ts';
+import { requestAiWording } from '../_shared/groq.ts';
 import { areGroupMatchRoundsComplete, expectedGroupMatchRoundKinds, GroupMatchPayloadSchema } from './contract.ts';
 
 type Member = { id: string; display_name: string; display_name_discriminator: number };
@@ -112,8 +113,8 @@ Deno.serve(async (request) => {
   if (submissionQuery.error) return json({ error: 'Could not load preference inputs.' }, 500);
   const deterministic = deterministicResult({ trip: tripQuery.data, members: memberQuery.data, constraints: constraintQuery.data as Constraint[], rounds: roundQuery.data as Round[], submissions: submissionQuery.data as Submission[], generatedAt: new Date().toISOString() });
   const inputFingerprint = await fingerprint({ members: memberQuery.data, constraints: constraintQuery.data, rounds: roundQuery.data, submissions: submissionQuery.data });
-  const ai = await requestGroqWording(deterministic.facts);
-  const prose = ai ? { heading: ai.heading, summary: ai.summary, factWording: Object.fromEntries(ai.facts.map((fact) => [fact.factId, fact.wording])), source: 'groq' } : deterministic.prose;
+  const ai = await requestAiWording(deterministic.facts);
+  const prose = ai ? { heading: ai.heading, summary: ai.summary, factWording: Object.fromEntries(ai.facts.map((fact) => [fact.factId, fact.wording])), source: llmConfig().provider } : deterministic.prose;
   const stored = await service.from('recommendation_runs').upsert({ trip_id: parsed.data.tripId, status: deterministic.status, input_fingerprint: inputFingerprint, deterministic_result: deterministic, ai_wording: ai }, { onConflict: 'trip_id,input_fingerprint' }).select('id').single();
   if (stored.error) return json({ error: 'Could not save the group match.' }, 500);
   return json({ ...deterministic, runId: stored.data.id, prose });

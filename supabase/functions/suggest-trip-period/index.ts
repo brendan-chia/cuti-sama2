@@ -1,3 +1,4 @@
+import { llmConfig } from '../_shared/llm.ts';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { DateRecommendationSchema, QuestRoomSchema } from '../../../packages/contracts/src/quest.ts';
@@ -21,7 +22,7 @@ Deno.serve(async (request) => {
     if (room.members.some((member) => !member.availabilitySubmitted)) return json({ error: 'Wait for everyone to submit their preferences.' }, 409);
     if (room.dateRecommendation) return json(room);
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-    // Private exclusions are used only by the calendar engine, never sent to Groq or other travellers.
+    // Private exclusions are used only by the calendar engine, never sent to DeepSeek or other travellers.
     const [inputResult, calendarResult] = await Promise.all([
       admin.from('trip_quest_inputs').select('member_id, starts_on, ends_on, date_preferences').eq('trip_id', room.tripId).in('member_id', room.members.map((member) => member.memberId)),
       admin.from('national_holiday_calendar').select('*').eq('id', 1).single(),
@@ -39,7 +40,7 @@ Deno.serve(async (request) => {
     const ranked = await rankCombinedDates(candidates);
     const recommendation = DateRecommendationSchema.parse({
       periods: (ranked ?? candidates.slice(0, 3)).map(recommendationPeriod),
-      source: ranked ? 'groq' : 'calendar', calendarVersion: calendar.version,
+      source: ranked ? llmConfig().provider : 'calendar', calendarVersion: calendar.version,
       calendarNotice: `${calendar.notice}${missing.length ? ` Holiday data for ${missing.join(', ')} is not loaded; leave estimates for those years use usual days off only.` : ''}`,
       message: !candidates.length
         ? 'No period fits everyone’s flexibility and unavailable dates. Widen your flexibility or review your unavailable dates, then save your preferences again.'

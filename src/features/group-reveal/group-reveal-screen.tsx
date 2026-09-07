@@ -65,7 +65,7 @@ export function GroupRevealScreen({ tripId, onBack, onNext, loadAction = loadGro
         })}
       </View>;
     })}
-    {result.prose.source === 'groq' ? <Text style={styles.aiNote}>Wording assisted by AI · match facts remain deterministic</Text> : null}
+    {result.prose.source !== 'deterministic' ? <Text style={styles.aiNote}>Wording assisted by AI · match facts remain deterministic</Text> : null}
   </Screen>;
 }
 

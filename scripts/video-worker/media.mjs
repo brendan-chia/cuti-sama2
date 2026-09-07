@@ -19,7 +19,7 @@ export function validateVideoProbe(probe){
  if(Number(video.width)*Number(video.height)>3840*2160)throw new Error('Choose a video at 4K resolution or below.');
  return {duration,hasAudio:probe.streams.some(s=>s.codec_type==='audio')};
 }
-export async function prepareVideo(file,directory){
+export async function prepareVideo(file,directory,budget=20){
  const probe=JSON.parse(await command('ffprobe',['-v','error','-protocol_whitelist','file,pipe','-show_streams','-show_format','-of','json',file]));
  const info=validateVideoProbe(probe);
  const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);
@@ -30,7 +30,7 @@ export async function prepareVideo(file,directory){
  const times=manifest.frames.map(f=>Number(f.best_effort_timestamp_time));const origin=times[0];
  if(times.some(t=>!Number.isFinite(t)))throw new Error('Could not read every frame timestamp.');
  const sceneOutput=await command('ffmpeg',['-nostdin','-hide_banner','-loglevel','error','-protocol_whitelist','file,pipe','-i',file,'-map','0:v:0','-vf',"scale=160:-2,select='gt(scene,0.25)',metadata=mode=print:file=-",'-an','-f','null','-']);
- const selected=selectSceneFrames(times.map(t=>t-origin),parseScenes(sceneOutput).map(s=>({...s,seconds:s.seconds-origin})),info.duration);
+ const selected=selectSceneFrames(times.map(t=>t-origin),parseScenes(sceneOutput).map(s=>({...s,seconds:s.seconds-origin})),info.duration,budget);
  const expression=selected.map(frame=>`eq(n,${frame.index})`).join('+');
  await command('ffmpeg',['-nostdin','-hide_banner','-loglevel','error','-y','-protocol_whitelist','file,pipe','-i',file,'-map','0:v:0','-vf',`select='${expression}',scale=720:720:force_original_aspect_ratio=decrease`,'-fps_mode','passthrough','-q:v','3','-start_number','0',path.join(frameDir,'%06d.jpg')]);
  const frames=(await readdir(frameDir)).filter(f=>/^\d{6}\.jpg$/.test(f)).sort();

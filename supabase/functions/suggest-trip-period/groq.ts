@@ -1,18 +1,21 @@
+import { llmConfig, llmFetch } from '../_shared/llm.ts';
 import { validateTripPeriodRanking, type TripPeriodCandidate } from '../../../packages/contracts/src/trip-period.ts';
 import type { TripPeriod } from '../../../packages/contracts/src/quest.ts';
 
-export async function requestGroqTripPeriods(
+export async function requestAiTripPeriods(
   candidates: readonly TripPeriodCandidate[],
   options: { fetchImpl?: typeof fetch; timeoutMs?: number; apiKey?: string; model?: string } = {},
 ): Promise<TripPeriod[] | null> {
-  const apiKey = options.apiKey ?? Deno.env.get('GROQ_API_KEY');
-  const model = options.model ?? Deno.env.get('GROQ_STRUCTURED_OUTPUT_MODEL');
+  const config = llmConfig();
+  const apiKey = options.apiKey ?? config.apiKey;
+  const model = options.model ?? config.model;
+  const endpoint = config.endpoint;
   if (!apiKey || !model || candidates.length < 2) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 6_000);
   try {
     const count = Math.min(3, candidates.length);
-    const response = await (options.fetchImpl ?? fetch)('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await llmFetch(options.fetchImpl)(endpoint, {
       method: 'POST', signal: controller.signal,
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({

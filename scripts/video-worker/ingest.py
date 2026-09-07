@@ -22,6 +22,15 @@ options = {
     'overwrites': True,
 }
 try:
+    if platform == 'instagram' and '/p/' in source_url:
+        from instagram_media import metadata, download
+        if action == 'metadata':
+            print(json.dumps(metadata(source_url, folder)))
+        elif action == 'download':
+            download(folder)
+        else:
+            raise ValueError('Unknown ingestion action.')
+        sys.exit(0)
     with YoutubeDL(options) as downloader:
         if action == 'metadata':
             info = downloader.extract_info(source_url, download=False)
@@ -44,5 +53,5 @@ try:
             raise ValueError('Unknown ingestion action.')
 except Exception:
     # Extractor errors can include signed CDN URLs. Keep them out of app/log output.
-    print('The platform did not provide a downloadable public video, or it exceeds the two-minute limit. Please check the link and retry.', file=sys.stderr)
+    print('The platform did not expose this public post. It may require login, be unavailable, or exceed the media limits. Please try again later.', file=sys.stderr)
     sys.exit(1)

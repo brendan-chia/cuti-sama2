@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-import { requestGroqItineraryRevision, AiItinerarySchema, type AiItinerary } from '../_shared/groq.ts';
+import { requestAiItineraryRevision, AiItinerarySchema, type AiItinerary } from '../_shared/groq.ts';
 import { diffItineraries } from '../_shared/itinerary-diff.ts';
 import { authenticatedClient, corsHeaders, json, requestJson } from '../_shared/invites.ts';
 
@@ -46,7 +46,7 @@ Deno.serve(async (request) => {
   }
   const base = AiItinerarySchema.safeParse(begun.data.base?.itinerary);
   if (!base.success) return json({ error: 'Stored base itinerary is invalid.' }, 500);
-  const candidate = await requestGroqItineraryRevision(base.data, parsed.data.instruction);
+  const candidate = await requestAiItineraryRevision(base.data, parsed.data.instruction);
   if (!candidate || !bounded(base.data, candidate, parsed.data.instruction)) {
     await service.from('itinerary_revision_operations').update({ status: 'failed', error: 'The revision was not safely bounded.', completed_at: new Date().toISOString() }).eq('id', begun.data.operationId);
     return json({ error: 'The revision could not be safely applied. Try a more specific request.' }, 422);

@@ -1,3 +1,4 @@
+import { llmConfig, llmFetch } from './llm.ts';
 import { z } from 'zod';
 
 export type EvidenceStatus = 'verified' | 'estimated' | 'unavailable';
@@ -51,11 +52,11 @@ const destinationAnnotationsJsonSchema = {
 };
 
 export async function requestDestinationAnnotations(cards: { destinationId: string; matchReasons: string[] }[], options: { fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
-  const apiKey = Deno.env.get('GROQ_API_KEY'); const model = Deno.env.get('GROQ_STRUCTURED_OUTPUT_MODEL');
+  const { apiKey, model, endpoint } = llmConfig();
   if (!apiKey || !model || cards.length === 0) return null;
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 4_000);
   try {
-    const response = await (options.fetchImpl ?? fetch)('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await llmFetch(options.fetchImpl)(endpoint, {
       method: 'POST', signal: controller.signal,
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({

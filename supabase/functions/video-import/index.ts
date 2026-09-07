@@ -17,8 +17,8 @@ Deno.serve(async request=>{
   let importId:string;
   if(input.action==='create'){
    let sourceUrl:string|null=null;
-   try{sourceUrl=input.sourceUrl?normalizeVideoUrl(input.sourceUrl).url:null;}catch{return json({error:'Use an Instagram or TikTok video link.'},400);}
-   if(!input.upload&&!sourceUrl)return json({error:'Use an Instagram or TikTok video link.'},400);
+   try{sourceUrl=input.sourceUrl?normalizeVideoUrl(input.sourceUrl).url:null;}catch{return json({error:'Use an Instagram post, Reel, or TikTok link.'},400);}
+   if(!input.upload&&!sourceUrl)return json({error:'Use an Instagram post, Reel, or TikTok link.'},400);
    const reserved=await client.rpc('begin_place_import',{p_trip_id:input.tripId,p_request_id:input.requestId,p_source_url:sourceUrl});
    if(reserved.error)return json({error:reserved.error.message},400);
    importId=reserved.data.id;
@@ -43,7 +43,7 @@ Deno.serve(async request=>{
   const jobResult=await admin.from('trip_video_jobs').select('*').eq('import_id',importId).single(); if(jobResult.error)throw jobResult.error;
   let job=jobResult.data;
   if(input.action==='cancel'){
-   const r=await admin.from('trip_video_jobs').update({state:'cancelled',lease:null,message:'Video analysis cancelled.'}).eq('import_id',importId).in('state',['uploading','queued','running','failed']).select().single();
+   const r=await admin.from('trip_video_jobs').update({state:'cancelled',lease:null,message:'Post analysis cancelled.'}).eq('import_id',importId).in('state',['uploading','queued','running','failed']).select().single();
    if(r.data){job=r.data;if(job.storage_path)await admin.storage.from('trip-video-imports').remove([job.storage_path]);}
   }
   if(input.action==='uploaded'||input.action==='retry'){
@@ -53,7 +53,7 @@ Deno.serve(async request=>{
     const objects=await admin.storage.from('trip-video-imports').list(importId);
     if(objects.error||!objects.data?.some(o=>o.name==='video'))return json({error:'The video upload has not finished.'},409);
    }
-   const r=await admin.from('trip_video_jobs').update({state:'queued',lease:null,message:'Waiting for the local video worker.'}).eq('import_id',importId).eq('state',input.action==='uploaded'?'uploading':'failed').select().single();
+   const r=await admin.from('trip_video_jobs').update({state:'queued',lease:null,message:'Waiting for the local post worker.'}).eq('import_id',importId).eq('state',input.action==='uploaded'?'uploading':'failed').select().single();
    if(r.error)return json({error:'This import cannot be restarted in its current state.'},409);job=r.data;
   }
   const presence=await admin.from('video_worker_presence').select('seen_at').eq('id',1).maybeSingle();

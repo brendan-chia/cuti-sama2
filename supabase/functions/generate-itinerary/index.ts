@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-import { requestGroqItinerary, type AiItinerary } from '../_shared/groq.ts';
+import { requestAiItinerary, type AiItinerary } from '../_shared/groq.ts';
 import { questItineraryInput, questItineraryConflicts } from './quest-input.ts';
 import { authenticatedClient, corsHeaders, json, requestJson } from '../_shared/invites.ts';
 
@@ -126,7 +126,7 @@ Deno.serve(async (request) => {
   const sourceTimestamps = questInput?.sourceTimestamps ?? [...new Set([trip.destination_locked_at, ...constraints.map((row) => row.updated_at), ...submissions.map((row) => row.updated_at)])];
   const destination = questInput?.destination ?? { name: trip.locked_destination_name, country: trip.locked_destination_country };
   const inputSnapshot = questInput ?? { destination, dates: { startsOn: trip.starts_on, endsOn: trip.ends_on }, hardConstraints: hard, groupSignals: groupedSignals, sourceTimestamps };
-  const draft = await requestGroqItinerary(inputSnapshot);
+  const draft = await requestAiItinerary(inputSnapshot);
   if (!draft) { await fail(service, operationId, 'The AI response was unavailable or malformed.'); return json({ error: 'The itinerary draft was not schema-valid. Retry generation.' }, 502); }
   const privateValues = questInput ? [] : constraints.filter((row) => !row.accessibility_visibility_consent && useful(row.accessibility_requirements)).map((row) => row.accessibility_requirements!);
   if (!outputIsSafe(draft, { destination, privateValues, sourceTimestamps })) { await fail(service, operationId, 'The AI response failed provenance or privacy validation.'); return json({ error: 'The itinerary draft failed safety validation. Retry generation.' }, 422); }

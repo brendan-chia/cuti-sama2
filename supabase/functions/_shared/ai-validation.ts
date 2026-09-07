@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const GroqWordingSchema = z.object({
+export const AiWordingSchema = z.object({
   heading: z.string().trim().min(1).max(120),
   summary: z.string().trim().min(1).max(500),
   facts: z.array(z.object({
@@ -9,10 +9,10 @@ export const GroqWordingSchema = z.object({
   }).strict()).max(100),
 }).strict();
 
-export type GroqWording = z.infer<typeof GroqWordingSchema>;
+export type AiWording = z.infer<typeof AiWordingSchema>;
 
-export function validateGroqWording(value: unknown, supportedFactIds: readonly string[]): GroqWording | null {
-  const parsed = GroqWordingSchema.safeParse(value);
+export function validateAiWording(value: unknown, supportedFactIds: readonly string[]): AiWording | null {
+  const parsed = AiWordingSchema.safeParse(value);
   if (!parsed.success) return null;
   const supported = new Set(supportedFactIds);
   const seen = new Set<string>();

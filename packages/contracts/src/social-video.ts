@@ -15,7 +15,10 @@ export function normalizeVideoUrl(input: string): { platform: SocialVideo['platf
   if (['instagram.com', 'www.instagram.com'].includes(url.hostname)) {
     const match = url.pathname.match(/^\/(?:[^/]+\/)?(p|reels?|tv)\/([A-Za-z0-9_-]+)\/?$/);
     if (!match) throw new Error('Use an Instagram post or Reel link.');
-    return { platform: 'instagram', url: `https://www.instagram.com/${match[1] === 'reels' ? 'reel' : match[1]}/${match[2]}/` };
+    const canonical = new URL(`https://www.instagram.com/${match[1] === 'reels' ? 'reel' : match[1]}/${match[2]}/`);
+    const imageIndex = url.searchParams.get('img_index');
+    if (imageIndex && /^[1-9]\d?$/.test(imageIndex)) canonical.searchParams.set('img_index', imageIndex);
+    return { platform: 'instagram', url: canonical.toString() };
   }
   if (['www.tiktok.com', 'tiktok.com', 'm.tiktok.com'].includes(url.hostname)
     && /^\/(?:@[^/]+\/video\/\d+|t\/[A-Za-z0-9_-]+)\/?$/.test(url.pathname)) {
@@ -27,6 +30,7 @@ export function normalizeVideoUrl(input: string): { platform: SocialVideo['platf
   throw new Error('Use an Instagram or TikTok video link.');
 }
 
+/** True for supported social media imports; media type is detected by the worker. */
 export function isSocialVideoUrl(input: string): boolean {
   try { normalizeVideoUrl(input); return true; } catch { return false; }
 }

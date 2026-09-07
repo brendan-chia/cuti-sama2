@@ -1,7 +1,8 @@
 /** Prioritize scene cuts and temporal coverage, capped at twenty vision calls. */
-export function selectSceneFrames(times, scenes, duration) {
+export function selectSceneFrames(times, scenes, duration, budget = 20) {
+  if (!Number.isInteger(budget) || budget < 1 || budget > 20) throw new Error('Invalid scene budget.');
   if (!times.length || times.some(t => !Number.isFinite(t))) throw new Error('Invalid frame timestamps.');
-  const target = Math.min(times.length, Math.max(8, Math.min(20, Math.ceil(duration / 6))));
+  const target = Math.min(budget, times.length, Math.max(8, Math.min(20, Math.ceil(duration / 6))));
   const selected = new Map();
   const closest = seconds => {
     let best = 0;

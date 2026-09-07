@@ -67,7 +67,7 @@ export const GroupMatchResultSchema = z.object({
     heading: z.string().min(1).max(120),
     summary: z.string().min(1).max(500),
     factWording: z.record(z.string(), z.string().min(1).max(500)),
-    source: z.enum(['deterministic', 'groq']),
+    source: z.enum(['deterministic', 'groq', 'openrouter']),
   }).strict(),
 }).strict().superRefine((value, context) => {
   const sourceIds = new Set(value.sources.map((source) => source.sourceId));

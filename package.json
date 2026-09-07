@@ -59,7 +59,7 @@
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
     "video-worker": "node scripts/video-worker/run.mjs",
-    "video-worker:test": "node --test scripts/video-worker/media.test.mjs",
+    "video-worker:test": "node --test scripts/video-worker/media.test.mjs scripts/video-worker/post-media.test.mjs",
     "video-worker:setup": "node scripts/video-worker/setup.mjs"
   },
   "jest": {

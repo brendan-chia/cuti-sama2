@@ -33,7 +33,9 @@ export function normalizeSocialUrl(input: string): string {
   }
   url.hash = '';
   const video = url.searchParams.get('v');
+  const imageIndex = url.searchParams.get('img_index');
   url.search = '';
   if (url.pathname === '/watch' && video) url.searchParams.set('v', video);
+  if (['instagram.com', 'www.instagram.com'].includes(url.hostname) && imageIndex && /^[1-9]\d?$/.test(imageIndex)) url.searchParams.set('img_index', imageIndex);
   return url.toString();
 }

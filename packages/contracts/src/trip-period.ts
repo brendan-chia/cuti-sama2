@@ -11,7 +11,7 @@ export const TripPeriodRequestSchema = z.object({
 
 export const TripPeriodSuggestionsSchema = z.object({
   periods: z.array(TripPeriodSchema).max(3),
-  source: z.enum(['groq', 'calendar']),
+  source: z.enum(['groq', 'deepseek', 'calendar']),
   message: z.string().trim().min(1).max(600),
 }).strict().superRefine((value, context) => {
   const seen = new Set<string>();

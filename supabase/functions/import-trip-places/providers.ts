@@ -1,3 +1,4 @@
+import { llmConfig, llmFetch } from '../_shared/llm.ts';
 import { z } from 'zod';
 import { readInstagramPost } from './instagram.ts';
 import { normalizeSocialUrl, PlaceCandidateSchema, type PlaceCandidate } from '../../../packages/contracts/src/place-import.ts';
@@ -26,15 +27,14 @@ export async function readPublicPost(input: string, fetcher = fetch): Promise<st
 
 const ExtractionSchema = z.object({ places: z.array(z.object({ name: z.string().min(2).max(150), evidence: z.string().max(500) })).max(4) });
 export async function extractPlaces(text: string, image?: string): Promise<{ name: string; evidence: string }[]> {
-  const key = Deno.env.get('GROQ_API_KEY');
-  const model = image ? (Deno.env.get('GROQ_VISION_MODEL') || 'qwen/qwen3.6-27b') : Deno.env.get('GROQ_STRUCTURED_OUTPUT_MODEL');
+  const { apiKey: key, model, endpoint } = llmConfig(image ? 'vision' : 'structured');
   if (!key || !model) {
     if (image) throw new Error('Screenshot reading is unavailable. Paste the caption or place names instead.');
     // Explicit names still work when AI is unavailable; these remain unverified search queries.
     return text.split(/[\n;]+/).map((name) => name.trim()).filter(Boolean).slice(0, 4)
       .map((name) => ({ name: name.slice(0, 150), evidence: 'Matched from the text you supplied. Please check the address.' }));
   }
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const response = await llmFetch(fetch)(endpoint, {
     method: 'POST', signal: AbortSignal.timeout(18000),
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, temperature: 0, max_completion_tokens: 1000,
@@ -79,10 +79,9 @@ const EnglishPlacesSchema = z.object({ places: z.array(PlaceCandidateSchema.pick
 
 export async function translatePlacesToEnglish(places: PlaceCandidate[], fetcher = fetch): Promise<PlaceCandidate[]> {
   if (!places.length) return [];
-  const key = Deno.env.get('GROQ_API_KEY');
-  const model = Deno.env.get('GROQ_STRUCTURED_OUTPUT_MODEL');
+  const { apiKey: key, model, endpoint } = llmConfig();
   if (!key || !model) throw new Error('English translation is unavailable. Please try importing these places again later.');
-  const response = await fetcher('https://api.groq.com/openai/v1/chat/completions', {
+  const response = await llmFetch(fetcher)(endpoint, {
     method: 'POST', signal: AbortSignal.timeout(18000),
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, temperature: 0, max_completion_tokens: 4000,

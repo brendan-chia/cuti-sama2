@@ -24,7 +24,7 @@ export const DateRecommendationSchema = z.object({
     holidays: z.array(z.object({ date: z.iso.date(), name: z.string() }).strict()),
     travellers: z.array(z.object({ memberId: z.uuid(), leaveDays: z.number().int().nonnegative(), leaveDates: z.array(z.iso.date()).max(30).optional(), shiftDays: z.number().int(), durationChange: z.number().int() }).strict()),
   }).strict()).max(3),
-  source: z.enum(['groq', 'calendar']), message: z.string(),
+  source: z.enum(['groq', 'deepseek', 'calendar']), message: z.string(),
   calendarVersion: z.string(), calendarNotice: z.string(),
 }).strict();
 export type DateRecommendation = z.infer<typeof DateRecommendationSchema>;

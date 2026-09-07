@@ -45,3 +45,6 @@ example
 
 # Local validation artifacts and isolated browser profiles
 /.tmp/
+
+# Python worker bytecode
+__pycache__/
