@@ -1,7 +1,7 @@
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 import { colors } from '@/theme/tokens';
 
-const backgrounds = [colors.surfaceTint, colors.sun, colors.sand, colors.surfaceTint, colors.leaf];
+const backgrounds = [colors.surfaceTint, colors.sun, colors.sand, colors.surfaceTint, colors.leaf, colors.sand];
 
 /** Small travel stickers, ordered to match the flight-plan reference. */
 export function FlightStopIcon({ index }: { index: number }) {
@@ -29,6 +29,7 @@ export function FlightStopIcon({ index }: { index: number }) {
         <Path d="M30 24H40V33H30Q26 28.5 30 24Z" fill={colors.surfaceTint} />
         <Circle cx="32" cy="28.5" r="1.4" fill={colors.ink} stroke="none" />
       </> : null}
+      {index === 5 ? <><Rect x="10" y="19" width="28" height="20" rx="4" fill="#FFF9E5" /><Path d="M18 19V12H30V19M17 23V35M31 23V35" fill="none" /></> : null}
       {index === 4 ? <>
         <Path d="M15 10H33Q36 10 36 13V37L25 32L14 38V13Q14 10 17 10Z" fill="#FFF0BE" />
         <Path d="M18 12V30" stroke="#FFFFFF" />

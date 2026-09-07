@@ -21,6 +21,10 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="inspiration" options={{ title: 'Saved inspiration' }} />
+        <Stack.Screen name="profile" options={{ title: 'My travel passport' }} />
+        <Stack.Screen name="solo" options={{ title: 'Solo adventure' }} />
+        <Stack.Screen name="discover" options={{ title: 'Discover trips' }} />
         <Stack.Screen name="create" options={{ title: 'Create a Trip Room' }} />
         <Stack.Screen name="join" options={{ title: 'Join a Trip Room' }} />
         <Stack.Screen name="recover" options={{ title: 'Recover room access' }} />

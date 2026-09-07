@@ -88,3 +88,12 @@ verify_jwt = true
 
 [functions.video-import-worker]
 verify_jwt = false
+
+[functions.analyze-inspiration]
+verify_jwt = true
+
+[functions.recommend-budget]
+verify_jwt = true
+
+[functions.recommend-logistics]
+verify_jwt = true

@@ -65,7 +65,7 @@ export const ItineraryDaySchema = z.object({
   dayNumber: z.number().int().positive().max(30),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   title: z.string().trim().min(1).max(160),
-  activities: z.array(ItineraryActivitySchema).min(1).max(12),
+  activities: z.array(ItineraryActivitySchema).min(0).max(12),
 }).strict().superRefine((value, context) => {
   for (let index = 1; index < value.activities.length; index += 1) {
     if (value.activities[index - 1].timeBlock.end > value.activities[index].timeBlock.start) {

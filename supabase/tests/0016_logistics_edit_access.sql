@@ -1,0 +1,37 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select no_plan();
+insert into auth.users(id,instance_id,aud,role,created_at,updated_at) values
+ ('77777777-7777-4777-8777-777777777777','00000000-0000-0000-0000-000000000000','authenticated','authenticated',now(),now());
+set local role authenticated;
+select set_config('request.jwt.claim.sub','77777777-7777-4777-8777-777777777777',true);
+select public.create_trip('Logistics regression','undecided','{}',null,null,'77777777-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+create temporary table logistics_trip as select id from public.trips where name='Logistics regression';
+create function pg_temp.room() returns jsonb language sql as $$select public.get_trip_quest((select id from logistics_trip))$$;
+create function pg_temp.act(action jsonb, key uuid default extensions.gen_random_uuid()) returns jsonb language sql as $$select public.update_trip_quest((select id from logistics_trip),action,key)$$;
+reset role;
+update public.trips set planning_started_at=now() where id=(select id from logistics_trip);
+insert into auth.users(id,instance_id,aud,role,created_at,updated_at) values ('99999999-9999-4999-8999-999999999999','00000000-0000-0000-0000-000000000000','authenticated','authenticated',now(),now());
+insert into public.trip_members(trip_id,user_id,display_name,role) select id,'99999999-9999-4999-8999-999999999999','Brendan','member' from logistics_trip;
+set local role authenticated;
+select pg_temp.room();
+reset role;
+update public.trip_quests set stage='budget',period='{"startsOn":"2027-10-12","endsOn":"2027-10-16","label":"Trip","reason":"Shared"}',selected_country_code='JP',attraction_ids=array['jp-sensoji'] where trip_id=(select id from logistics_trip);
+update public.trip_quest_inputs set budget=3000 where trip_id=(select id from logistics_trip);
+set local role authenticated;
+
+select pg_temp.act('{"type":"finish"}');
+select pg_temp.act(jsonb_build_object('type','complete_logistics','skip',true,'revision',(pg_temp.room()->>'revision')::integer));
+create temporary table transport_input as select jsonb_build_object('type','transport','memberId',(select id from public.trip_members where trip_id=(select id from logistics_trip) and user_id='99999999-9999-4999-8999-999999999999'), 'transport','{"direction":"arrival","mode":"flight","departureLocation":"KUL","arrivalLocation":"NRT","departureAt":"2027-10-12T07:00:00+08:00","arrivalAt":"2027-10-12T14:30:00+09:00","cost":850,"bookingLink":null,"status":"selected"}'::jsonb) as value;
+select is(pg_temp.act((select value from transport_input))->>'stage','logistics','organiser enters another traveller transport from a completed plan');
+select is(pg_temp.room()->'logistics'->'transport'->0->>'memberId',(select value->>'memberId' from transport_input),'transport belongs to the chosen traveller');
+select pg_temp.act(jsonb_build_object('type','complete_logistics','skip',true,'revision',(pg_temp.room()->>'revision')::integer));
+select set_config('request.jwt.claim.sub','99999999-9999-4999-8999-999999999999',true);
+select throws_ok($$select pg_temp.act(jsonb_set((select value from transport_input),'{memberId}',to_jsonb((select id::text from public.trip_members where trip_id=(select id from logistics_trip) and role='organizer'))))$$,'42501','Only the organiser can enter another traveller’s transport.','member cannot overwrite organiser transport');
+select is(pg_temp.room()->>'stage','complete','rejected changes do not reopen the plan');
+select is(pg_temp.act((select value - 'memberId' from transport_input))->>'stage','logistics','member saves their own transport without organiser reopening');
+select throws_ok($$select pg_temp.act('{"type":"skip_stay"}')$$,'42501','Only the organiser can advance this quest stage.','stay decision remains with organiser');
+select set_config('request.jwt.claim.sub','77777777-7777-4777-8777-777777777777',true);
+select throws_ok($$select pg_temp.act(jsonb_set((select value from transport_input),'{memberId}','"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"'::jsonb))$$,'22023','Choose an active traveller in this trip.','organiser cannot target a nonparticipant');
+select * from finish();
+rollback;

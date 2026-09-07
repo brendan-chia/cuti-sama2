@@ -4,27 +4,29 @@ import { useReducedMotion } from '@/theme/motion';
 import { colors } from '@/theme/tokens';
 import { FlightStopIcon } from './flight-stop-icon';
 
-const stops = ['Dates', 'Wishlist', 'Vote', 'Explore', 'Budget'];
-export function FlightPath({ stage = 0 }: { stage?: number }) {
+const stops = ['Dates', 'Wishlist', 'Vote', 'Explore', 'Budget', 'Logistics'];
+export function FlightPath({ stage = 0, solo = false }: { stage?: number; solo?: boolean }) {
+  const visibleStops = solo ? stops.filter(label => label !== 'Vote') : stops;
+  const last = visibleStops.length - 1;
   const [width, setWidth] = useState(0);
-  const [position] = useState(() => new Animated.Value(Math.min(stage, 4)));
+  const [position] = useState(() => new Animated.Value(Math.min(stage, last)));
   const reduced = useReducedMotion();
   useEffect(() => {
-    const animation = Animated.timing(position, { toValue: Math.min(stage, 4), duration: reduced ? 0 : 850, easing: Easing.inOut(Easing.cubic), useNativeDriver: true });
+    const animation = Animated.timing(position, { toValue: Math.min(stage, last), duration: reduced ? 0 : 850, easing: Easing.inOut(Easing.cubic), useNativeDriver: true });
     animation.start(); return () => animation.stop();
-  }, [position, reduced, stage]);
-  return <View style={styles.board} accessibilityLabel={`${stage} of 5 stages completed. ${stage === 5 ? 'Journey complete' : `Plane stopped at ${stops[stage]}`}`} testID="flight-path">
-    <View style={styles.heading}><Text style={styles.kicker}>YOUR FLIGHT PLAN</Text><Text style={styles.status}>{stage === 5 ? 'LANDED ✓' : `STOP 0${stage + 1} / 05`}</Text></View>
+  }, [position, reduced, stage, last]);
+  return <View style={styles.board} accessibilityLabel={`${stage} of ${visibleStops.length} stages completed. ${stage === visibleStops.length ? 'Journey complete' : `Plane stopped at ${visibleStops[stage]}`}`} testID="flight-path">
+    <View style={styles.heading}><Text style={styles.kicker}>YOUR FLIGHT PLAN</Text><Text style={styles.status}>{stage === visibleStops.length ? 'LANDED ✓' : `STOP 0${stage + 1} / 0${visibleStops.length}`}</Text></View>
     <View style={styles.route} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
       <View style={styles.dashes} />
-      {stops.map((label, index) => <View key={label} style={styles.stop}>
+      {visibleStops.map((label, index) => <View key={label} style={styles.stop}>
         <View style={[styles.dot, index === stage && styles.current]}>
-          <FlightStopIcon index={index} />
+          <FlightStopIcon index={stops.indexOf(label)} />
           {index < stage ? <View style={styles.completed}><Text style={styles.completedText}>✓</Text></View> : null}
         </View>
-        <Text style={[styles.label, index === Math.min(stage, 4) && styles.activeLabel]}>{label}</Text>
+        <Text style={[styles.label, index === Math.min(stage, last) && styles.activeLabel]}>{label}</Text>
       </View>)}
-      {width > 0 ? <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.plane, { left: width / 10 - 17, transform: [{ translateX: position.interpolate({ inputRange: [0, 4], outputRange: [0, width * 0.8] }) }] }]}><Text style={styles.planeGlyph}>✈</Text></Animated.View> : null}
+      {width > 0 ? <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.plane, { left: width / (visibleStops.length * 2) - 17, transform: [{ translateX: position.interpolate({ inputRange: [0, last], outputRange: [0, width * last / visibleStops.length] }) }] }]}><Text style={styles.planeGlyph}>✈</Text></Animated.View> : null}
     </View>
   </View>;
 }

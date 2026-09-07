@@ -1,6 +1,7 @@
 import { questItineraryInput, questItineraryConflicts } from './quest-input.ts';
 import { countryByCode } from '../../../packages/contracts/src/countries.ts';
 import type { AiItinerary } from '../_shared/groq.ts';
+import { emptyLogistics } from '../../../packages/contracts/src/logistics.ts';
 
 function assert(value: unknown, message = 'Assertion failed'): asserts value { if (!value) throw new Error(message); }
 const room = {
@@ -26,9 +27,26 @@ Deno.test('completed quest input includes selected imported stops and budget wit
 });
 Deno.test('quest validation requires every date and every selected place at its verified coordinates', () => {
   const input = questItineraryInput(room, '2026-09-05T10:00:00Z');
-  const draft = { days: input.selectedPlaces.map((place, index) => ({ date: `2027-12-0${4 + index}`, activities: [{ tags: [`place:${place.id}`], location: { latitude: place.latitude, longitude: place.longitude } }] })) } as AiItinerary;
+  const draft = { days: input.selectedPlaces.map((place, index) => ({ date: `2027-12-0${4 + index}`, activities: [{ timeBlock: { start: '10:00', end: '11:00', timezone: 'Asia/Tokyo' }, tags: [`place:${place.id}`], location: { latitude: place.latitude, longitude: place.longitude } }] })) } as AiItinerary;
   assert(questItineraryConflicts(draft, input).length === 0);
   assert(questItineraryConflicts({ ...draft, days: draft.days.slice(0, 1) }, input).length === 2);
   draft.days[1].activities[0].location.latitude = 0;
   assert(questItineraryConflicts(draft, input).length === 1);
+});
+
+Deno.test('logistics normalizes selected travel, deducts costs and enforces timezone boundaries', () => {
+  const journey = { memberId: room.currentMemberId, direction: 'arrival', mode: 'flight', departureLocation: 'KUL', arrivalLocation: 'NRT', departureAt: '2027-12-04T07:00:00+08:00', arrivalAt: '2027-12-04T14:30:00+09:00', cost: 850, bookingLink: 'https://example.com/private-booking', status: 'selected' };
+  const input = questItineraryInput({ ...room, logistics: { ...emptyLogistics, transport: [journey, { ...journey, direction: 'departure', departureAt: '2027-12-05T16:00:00+09:00', arrivalAt: '2027-12-05T22:00:00+08:00', cost: 400 }] } }, '2026-09-05T10:00:00Z');
+  assert(input.hardConstraints.budgetMaximum === 3750);
+  assert(input.logistics.groupArrivalAt === '2027-12-04T05:30:00.000Z');
+  assert(input.logistics.groupDepartureAt === '2027-12-05T07:00:00.000Z');
+  assert(input.logistics.draft && !JSON.stringify(input).includes('private-booking'));
+  const draft = { days: input.selectedPlaces.map((place, index) => ({ date: `2027-12-0${4 + index}`, activities: [{ timeBlock: { start: '15:00', end: '16:00', timezone: 'Asia/Tokyo' }, tags: [`place:${place.id}`], location: { latitude: place.latitude, longitude: place.longitude } }] })) } as AiItinerary;
+  assert(questItineraryConflicts(draft, input).length === 0);
+  draft.days[0].activities[0].timeBlock.start = '14:00';
+  assert(questItineraryConflicts(draft, input).some((issue) => issue.includes('before everyone arrives')));
+  draft.days[1].activities[0].timeBlock.end = '16:30';
+  assert(questItineraryConflicts(draft, input).some((issue) => issue.includes('earliest departure')));
+  const proposed = questItineraryInput({ ...room, logistics: { ...emptyLogistics, transport: [{ ...journey, status: 'proposed' }] } }, '2026-09-05T10:00:00Z');
+  assert(proposed.hardConstraints.budgetMaximum === 5000 && proposed.logistics.arrivals.length === 0);
 });

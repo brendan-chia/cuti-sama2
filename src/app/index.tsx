@@ -1,5 +1,4 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -7,6 +6,7 @@ import { BrandLogo } from '@/components/brand-logo';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { getLastTripId } from '@/features/trips/service';
+import { DestinationRow, malaysiaDestinations, worldDestinations } from '@/features/home/destination-row';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 export default function WelcomeScreen() {
@@ -28,27 +28,21 @@ export default function WelcomeScreen() {
   return (
     <Screen testID="welcome-screen">
       <View style={styles.brandRow}>
-        <BrandLogo />
+        <BrandLogo compact />
       </View>
 
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>GOOD COMPANY. GREAT GETAWAYS.</Text>
-        <Text style={styles.title}>The group trip that finally leaves the chat.</Text>
+        <Text style={styles.eyebrow}>YOUR NEXT GETAWAY STARTS HERE</Text>
+        <Text style={styles.title}>Where shall we go?</Text>
         <Text style={styles.subtitle}>
-          Pick the dates. Dream a little. Get your favourite people on the same flight plan.
+          A weekend close to home or a whole new world. Make it your kind of trip.
         </Text>
       </View>
 
-      <View style={styles.postcards} accessibilityLabel="Travel inspiration: Japan and Malaysia">
-        <View style={styles.postcard}><Image source={require('../../assets/images/postcard-japan.jpg')} style={styles.postcardImage} contentFit="cover" accessibilityLabel="Japan travel inspiration" /><Text style={styles.postcardCaption}>A little out of office.</Text><Text style={styles.postcardSmall}>JAPAN · WISH YOU WERE HERE</Text></View>
-        <View style={styles.miniPostcard}><Image source={require('../../assets/images/postcard-malaysia.jpg')} style={styles.miniImage} contentFit="cover" accessibilityLabel="Malaysia travel inspiration" /><Text style={styles.postcardCaption}>Or closer to home?</Text></View>
-        <View style={styles.sunSticker}><Text style={styles.stickerText}>{'BETTER\nTOGETHER'}</Text></View>
-      </View>
-
       <View style={styles.actionPanel}>
-        <View style={styles.boardingRow}><Text style={styles.boardingLabel}>BOARDING PASS</Text><Text style={styles.boardingLabel}>1–8 TRAVELLERS</Text></View>
+        <Text style={styles.sectionTitle}>Create a new trip plan</Text>
         <AppButton label="Start a group trip" onPress={() => router.push('/create')} />
-        <AppButton label="Join with an invitation" onPress={() => router.push('/join')} variant="secondary" />
+        <AppButton label="Plan a solo adventure" onPress={() => router.push('/solo')} variant="secondary" />
         {lastTripId ? (
           <AppButton
             label="Continue your Trip Room"
@@ -61,35 +55,29 @@ export default function WelcomeScreen() {
           <Text style={styles.promiseText}>No sign-up. Your guest session is created securely in the background.</Text>
         </View>
       </View>
+      <View style={styles.destinationSections}>
+        <DestinationRow title="Popular in Malaysia" subtitle="A few favourites, right here at home." destinations={malaysiaDestinations} testID="malaysia-destinations" />
+        <DestinationRow title="Popular destinations" subtitle="Dream a little further. Where is next on your list?" destinations={worldDestinations} testID="world-destinations" />
+      </View>
+      <View style={styles.community}>
+        <Text style={styles.sectionTitle}>Find your travel people</Text>
+        <AppButton label="Discover public trips" onPress={() => router.push('/discover')} variant="secondary" />
+        <AppButton label="Join with an invitation" onPress={() => router.push('/join')} variant="secondary" />
+        <AppButton label="My profile & trips" onPress={() => router.push('/profile')} variant="secondary" />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  sectionTitle: { color: colors.ink, fontSize: 19, fontWeight: '800' },
+  destinationSections: { gap: 28, marginTop: 28 },
+  community: { gap: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.xl, marginTop: spacing.xl },
   brandRow: { alignItems: 'center', backgroundColor: colors.paper, borderRadius: radius.lg, padding: spacing.md },
-  brandMark: { height: 36, width: 36, borderRadius: 12, backgroundColor: colors.sky, alignItems: 'center', justifyContent: 'center' },
-  brandPlane: { color: colors.paper, fontSize: 25 },
-  brandDot: {
-    backgroundColor: colors.coral,
-    borderRadius: radius.pill,
-    height: 22,
-    left: 0,
-    position: 'absolute',
-    top: 0,
-    width: 22,
-  },
-  brandDotSecond: { backgroundColor: colors.sky, left: 14, opacity: 0.82 },
-  wordmark: { color: colors.ink, fontSize: typography.small, fontWeight: '900', letterSpacing: 2.2 },
-  hero: { justifyContent: 'center', maxWidth: 620, paddingTop: 32, paddingBottom: 24 },
+  hero: { justifyContent: 'center', maxWidth: 620, paddingTop: 24, paddingBottom: 24 },
   eyebrow: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 2, marginBottom: spacing.lg },
-  title: { color: colors.ink, fontSize: 39, fontWeight: '900', letterSpacing: -1.8, lineHeight: 43 },
+  title: { color: colors.ink, fontSize: 34, fontWeight: '900', letterSpacing: -1.8, lineHeight: 40 },
   subtitle: { color: colors.textMuted, fontSize: typography.body, lineHeight: 24, marginTop: spacing.lg, maxWidth: 560 },
-  postcards: { height: 208, marginBottom: 24, marginHorizontal: 10 },
-  postcard: { width: '64%', maxWidth: 290, backgroundColor: colors.paper, padding: 8, paddingBottom: 12, borderRadius: 5, transform: [{ rotate: '-5deg' }] },
-  postcardImage: { height: 125, borderRadius: 3 }, postcardCaption: { color: colors.ink, fontSize: 13, fontWeight: '800', marginTop: 9, marginHorizontal: 4 }, postcardSmall: { color: colors.textMuted, fontSize: 8, letterSpacing: 1.2, marginTop: 5, marginHorizontal: 4 },
-  miniPostcard: { position: 'absolute', right: 0, top: 45, width: '48%', backgroundColor: colors.paper, padding: 7, paddingBottom: 12, borderRadius: 5, transform: [{ rotate: '7deg' }] }, miniImage: { height: 100, borderRadius: 3 },
-  sunSticker: { position: 'absolute', top: -7, right: 4, backgroundColor: colors.orange, width: 73, height: 73, borderRadius: 37, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '12deg' }] }, stickerText: { color: colors.ink, textAlign: 'center', fontSize: 10, lineHeight: 15, fontWeight: '900', letterSpacing: 0.6 },
-  boardingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderStyle: 'dashed', borderColor: colors.border, marginBottom: 3 }, boardingLabel: { fontSize: 9, color: colors.textMuted, letterSpacing: 1.3, fontWeight: '800' },
   actionPanel: { gap: spacing.md, backgroundColor: colors.surface, padding: 20, borderRadius: 24 },
   promiseRow: {
     alignItems: 'flex-start',

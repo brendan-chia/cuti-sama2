@@ -60,6 +60,90 @@ async function openQuest(room: QuestRoom, overrides: Partial<ComponentProps<type
 }
 
 describe('trip quest shared planning flow', () => {
+  it('solo planning hides voting and submits one directly selected destination', async () => {
+    const { screen, updateAction } = await openQuest(roomWith({ travelParty: 'solo', members: [baseRoom.members[0]] }));
+    expect(screen.queryByText('Vote')).toBeNull();
+    expect(screen.getByTestId('flight-path').props.accessibilityLabel).toContain('of 5 stages');
+    await fireEvent.press(screen.getByLabelText('Japan'));
+    await fireEvent.press(screen.getByLabelText('Thailand'));
+    await fireEvent.press(screen.getByText('Choose destination & explore'));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'picks', countryCodes: ['TH'] });
+  });
+
+  it('solo stays are confirmed directly without a ballot', async () => {
+    const stay = { id: '33333333-3333-4333-8333-333333333333', name: 'Solo Hotel', area: 'Tokyo', image: 'https://example.com/stay.jpg', latitude: 35, longitude: 139, totalCost: 1050, checkIn: '2027-12-04', checkOut: '2027-12-08', rating: 8.4, distance: '6 min from station', bookingLink: 'https://example.com/book', provider: 'Provider' };
+    const { screen, updateAction } = await openQuest(roomWith({ travelParty: 'solo', stage: 'logistics', members: [baseRoom.members[0]], logistics: { stays: [stay], transport: [], votes: [], selectedStayId: null, skippedMemberIds: [], staySkipped: false } }));
+    await fireEvent.press(screen.getByText('Next: Accommodation'));
+    expect(screen.queryByText('Vote · 0')).toBeNull();
+    await fireEvent.press(screen.getByText('Confirm stay'));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'confirm_stay', stayId: stay.id });
+  });
+
+  it.each(['organizer', 'member'] as const)('shows transport and stay inputs on an old completed trip for the %s', async (role) => {
+    const room = roomWith({ stage: 'complete', currentRole: role, currentMemberId: role === 'member' ? memberId : organizerId });
+    const { screen, updateAction } = await openQuest(room);
+    expect(screen.queryByText('QUEST COMPLETE')).toBeNull();
+    expect(screen.getByText('CHAPTER 6 · LOGISTICS')).toBeTruthy();
+    expect(screen.getByText('Choose a journey')).toBeTruthy();
+    expect(screen.queryByLabelText('Departure city / airport')).toBeNull();
+    await fireEvent.press(screen.getByText('Add or edit my own booking'));
+    expect(screen.getByLabelText('Departure city / airport')).toBeTruthy();
+    expect(screen.getByText('Save my transport')).toBeTruthy();
+    expect(screen.queryByText('Edit logistics')).toBeNull();
+    expect(updateAction).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByText('Next: Accommodation'));
+    expect(screen.getByText('Suggested stays')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Add my own accommodation'));
+    expect(screen.getByLabelText('Hotel / stay name')).toBeTruthy();
+    expect(screen.getByLabelText('Total stay price (MYR)')).toBeTruthy();
+    expect(screen.getByText('Add stay option')).toBeTruthy();
+  });
+
+  it('lets the organiser save another traveller’s transport directly from an old completed trip', async () => {
+    const { screen, updateAction } = await openQuest(roomWith({ stage: 'complete' }));
+    await fireEvent.press(screen.getByLabelText('Transport for Aina'));
+    await fireEvent.press(screen.getByText('Add or edit my own booking'));
+    for (const [label, value] of [
+      ['Departure city / airport', 'KUL'], ['Destination city / airport', 'NRT'],
+      ['Departure date', '2027-12-04'], ['Departure local time', '07:00'], ['Departure UTC offset', '+08:00'],
+      ['Arrival date', '2027-12-04'], ['Arrival local time', '14:30'], ['Arrival UTC offset', '+09:00'],
+      ['Estimated transport price (MYR)', '850'],
+    ]) await fireEvent.changeText(screen.getByLabelText(label), value);
+    await fireEvent.press(screen.getByText('○ selected'));
+    await fireEvent.press(screen.getByText('Save Aina’s transport'));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'transport', memberId, transport: {
+      direction: 'arrival', mode: 'flight', departureLocation: 'KUL', arrivalLocation: 'NRT',
+      departureAt: '2027-12-04T07:00:00+08:00', arrivalAt: '2027-12-04T14:30:00+09:00',
+      cost: 850, bookingLink: null, status: 'selected',
+    } });
+  });
+
+  it('requires summary review before skipping and sends the reviewed revision', async () => {
+    const room = roomWith({ stage: 'logistics', selectedCountryCode: 'JP', budgetSummary: { submittedCount: 2, comfortablePerPerson: 3000, currency: 'MYR' } });
+    const onItinerary = jest.fn();
+    const updateAction = jest.fn(async () => ({ ...room, stage: 'complete' as const, revision: 2 }));
+    const { screen } = await openQuest(room, { updateAction, onItinerary });
+    await fireEvent.press(screen.getByText('Skip for now'));
+    expect(updateAction).not.toHaveBeenCalled();
+    expect(screen.getByText(/Schedule may change once transport/)).toBeTruthy();
+    await fireEvent.press(screen.getByText('Confirm & Generate Draft Itinerary'));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'complete_logistics', skip: true, revision: 1 });
+    expect(onItinerary).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets members vote on stays but hides organiser confirmation controls', async () => {
+    const stay = { id: '33333333-3333-4333-8333-333333333333', name: 'Crew Hotel', area: 'Tokyo', image: 'https://example.com/stay.jpg', latitude: 35, longitude: 139, totalCost: 1050, checkIn: '2027-12-04', checkOut: '2027-12-08', rating: 8.4, distance: '6 min from station', bookingLink: 'https://example.com/book', provider: 'Provider' };
+    const room = roomWith({ stage: 'logistics', currentRole: 'member', currentMemberId: memberId, logistics: { stays: [stay], transport: [], votes: [], selectedStayId: null, skippedMemberIds: [], staySkipped: false } });
+    const { screen, updateAction } = await openQuest(room);
+    await fireEvent.press(screen.getByText('○ Accommodation'));
+    expect(screen.getByText('RM 1,050 total · RM 525/person')).toBeTruthy();
+    expect(screen.queryByText('Confirm stay')).toBeNull();
+    await fireEvent.press(screen.getByText('Vote · 0'));
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'stay_vote', stayId: stay.id });
+    await fireEvent.press(screen.getByText('Review logistics summary'));
+    expect(screen.queryByText('Confirm & Generate Draft Itinerary')).toBeNull();
+  });
+
   it('collects a proposal and hides the compiled list until everyone submits', async () => {
     const room = roomWith({ stage: 'timing', period: null, ownAvailability: null, members: baseRoom.members.map((member) => ({ ...member, availabilitySubmitted: member.memberId === organizerId })) });
     const { screen, updateAction } = await openQuest(room);
@@ -224,7 +308,7 @@ describe('trip quest shared planning flow', () => {
     const saved = { ...room, revision: 2, ownBudget: 2500, members: room.members.map((member) => ({ ...member, budgetSubmitted: member.memberId === organizerId })), budgetSummary: { submittedCount: 1, comfortablePerPerson: 2500, currency: 'MYR' as const } };
     const allReady = { ...saved, revision: 3, members: saved.members.map((member) => ({ ...member, budgetSubmitted: true })), budgetSummary: { submittedCount: 2, comfortablePerPerson: 1500, currency: 'MYR' as const } };
     const loadAction = jest.fn().mockResolvedValueOnce(room).mockResolvedValue(allReady);
-    const updateAction = jest.fn().mockResolvedValueOnce(saved).mockResolvedValueOnce({ ...allReady, revision: 4, stage: 'complete' });
+    const updateAction = jest.fn().mockResolvedValueOnce(saved).mockResolvedValueOnce({ ...allReady, revision: 4, stage: 'logistics' });
     const { screen, notify } = await openQuest(room, { loadAction, updateAction });
     await fireEvent.changeText(screen.getByLabelText('My maximum per person (MYR)'), '2500');
     await fireEvent.press(screen.getByTestId('submit-quest-budget'));
@@ -237,15 +321,17 @@ describe('trip quest shared planning flow', () => {
     expect(screen.getByTestId('finish-trip-quest').props.accessibilityState.disabled).toBe(false);
     await fireEvent.press(screen.getByTestId('finish-trip-quest'));
     expect(updateAction).toHaveBeenLastCalledWith(tripId, { type: 'finish' });
-    await waitFor(() => expect(screen.getByText('QUEST COMPLETE')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('CHAPTER 6 · LOGISTICS')).toBeTruthy());
   });
 
   it('summarizes the saved destination, dates, stops and per-person ceiling', async () => {
     const country = countryByCode('JP')!;
-    const room = roomWith({ stage: 'complete', selectedCountryCode: 'JP', attractionIds: country.attractions.slice(0, 2).map((place) => place.id), budgetSummary: { submittedCount: 2, comfortablePerPerson: 1500, currency: 'MYR' } });
+    const stay = { id: '33333333-3333-4333-8333-333333333333', name: 'Crew stay', area: 'Tokyo', image: 'https://example.com/stay.jpg', latitude: 35, longitude: 139, totalCost: 1000, checkIn: '2027-12-04', checkOut: '2027-12-08', rating: 8, distance: '6 min from station', bookingLink: 'https://example.com/book', provider: 'Provider' };
+    const transport = baseRoom.members.flatMap((member) => (['arrival', 'departure'] as const).map((direction) => ({ memberId: member.memberId, direction, mode: 'flight' as const, status: 'selected' as const, departureLocation: 'KUL', arrivalLocation: 'NRT', departureAt: '2027-12-04T07:00:00+08:00', arrivalAt: '2027-12-04T14:30:00+09:00', cost: 100, bookingLink: null })));
+    const room = roomWith({ stage: 'complete', logistics: { transport, stays: [stay], selectedStayId: stay.id, votes: [], skippedMemberIds: [], staySkipped: false }, selectedCountryCode: 'JP', attractionIds: country.attractions.slice(0, 2).map((place) => place.id), budgetSummary: { submittedCount: 2, comfortablePerPerson: 1500, currency: 'MYR' } });
     const onItinerary = jest.fn();
     const { screen } = await openQuest(room, { onItinerary });
-    expect(screen.getByLabelText('5 of 5 stages completed. Journey complete')).toBeTruthy();
+    expect(screen.getByLabelText('6 of 6 stages completed. Journey complete')).toBeTruthy();
     expect(screen.getByText('From group chat to game plan.')).toBeTruthy();
     expect(screen.getByText(/4 Dec 2027.*8 Dec 2027/)).toBeTruthy();
     expect(screen.getByText(new RegExp(`01\\s+${country.attractions[0].name}`))).toBeTruthy();

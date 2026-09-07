@@ -1,7 +1,5 @@
-import { DateTimePicker } from '@expo/ui/community/datetime-picker';
-import { type CSSProperties, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type DateFieldProps = {
@@ -13,118 +11,81 @@ type DateFieldProps = {
   value: string;
 };
 
-function dateFromValue(value: string) {
+function parseDate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return new Date();
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  return date.getFullYear() === Number(match[1]) && date.getMonth() === Number(match[2]) - 1 && date.getDate() === Number(match[3]) ? date : null;
 }
-
-function dateOnly(value: Date) {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function dateOnly(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
-
 function displayDate(value: string) {
-  return dateFromValue(value).toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return parseDate(value)?.toLocaleDateString('en-MY', { day: 'numeric', month: 'long', year: 'numeric' }) ?? 'Choose date';
 }
 
 export function DateField({ error, label, minimumDate, onChange, required = false, value }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const hint = `${required ? 'Required' : 'Optional'} — choose from the calendar`;
-
-  // @expo/ui's picker is native-only. Use the browser's date control on web.
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.group}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.hint}>{hint}</Text>
-        <input
-          aria-invalid={Boolean(error)}
-          aria-label={label}
-          min={minimumDate}
-          onChange={(event) => onChange(event.currentTarget.value)}
-          required={required}
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${error ? colors.danger : colors.border}`,
-            borderRadius: radius.md,
-            boxSizing: 'border-box',
-            color: colors.ink,
-            colorScheme: 'dark',
-            fontFamily: 'inherit',
-            fontSize: typography.body,
-            minHeight: 52,
-            padding: `${spacing.md}px ${spacing.lg}px`,
-            width: '100%',
-          } satisfies CSSProperties}
-          type="date"
-          value={value}
-        />
-        {value ? (
-          <Pressable accessibilityRole="button" onPress={() => onChange('')} style={styles.clearButton}>
-            <Text style={styles.clearText}>Clear date</Text>
-          </Pressable>
-        ) : null}
-        {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
-      </View>
-    );
+  const [month, setMonth] = useState(() => new Date());
+  const minimum = minimumDate && parseDate(minimumDate) ? minimumDate : undefined;
+  const selected = parseDate(value);
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstWeekday = (new Date(year, monthIndex, 1, 12).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, monthIndex + 1, 0, 12).getDate();
+  const lastPreviousMonth = dateOnly(new Date(year, monthIndex, 0, 12));
+  const previousDisabled = Boolean(minimum && lastPreviousMonth < minimum);
+  const cells = Array.from({ length: Math.ceil((firstWeekday + daysInMonth) / 7) * 7 }, (_, index) => {
+    const day = index - firstWeekday + 1;
+    return day > 0 && day <= daysInMonth ? day : null;
+  });
+  function toggle() {
+    if (!showPicker) {
+      const initial = selected && (!minimum || value >= minimum) ? selected : (minimum ? parseDate(minimum)! : new Date());
+      setMonth(new Date(initial.getFullYear(), initial.getMonth(), 1, 12));
+    }
+    setShowPicker(!showPicker);
   }
-
-  const pickerValue = value ? dateFromValue(value) : minimumDate ? dateFromValue(minimumDate) : new Date();
-
-  return (
-    <View style={styles.group}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.hint}>{hint}</Text>
-      <Pressable
-        accessibilityLabel={label}
-        accessibilityRole="button"
-        onPress={() => setShowPicker(true)}
-        style={({ pressed }) => [
-          styles.input,
-          error ? styles.inputError : null,
-          pressed ? styles.pressed : null,
-        ]}
-      >
-        <Text style={value ? styles.value : styles.placeholder}>
-          {value ? displayDate(value) : 'Choose date'}
-        </Text>
-        <Text aria-hidden style={styles.calendar}>CAL</Text>
-      </Pressable>
-      {value ? (
-        <Pressable accessibilityRole="button" onPress={() => onChange('')} style={styles.clearButton}>
-          <Text style={styles.clearText}>Clear date</Text>
-        </Pressable>
-      ) : null}
-      {showPicker ? (
-        <DateTimePicker
-          accentColor={colors.coral}
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={minimumDate ? dateFromValue(minimumDate) : undefined}
-          mode="date"
-          onDismiss={() => setShowPicker(false)}
-          onValueChange={(_event, selectedDate) => {
-            onChange(dateOnly(selectedDate));
-            setShowPicker(false);
-          }}
-          presentation="dialog"
-          testID={`${label.toLowerCase().replace(/\s+/g, '-')}-picker`}
-          themeVariant="dark"
-          value={pickerValue}
-        />
-      ) : null}
-      {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
-    </View>
-  );
+  return <View style={styles.group}>
+    <Text style={styles.label}>{label}</Text>
+    <Text style={styles.hint}>{required ? 'Required' : 'Optional'} · Tap to choose from the calendar</Text>
+    <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ expanded: showPicker }} onPress={toggle} style={({ pressed }) => [styles.input, error && styles.inputError, pressed && styles.pressed]}>
+      <Text style={selected ? styles.value : styles.placeholder}>{selected ? displayDate(value) : 'Choose date'}</Text><Text aria-hidden style={styles.calendar}>{showPicker ? 'CLOSE' : 'CALENDAR'}</Text>
+    </Pressable>
+    {showPicker ? <View style={styles.calendarPanel} testID={`${label.toLowerCase().replace(/\s+/g, '-')}-picker`}>
+      <View style={styles.monthHeader}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Previous month for ${label}`} accessibilityState={{ disabled: previousDisabled }} disabled={previousDisabled} style={[styles.monthButton, previousDisabled && styles.disabled]} onPress={() => setMonth(new Date(year, monthIndex - 1, 1, 12))}><Text style={styles.monthArrow}>‹</Text></Pressable>
+        <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.monthTitle}>{month.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Next month for ${label}`} style={styles.monthButton} onPress={() => setMonth(new Date(year, monthIndex + 1, 1, 12))}><Text style={styles.monthArrow}>›</Text></Pressable>
+      </View>
+      <View style={styles.week}>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => <Text key={day} style={styles.weekday}>{day}</Text>)}</View>
+      {Array.from({ length: cells.length / 7 }, (_, week) => <View style={styles.week} key={week}>{cells.slice(week * 7, week * 7 + 7).map((day, column) => {
+        if (!day) return <View key={column} style={styles.dayCell} />;
+        const date = dateOnly(new Date(year, monthIndex, day, 12));
+        const disabled = Boolean(minimum && date < minimum);
+        const checked = date === value;
+        return <Pressable key={column} accessibilityRole="button" accessibilityLabel={displayDate(date)} accessibilityState={{ selected: checked, disabled }} disabled={disabled} onPress={() => { onChange(date); setShowPicker(false); }} style={({ pressed }) => [styles.dayCell, checked && styles.selectedDay, disabled && styles.disabled, pressed && styles.pressed]}><Text style={[styles.dayText, checked && styles.selectedText]}>{day}</Text></Pressable>;
+      })}</View>)}
+      <Text style={styles.hint}>Select a day to confirm your date.</Text>
+    </View> : null}
+    {value ? <Pressable accessibilityRole="button" accessibilityLabel={`Clear ${label}`} onPress={() => onChange('')} style={styles.clearButton}><Text style={styles.clearText}>Clear date</Text></Pressable> : null}
+    {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+  </View>;
 }
 
 const styles = StyleSheet.create({
+  calendarPanel: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, gap: spacing.sm },
+  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  monthTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  monthButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  monthArrow: { fontSize: 28, color: colors.sky },
+  week: { flexDirection: 'row' },
+  weekday: { flex: 1, textAlign: 'center', color: colors.textMuted, fontSize: 11, paddingVertical: 8 },
+  dayCell: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
+  dayText: { color: colors.ink, fontSize: 14, fontWeight: '600' },
+  selectedDay: { backgroundColor: colors.sky },
+  selectedText: { color: colors.paper },
+  disabled: { opacity: 0.3 },
   group: { gap: spacing.sm },
   label: { color: colors.ink, fontSize: typography.body, fontWeight: '700' },
   hint: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },

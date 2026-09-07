@@ -144,7 +144,7 @@ select ok(not (pg_temp.room()->'budgetSummary' ? 'max') and not (pg_temp.room()-
 select throws_ok($$select pg_temp.act('{"type":"finish"}')$$, '42501', 'Only the organiser can advance this quest stage.', 'a member cannot finish the trip for everyone');
 select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
 select pg_temp.act('{"type":"finish"}', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
-select is(pg_temp.room()->>'stage', 'complete', 'the host finishes the shared plan');
+select is(pg_temp.room()->>'stage', 'logistics', 'budget advances to Logistics');
 create temporary table completed_revision as select (pg_temp.room()->>'revision')::integer as value;
 select lives_ok($$select pg_temp.act('{"type":"finish"}', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')$$, 'network retries safely replay a completed action');
 select is((pg_temp.room()->>'revision')::integer, (select value from completed_revision), 'retries do not repeat mutation side effects');

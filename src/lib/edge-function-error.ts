@@ -1,6 +1,9 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
+import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 
 export async function edgeFunctionErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof FunctionsFetchError) {
+    return 'Could not reach the server. Check your internet connection and try again.';
+  }
   if (error instanceof FunctionsHttpError) {
     try {
       const payload = await error.context.json() as { error?: unknown };

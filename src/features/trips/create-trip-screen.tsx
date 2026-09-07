@@ -18,6 +18,7 @@ const chapters = [
   ['03', 'Swipe to decide', 'Vote on the group’s countries and reveal a winner.'],
   ['04', 'Explore the map', 'Highlight the attractions you want to visit.'],
   ['05', 'Find your comfort zone', 'Agree on a budget that fits everyone.'],
+  ['06', 'Get there. Settle in.', 'Choose transport and a stay, or plan a draft for now.'],
 ];
 
 export function CreateTripScreen({ onCreated, createTripAction = createTrip, configured = isSupabaseConfigured }: Props) {

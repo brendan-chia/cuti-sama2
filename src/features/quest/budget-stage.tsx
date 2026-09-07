@@ -4,6 +4,7 @@ import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/que
 import { AppButton } from '@/components/app-button';
 import { FormField } from '@/components/form-field';
 import { questStyles as s } from './quest-styles';
+import { BudgetRecommendation } from './budget-recommendation';
 
 export const money = (amount: number) => `RM ${amount.toLocaleString('en-MY')}`;
 export function BudgetStage({ room, busy, act }: { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean> }) {
@@ -12,6 +13,7 @@ export function BudgetStage({ room, busy, act }: { room: QuestRoom; busy: boolea
   const valid = Number.isSafeInteger(amount) && amount > 0 && amount <= 1_000_000;
   const allReady = room.members.every((member) => member.budgetSubmitted);
   return <View style={s.stack}>
+    <BudgetRecommendation key={`${room.tripId}:${room.selectedCountryCode}:${room.period?.startsOn}:${room.period?.endsOn}:${room.attractionIds.join(',')}:${room.members.length}`} tripId={room.tripId} disabled={busy || !room.selectedCountryCode || !room.period} onApply={(recommended) => setValue(String(recommended))} />
     <View style={s.panel}>
       <Text style={s.heading}>A comfortable limit, just for you.</Text>
       <Text style={s.body}>What’s the most you’d like to spend for the whole trip, including travel, stays, food and activities?</Text>
@@ -25,6 +27,6 @@ export function BudgetStage({ room, busy, act }: { room: QuestRoom; busy: boolea
       <Text style={s.strong}>per person · for the whole trip</Text>
       <Text style={s.body}>This ceiling fits every submitted limit. It’s a planning target; actual trip costs still need to be checked.</Text>
     </View> : <Text style={s.body}>The group’s spending ceiling unlocks when everyone has played a budget card. We use the lowest limit so no one is pushed above their budget.</Text>}
-    {room.currentRole === 'organizer' ? <AppButton label="Complete our trip quest" testID="finish-trip-quest" disabled={!allReady} loading={busy} onPress={() => void act({ type: 'finish' })} /> : <Text style={s.small}>{allReady ? 'The organiser can now complete your shared plan.' : 'Your final stamp unlocks after everyone submits.'}</Text>}
+    {room.currentRole === 'organizer' ? <AppButton label="Continue to Logistics" testID="finish-trip-quest" disabled={!allReady} loading={busy} onPress={() => void act({ type: 'finish' })} /> : <Text style={s.small}>{allReady ? 'The organiser can now open Logistics.' : 'Logistics unlocks after everyone submits.'}</Text>}
   </View>;
 }

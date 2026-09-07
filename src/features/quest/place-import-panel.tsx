@@ -10,6 +10,7 @@ import { confirmTripPlaces, importTripPlaces } from './place-import-service';
 import { VideoImportPanel } from './video-import-panel';
 import { isSocialVideoUrl } from '../../../packages/contracts/src/social-video';
 import { questStyles as s } from './quest-styles';
+import { SavedIdeasPicker } from '@/features/inspiration/saved-ideas-picker';
 
 type Props = { tripId: string; countryName: string; disabled?: boolean; onConfirmed: (room: QuestRoom) => void; importAction?: typeof importTripPlaces; confirmAction?: typeof confirmTripPlaces };
 export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, importAction = importTripPlaces, confirmAction = confirmTripPlaces }: Props) {
@@ -59,6 +60,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     finally { working.current = false; setBusy(false); }
   }
   return <View style={styles.panel} testID="place-import-panel">
+    <SavedIdeasPicker disabled={busy || disabled} onChoose={(names) => { setText(names); setSourceUrl(''); setCaptionOnly(true); setShowFallback(true); setOpen(true); setResult(null); setSelected([]); }} />
     <Text style={s.kicker}>FROM YOUR FEED TO YOUR NEXT TRIP</Text>
     <Text style={s.heading}>Saw it. Saved it. Let’s find it.</Text>
     <Text style={s.body}>Bring a travel post to the map. Find the places in {countryName}, then check that we got them right.</Text>

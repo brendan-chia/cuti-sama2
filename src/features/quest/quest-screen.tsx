@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { countryByCode } from '../../../packages/contracts/src/countries';
 import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/quest';
+import { emptyLogistics, logisticsTotals } from '../../../packages/contracts/src/logistics';
 import { BrandLogo } from '@/components/brand-logo';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
@@ -10,6 +11,7 @@ import { FlightPath } from '@/components/flight-path';
 import { PlaceImportPanel } from './place-import-panel';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { AttractionMap } from './attraction-map';
+import { LogisticsStage } from './logistics-stage';
 import { BudgetStage, money } from './budget-stage';
 import { CountryPicks } from './country-picks';
 import { CountryVote } from './country-vote';
@@ -23,7 +25,8 @@ export const questSteps = [
   { stage: 'picks', label: 'Wishlist', title: 'Where’s your heart set?', description: 'Play up to three favourite countries. Every traveller gets the same number of slots.' },
   { stage: 'voting', label: 'Vote', title: 'Swipe for your next stop.', description: 'One shared deck. One vote per country, per person. See where your group lands.' },
   { stage: 'explore', label: 'Explore', title: 'Pin the good stuff.', description: 'Your destination is decided. Explore the map together and let the organiser save your must-see stops.' },
-  { stage: 'budget', label: 'Budget', title: 'Great memories. Happy wallets.', description: 'One last card to play. Find a spending ceiling everyone feels comfortable with.' },
+  { stage: 'budget', label: 'Budget', title: 'Great memories. Happy wallets.', description: 'Set your whole-trip budget. Find a spending ceiling everyone feels comfortable with.' },
+  { stage: 'logistics', label: 'Logistics', title: 'Get there. Settle in.', description: 'How everyone gets there and where everyone stays. Confirm the details or continue with a draft.' },
 ] as const;
 
 type Props = { tripId: string; onBack: () => void; onItinerary?: () => void; loadAction?: typeof loadQuest; updateAction?: typeof updateQuest; subscribeAction?: typeof subscribeToQuest; suggestAction?: typeof suggestTripPeriods };
@@ -36,9 +39,9 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
   const votes = room.results.find((result) => result.countryCode === country.code)?.agreeCount;
   const mapCountry = { ...country, attractions: [...country.attractions, ...(room.importedPlaces ?? []).map((place) => ({ ...place, category: 'From your crew', description: place.address }))] };
   return <View style={s.stack}>
-    <View style={s.success}><Text style={s.kicker}>DESTINATION UNLOCKED</Text><Text style={s.title}>{country.flag} {country.name}</Text><Text style={s.body}>{votes !== undefined ? `${votes} of ${room.members.length} travellers voted yes. ` : ''}{country.tagline}</Text></View>
+    <View style={s.success}><Text style={s.kicker}>DESTINATION UNLOCKED</Text><Text style={s.title}>{country.flag} {country.name}</Text><Text style={s.body}>{room.travelParty !== 'solo' && votes !== undefined ? `${votes} of ${room.members.length} travellers voted yes. ` : ''}{country.tagline}</Text></View>
     <PlaceImportPanel tripId={room.tripId} countryName={country.name} disabled={busy} onConfirmed={onConfirmed} />
-    <Text style={s.heading}>Your crew’s discovery map</Text>
+    <Text style={s.heading}>{room.travelParty === 'solo' ? 'Your discovery map' : 'Your crew’s discovery map'}</Text>
     <AttractionMap country={mapCountry} selectedIds={organizer ? selected : room.attractionIds} onToggle={(id) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} disabled={busy || !organizer} />
     {organizer ? <AppButton label={`Save ${selected.length || 'your'} ${selected.length === 1 ? 'stop' : 'stops'} & unlock budget`} testID="save-quest-attractions" disabled={!selected.length} loading={busy} onPress={() => void act({ type: 'attractions', attractionIds: selected })} /> : <Text style={s.body}>Explore the highlighted attractions while the organiser gathers your group’s choices. The saved stops will appear in your shared plan.</Text>}
   </View>;
@@ -59,7 +62,7 @@ function QuestSummary({ room, onItinerary }: { room: QuestRoom; onItinerary?: ()
       <Text style={styles.ticketTitle}>{room.budgetSummary ? money(room.budgetSummary.comfortablePerPerson) : '—'}</Text>
       <Text style={styles.ticketBody}>per person · {room.members.length} travellers · whole trip</Text>
     </View>
-    <Text style={s.body}>Five stops, one happy landing. Your dates, destination, places and budget are saved for everyone in the room.</Text>
+    <Text style={s.body}>Six stops, one happy landing. Your dates, destination, places and budget are saved for everyone in the room.</Text>
     <Text style={s.body}>Turn your selected places into a day-by-day itinerary, with time for travel and meals, within your group’s budget.</Text>
     {onItinerary ? <AppButton label={room.currentRole === 'organizer' ? 'Generate our itinerary' : 'View our itinerary'} testID="open-quest-itinerary" onPress={onItinerary} /> : null}
   </View>;
@@ -71,6 +74,7 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const mutation = useRef(false);
+  const screenScroll = useRef<ScrollView>(null);
   const refreshFailed = useRef(false);
   const alive = useRef(true);
   const accept = useCallback((next: QuestRoom) => {
@@ -107,29 +111,34 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
     finally { mutation.current = false; if (alive.current) setBusy(false); }
   }
 
-  if (!room) return <Screen><View style={s.stack}><Text style={s.title}>{error ? 'Your quest is waiting.' : 'Gathering your next adventure…'}</Text>{error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Try again" onPress={() => void refresh()} /></> : <Text style={s.body}>Opening the shared plan for your group.</Text>}<AppButton label="Back to the lobby" variant="secondary" onPress={onBack} /></View></Screen>;
-  const completed = room.stage === 'complete';
+  if (!room) return <Screen scrollRef={screenScroll}><View style={s.stack}><Text style={s.title}>{error ? 'Your quest is waiting.' : 'Gathering your next adventure…'}</Text>{error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Try again" onPress={() => void refresh()} /></> : <Text style={s.body}>Opening the shared plan for your group.</Text>}<AppButton label="Back to the lobby" variant="secondary" onPress={onBack} /></View></Screen>;
+  const logisticsOpen = room.stage === 'logistics' || room.stage === 'complete';
+  const logisticsDraft = logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0).draft;
+  const completed = room.stage === 'complete' && !logisticsDraft;
   const voting = room.stage === 'voting';
-  const index = completed ? 5 : questSteps.findIndex((step) => step.stage === room.stage);
-  const step = questSteps[Math.min(index, 4)];
+  const solo = room.travelParty === 'solo';
+  const steps = solo ? questSteps.filter(step => step.stage !== 'voting') : questSteps;
+  const index = completed ? steps.length : logisticsOpen ? steps.length - 1 : steps.findIndex((step) => step.stage === room.stage);
+  const step = steps[Math.max(0, Math.min(index, steps.length - 1))];
   const field = room.stage === 'timing' ? 'availabilitySubmitted' : room.stage === 'picks' ? 'picksSubmitted' : room.stage === 'voting' ? 'votesSubmitted' : room.stage === 'budget' ? 'budgetSubmitted' : null;
   const ready = field ? room.members.filter((member) => member[field]).length : room.members.length;
-  return <Screen testID="trip-quest-screen">
+  return <Screen testID="trip-quest-screen" scrollRef={screenScroll}>
     <View style={s.stack}>
       <View style={s.between}><Pressable accessibilityRole="button" onPress={onBack}><Text style={s.link}>‹ Trip lobby</Text></Pressable><BrandLogo compact /></View>
       {!voting ? <Text numberOfLines={1} style={s.small}>{room.tripName}</Text> : null}
-      <FlightPath stage={index} />
-      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? 'From group chat to game plan.' : step.title}</Text>{!voting ? <Text style={s.body}>{completed ? 'You made the big decisions. Together.' : step.description}</Text> : null}</View>
+      <FlightPath stage={index} solo={solo} />
+      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? 'From group chat to game plan.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? 'You made the big decisions. Together.' : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
       {error ? <View style={s.success}><Text accessibilityRole="alert" style={s.error}>{error}</Text>{unavailable ? <AppButton label="Reconnect & refresh" variant="secondary" onPress={() => { setError(null); void refresh(); }} /> : <Pressable accessibilityRole="button" onPress={() => setError(null)}><Text style={s.link}>Dismiss</Text></Pressable>}</View> : null}
-      {!completed ? <View><View style={s.between}><Text style={s.kicker}>YOUR TRAVEL CREW</Text><Text accessibilityLiveRegion="polite" style={s.small}>{field ? `${ready} / ${room.members.length} ready` : 'Explore together'}</Text></View>{!voting ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crew}>
+      {!solo && !completed && !logisticsOpen ? <View><View style={s.between}><Text style={s.kicker}>YOUR TRAVEL CREW</Text><Text accessibilityLiveRegion="polite" style={s.small}>{field ? `${ready} / ${room.members.length} ready` : 'Explore together'}</Text></View>{!voting ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crew}>
         {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName} numberOfLines={1}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}
       </ScrollView> : null}</View> : null}
       {room.period && !completed && !voting ? <Text style={s.small}>✓ {periodLabel(room.period)}{room.selectedCountryCode ? ` · ${countryByCode(room.selectedCountryCode)?.name}` : ''}</Text> : null}
       {room.stage === 'timing' ? <TimingStage room={room} busy={busy || unavailable} act={act} recommend={recommend} /> : null}
       {room.stage === 'picks' ? <CountryPicks room={room} busy={busy || unavailable} act={act} /> : null}
-      {room.stage === 'voting' ? <CountryVote room={room} busy={busy || unavailable} act={act} /> : null}
+      {room.stage === 'voting' && !solo ? <CountryVote room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'explore' ? <ExploreStage room={room} busy={busy || unavailable} act={act} onConfirmed={accept} /> : null}
       {room.stage === 'budget' ? <BudgetStage room={room} busy={busy || unavailable} act={act} /> : null}
+      {logisticsOpen ? <View><LogisticsStage room={room} busy={busy || unavailable} act={act} onItinerary={onItinerary} onSectionChange={() => requestAnimationFrame(() => screenScroll.current?.scrollTo({ y: 0, animated: false }))} /></View> : null}
       {completed ? <QuestSummary room={room} onItinerary={onItinerary} /> : null}
     </View>
   </Screen>;

@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { LogisticsSchema, TransportSchema, StaySchema } from './logistics';
 import { ConfirmedPlaceSchema } from './place-import';
 
-export const QuestStageSchema = z.enum(['timing', 'picks', 'voting', 'explore', 'budget', 'complete']);
+export const QuestStageSchema = z.enum(['timing', 'picks', 'voting', 'explore', 'budget', 'logistics', 'complete']);
 export type QuestStage = z.infer<typeof QuestStageSchema>;
 
 export const AvailabilitySchema = z.object({ startsOn: z.iso.date(), endsOn: z.iso.date() }).strict();
@@ -48,11 +49,20 @@ export const QuestActionSchema = z.discriminatedUnion('type', [
     .refine((ids) => new Set(ids).size === ids.length, 'Choose each attraction only once.') }).strict(),
   z.object({ type: z.literal('budget'), amount: z.number().int().min(1).max(1_000_000) }).strict(),
   z.object({ type: z.literal('finish') }).strict(),
+  z.object({ type: z.literal('transport'), transport: TransportSchema, memberId: z.uuid().optional() }).strict(),
+  z.object({ type: z.literal('skip_transport'), memberId: z.uuid().optional() }).strict(),
+  z.object({ type: z.literal('stay'), stay: StaySchema }).strict(),
+  z.object({ type: z.literal('stay_vote'), stayId: z.uuid() }).strict(),
+  z.object({ type: z.literal('confirm_stay'), stayId: z.uuid() }).strict(),
+  z.object({ type: z.literal('skip_stay') }).strict(),
+  z.object({ type: z.literal('complete_logistics'), skip: z.boolean(), revision: z.number().int().nonnegative() }).strict(),
+  z.object({ type: z.literal('edit_logistics') }).strict(),
 ]);
 export type QuestAction = z.infer<typeof QuestActionSchema>;
 
 export const QuestRoomSchema = z.object({
   tripId: z.uuid(),
+  travelParty: z.enum(['group', 'solo']).optional(),
   tripName: z.string().min(2).max(80),
   currentMemberId: z.uuid(),
   currentRole: z.enum(['organizer', 'member']),
@@ -77,6 +87,7 @@ export const QuestRoomSchema = z.object({
   selectedCountryCode: QuestCountryCodeSchema.nullable(),
   attractionIds: z.array(z.string()),
   importedPlaces: z.array(ConfirmedPlaceSchema).optional(),
+  logistics: LogisticsSchema.optional(),
   ownBudget: z.number().int().positive().nullable(),
   budgetSummary: z.object({
     submittedCount: z.number().int().nonnegative(), comfortablePerPerson: z.number().int().positive(),

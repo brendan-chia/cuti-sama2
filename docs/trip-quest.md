@@ -1,6 +1,6 @@
 # Trip quest
 
-New trips use a shared, five-chapter planning quest. The lobby collects the group first; starting planning opens the quest and fixes its participant roster. Participants with the same member session or recovered identity can return to the saved stage on another device. Realtime updates, focus refresh, and a 15-second foreground poll keep the room current.
+New trips use a shared, six-chapter planning quest. The lobby collects the group first; starting planning opens the quest and fixes its participant roster. Participants with the same member session or recovered identity can return to the saved stage on another device. Realtime updates, focus refresh, and a 15-second foreground poll keep the room current.
 
 ## Flow and roles
 
@@ -10,7 +10,8 @@ New trips use a shared, five-chapter planning quest. The lobby collects the grou
 | Wishlist | Choose 1–3 distinct favourite countries. Picks can be edited before the voting deck opens. | Participate with the same three-slot limit. | Everyone has submitted at least one country. |
 | Vote | Swipe right to agree or left to pass on every country; equivalent buttons and vote review are available. | Break a positive tie by choosing one of the tied leaders, or restart wishlists after an all-pass result. | Everyone has voted on every distinct country. A sole positive leader is selected automatically. |
 | Explore | Pan, zoom, and locate tourist attractions on the selected country's map. | Collect at least one attraction and save the group's stops. | The organiser saves valid attractions belonging to the winning country. |
-| Budget | Submit a whole-MYR maximum per person for the entire trip. | Complete the quest after everyone submits a budget. | Everyone has a saved budget. |
+| Budget | Submit a whole-MYR maximum per person for the entire trip. | Open Logistics after everyone submits a budget. | Everyone has a saved budget. |
+| Logistics | Save personal inbound/return transport; add stay options; vote for one stay. | Confirm one stay, review the summary and generate, or skip for a draft. | Budget is complete; unknown logistics do not block draft generation. |
 
 Duplicate country nominations appear once in the voting deck. Results remain hidden until every participant finishes the deck. Each participant has one agree/pass vote per country and may revise it before the reveal. The organiser's tie-break choice is restricted to countries with the highest positive vote count.
 
@@ -73,3 +74,29 @@ During implementation, all 16 SQL migrations were applied unmodified in embedded
 Local validation passed: TypeScript, ESLint, the production Expo web export, all 189 app tests, and three Deno provider tests plus the Edge Function typecheck. After the final layout adjustments, all 42 affected screen/map tests passed again. The updated Maestro creation/restore/quest-entry flow has not been run on a device.
 
 Visual QA has not been completed in the current development session: the connected browser runtime reported no available browsers, and a separate hidden local browser did not produce a usable screenshot. Compiler, lint, and automated tests do not establish native/web visual quality or live backend behavior. Live deployment and integration checks remain separate from local code validation.
+
+
+## Quest 6: Logistics
+
+This MVP covers transport and accommodation only. Each traveller saves one inbound and one return journey (flight, train, bus or car), with local timestamps and explicit UTC offsets, a per-person MYR estimate, optional provider link, and proposed/selected/booked status. Editing the saved entry changes their choice; only selected/booked entries constrain generation. No group voting on individual transport.
+
+Travellers add provider stay listings with an image URL, area, map coordinates, dates, total group price, rating out of 10, distance description and provider booking link. Listings are member-entered estimates, not live availability or hotel-search results. Multiple options can be compared in-app, with equal per-person price and one changeable vote per traveller. Only the organiser confirms the stay. View / Book opens an HTTP(S) provider link; payment remains with the provider.
+
+The Quest 5 spending ceiling remains the whole-trip limit. Logistics subtracts each person's selected inbound/return costs and an equal, conservatively rounded stay share. The generator's activity ceiling is the lowest remaining amount across active travellers, so a traveller with expensive transport is not forced over budget by an average. Missing costs are explicitly provisional; selected costs exceeding the ceiling must be corrected.
+
+The organiser reviews arrivals, departures, stay, average transport and remaining budget before completing. Confirmation includes the reviewed quest revision, preventing stale summary approval. Skip for now leads to the same review and allows draft generation with incomplete journeys or no stay. The app and saved AI output display: “Schedule may change once transport and accommodation are confirmed.” Existing completed quests without logistics also generate drafts. Edit logistics reopens the stage; subsequent generation uses a new revision and invalidates stale generated plans.
+
+Generation receives a normalized logistics snapshot, excluding booking links, images, vote records and provider text. It enforces the latest arrival and earliest departure across time zones, deducts known logistics once, and prompts for accommodation-based daily starts and realistic transfers. Empty activity days are valid when travel leaves no group time. Hotel proximity and estimated transfer accuracy still depend on the generated plan; only supplied coordinates, travel-window boundaries and numeric budgets receive deterministic checks.
+
+Deploy the app and `generate-itinerary` Edge Function with the updated contracts, then apply migration `0026_quest_logistics.sql`. Update any other deployed functions that parse the strict QuestRoom schema as part of the same rollout. The new `logistics` payload is not compatible with old strict room parsers. No new provider API key is required.
+
+Validation for this change: app/contract tests, generator tests through a Node compatibility harness, TypeScript, lint, and all 26 migrations applied to isolated PGlite with Supabase auth/realtime/storage shims. Logistics RPC tests cover persistence, supported modes, URLs, voting, organiser checks, stale summaries, budget limits, draft completion, retries and reopening. This does not establish live realtime or device behaviour; no production deployment was performed.
+
+Backend deployment completed on 7 September 2026 to Supabase project `cvgwxbirijgggkkfbojo`: migration `0026`, `generate-itinerary` v12, `revise-itinerary` v8, and `suggest-trip-period` v7. Both quest-consuming functions include the Deno import mapping for the shared logistics contract. All three functions report ACTIVE. The 12 assertions in `supabase/tests/0015_logistics.sql` passed on the remote database in a rollback transaction. The unrelated pending migration `0025_social_post_media.sql` was excluded using an isolated deployment workdir; a later rollout of that feature will need `db push --include-all`. This deployment updates the backend; the changed screens are in the local Expo app, with no store release or hosted frontend publication performed.
+
+
+### Logistics access correction
+
+Migration `0027_logistics_edit_access.sql` is deployed to the same project. Completed legacy quests and draft plans keep the transport and accommodation inputs available. Opening a trip does not mutate it; saving transport, a stay option, a vote or a stay decision reopens Logistics and increments the revision atomically. Members edit their own transport, add options and vote; organisers can also enter transport for any active traveller in the trip and retain the final stay decision. Nonparticipants cannot be targeted. Incomplete logistics display Chapter 6 rather than a completed flight plan. Empty accommodation lists open directly into the stay form, and section navigation resets the scroll position so its inputs are visible.
+
+Verification: 231 app tests, TypeScript, lint and the production web export passed. Remote rollback-only suites passed 14 Logistics and 7 access-control assertions. An isolated Edge preview with fixture RPC responses exercised organiser transport entry for another traveller, member self-entry, stay creation, organiser confirmation, member voting and mobile overflow. The static preview still reports the previously documented React hydration warning on direct dynamic-trip navigation; native-device QA has not been performed.

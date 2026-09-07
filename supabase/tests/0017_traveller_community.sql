@@ -1,0 +1,37 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select no_plan();
+insert into auth.users(id,instance_id,aud,role,created_at,updated_at) values
+ ('88888888-1111-4111-8111-111111111111','00000000-0000-0000-0000-000000000000','authenticated','authenticated',now(),now()),
+ ('88888888-2222-4222-8222-222222222222','00000000-0000-0000-0000-000000000000','authenticated','authenticated',now(),now());
+set local role authenticated;
+select set_config('request.jwt.claim.sub','88888888-1111-4111-8111-111111111111',true);
+insert into public.traveller_profiles(user_id) values(auth.uid());
+select lives_ok($$update public.traveller_profiles set display_name='Alex',favourite_places=array['Kyoto'] where user_id=auth.uid()$$,'profile is editable');
+select throws_ok($$update public.traveller_profiles set referral_code='forged' where user_id=auth.uid()$$,'42501',null,'referral ownership cannot be forged');
+create temporary table community_ids(kind text,id uuid);
+insert into community_ids select 'solo',(public.create_solo_trip('Solo test','88888888-aaaa-4aaa-8aaa-aaaaaaaaaaaa')->>'tripId')::uuid;
+select is((select travel_party from public.trips where id=(select id from community_ids where kind='solo')),'solo','solo party persists');
+select ok((select planning_started_at is not null from public.trips where id=(select id from community_ids where kind='solo')),'solo skips lobby');
+select is(public.get_trip_quest((select id from community_ids where kind='solo'))->>'stage','timing','solo can enter quest');
+select is((public.create_solo_trip('Solo test','88888888-aaaa-4aaa-8aaa-aaaaaaaaaaaa')->>'tripId')::uuid,(select id from community_ids where kind='solo'),'solo retries return the same trip');
+insert into community_ids select 'group',(public.create_trip('Public test','undecided','{}',null,null,'88888888-bbbb-4bbb-8bbb-bbbbbbbbbbbb')->>'tripId')::uuid;
+insert into public.trip_listings(trip_id,description,published) select id,'A trip to Kyoto for food and walking.',true from community_ids where kind='group';
+select is(jsonb_array_length(public.discover_trips()),1,'only published group trip is discoverable');
+select set_config('request.jwt.claim.sub','88888888-2222-4222-8222-222222222222',true);
+select is((select count(*)::integer from public.traveller_profiles),0,'other profiles remain private');
+select is((select count(*)::integer from public.trips),0,'listing does not expose private trip rows');
+select lives_ok($$select public.join_public_trip((select id from community_ids where kind='group'),'Sam')$$,'public user can join');
+select lives_ok($$select public.join_public_trip((select id from community_ids where kind='group'),'Sam')$$,'joining twice is idempotent');
+select is((select count(*)::integer from public.trip_members where trip_id=(select id from community_ids where kind='group')),2,'membership created once');
+select throws_ok($$select public.join_public_trip((select id from community_ids where kind='solo'),'Sam')$$,'P0001','This trip is no longer open.','solo rejects public joins');
+select throws_ok($$select public.record_completed_trip((select id from community_ids where kind='group'))$$,'P0001','Only your past trips can be recorded as completed.','undated trip cannot award a badge');
+reset role;
+update public.trips set ends_on=current_date-1 where id=(select id from community_ids where kind='group');
+set local role authenticated;
+select lives_ok($$select public.record_completed_trip((select id from community_ids where kind='group'))$$,'member can record a past trip');
+select lives_ok($$select public.record_completed_trip((select id from community_ids where kind='group'))$$,'completion is idempotent');
+select is((select count(*)::integer from public.travel_memories),1,'one memory earns first adventure badge');
+select is(jsonb_array_length(public.discover_trips()),0,'past trips are no longer discoverable');
+select * from finish();
+rollback;

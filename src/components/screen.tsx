@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import type { PropsWithChildren, ReactNode, Ref } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,12 +16,14 @@ type ScreenProps = PropsWithChildren<{
   footer?: ReactNode;
   scroll?: boolean;
   testID?: string;
+  scrollRef?: Ref<ScrollView>;
   contentStyle?: StyleProp<ViewStyle>;
 }>;
 
-export function Screen({ children, contentStyle, footer, scroll = true, testID }: ScreenProps) {
+export function Screen({ children, contentStyle, footer, scroll = true, testID, scrollRef }: ScreenProps) {
   const content = scroll ? (
     <ScrollView
+      ref={scrollRef}
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
