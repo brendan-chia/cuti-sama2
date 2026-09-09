@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Linking, Text, View } from 'react-native';
+import { UseInspiration } from '@/features/inspiration/use-inspiration';
+import { inspirationSource } from '@/features/inspiration/planning';
 import { Screen } from '@/components/screen';
 import { FormField } from '@/components/form-field';
 import { AppButton } from '@/components/app-button';
@@ -21,9 +23,9 @@ export default function InspirationFolder() {
   async function save(){const id=await saveInspiration({sourceUrl:url,folder,caption});setItems(await loadInspiration());setUrl('');setCaption('');await analyzeInspiration(id);setMessage('Link saved. Analysis will appear here automatically.');setItems(await loadInspiration());}
   const visible=items.filter(item=>(!filter||item.folder===filter)&&`${item.source_url} ${item.analysis?.title??''} ${item.analysis?.summary??''} ${item.analysis?.tags.join(' ')??''} ${item.analysis?.places.map(p=>`${p.name} ${p.location}`).join(' ')??''}`.toLowerCase().includes(search.toLowerCase()));
   return <Screen><View style={s.stack}>
-    <Text style={s.title}>Saved inspiration</Text><Text style={s.body}>Save now. Plan later. Keep social posts in your own travel folders.</Text>
+    <Text style={s.title}>Saved inspiration</Text><Text style={s.body}>Saved it. Forgot it. Travel it. Paste a reel or travel link and turn it into a place you can actually plan around.</Text>
     <View style={s.panel}>
-      <FormField label="Social post link" value={url} onChangeText={setUrl} autoCapitalize="none" keyboardType="url" maxLength={2000} placeholder="https://www.instagram.com/p/…" />
+      <FormField label="Reel or travel link" value={url} onChangeText={setUrl} autoCapitalize="none" keyboardType="url" maxLength={2000} placeholder="https://www.instagram.com/p/…" />
       <FormField label="Folder" value={folder} onChangeText={setFolder} maxLength={60} placeholder="e.g. Japan food trip" />
       <FormField label="Caption or transcript (optional)" value={caption} onChangeText={setCaption} multiline maxLength={6000} placeholder="Useful when a post needs login or its places are only mentioned in the video." />
       <Text style={s.small}>Public text and the caption you provide are sent to our AI reader. Your saved posts stay private. Linked videos are not automatically transcribed.</Text>
@@ -37,7 +39,7 @@ export default function InspirationFolder() {
       <Text style={s.kicker}>{item.folder}</Text><Text style={s.heading}>{item.analysis?.title??item.source_url}</Text>
       <Text style={s.small}>{item.status==='analyzing'?'Analyzing…':item.status==='ready'?'Analysis saved':item.status==='needs_input'?'Caption needed':item.status==='failed'?'Analysis needs a retry':'Saved'}</Text>
       <Text selectable style={s.small}>{item.source_url}</Text><Text style={s.body}>{item.message}</Text>
-      {item.analysis?<><Text style={s.body}>{item.analysis.summary}</Text>{item.analysis.places.map((place,index)=><View key={index}><Text style={s.strong}>{place.name}{place.location?` · ${place.location}`:''}</Text><Text style={s.small}>{place.evidence}</Text></View>)}{item.analysis.planningNotes.map((note,index)=><Text key={index} style={s.small}>{note}</Text>)}<Text style={s.small}>{item.analysis.tags.join(' · ')}</Text><Text style={s.small}>Use these ideas from your trip’s Explore step, then confirm the matching locations.</Text></>:null}
+      {item.analysis?<><Text style={s.body}>{item.analysis.summary}</Text>{item.analysis.places.map((place,index)=><View key={index}><Text style={s.strong}>{place.name}{place.location?` · ${place.location}`:''}</Text><Text style={s.small}>Source: {inspirationSource(item.source_url)}</Text><Text style={s.small}>{place.evidence}</Text></View>)}{item.analysis.planningNotes.map((note,index)=><Text key={index} style={s.small}>{note}</Text>)}<Text style={s.small}>{item.analysis.tags.join(' · ')}</Text>{item.analysis.places.length ? <UseInspiration inspirationId={item.id} /> : null}</>:null}
       <AppButton label="Open original post" variant="secondary" disabled={busy} onPress={()=>void run(async()=>{await Linking.openURL(item.source_url);})} />
       {item.status!=='ready'?<AppButton label="Retry analysis" variant="secondary" disabled={busy} onPress={()=>void run(async()=>{await analyzeInspiration(item.id);setItems(await loadInspiration());})} />:null}
       <AppButton label="Edit folder or caption" variant="secondary" disabled={busy} onPress={()=>{setUrl(item.source_url);setFolder(item.folder);setCaption(item.caption);setMessage('Edit the form above, then choose Save & analyze.');}} />

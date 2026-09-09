@@ -29,7 +29,7 @@ export function CountryPicks({ room, busy, act }: Props) {
   function toggle(code: QuestCountryCode) {
     setSelected((current) => current.includes(code) ? current.filter((item) => item !== code) : solo ? [code] : current.length < 3 ? [...current, code] : current);
   }
-  if (submitted && !editing) return <View style={s.stack}>
+  if (!solo && submitted && !editing) return <View style={s.stack}>
     <View style={s.success}><Text style={s.heading}>Your wishlist is on the table.</Text><Text style={s.body}>Everyone’s picks stay hidden until the whole group has submitted. Your countries will become part of the shared voting deck.</Text>
       {room.ownPicks.map((code) => <Text key={code} style={s.strong}>{countryByCode(code)?.flag} {countryByCode(code)?.name}</Text>)}
     </View>

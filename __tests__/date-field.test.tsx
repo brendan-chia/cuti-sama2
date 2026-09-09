@@ -1,5 +1,8 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 import { DateField } from '@/components/date-field';
+
+beforeEach(() => { jest.useFakeTimers(); jest.setSystemTime(new Date(2026, 8, 8, 12)); });
+afterEach(async () => { await cleanup(); jest.useRealTimers(); });
 
 test('selects a leap day from the calendar without typing', async () => {
   const onChange = jest.fn();
@@ -27,4 +30,27 @@ test('closing the calendar does not modify the date; clear is explicit', async (
   expect(onChange).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByRole('button', { name: 'Clear Check-in' }));
   expect(onChange).toHaveBeenCalledWith('');
+});
+
+test('every calendar blocks past dates even when an older minimum was supplied', async () => {
+  const onChange = jest.fn();
+  const screen = await render(<DateField label="Date" value="2025-01-01" minimumDate="2025-01-01" onChange={onChange} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Date' }));
+  expect(screen.getByText('September 2026')).toBeTruthy();
+  expect(screen.getByRole('button', { name: '7 September 2026' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '8 September 2026' })).not.toBeDisabled();
+  await fireEvent.press(screen.getByRole('button', { name: '7 September 2026' }));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Previous month for Date' })).toBeDisabled();
+});
+
+test('an open calendar updates its minimum when midnight passes', async () => {
+  jest.setSystemTime(new Date(2026, 8, 8, 23, 59, 59));
+  const onChange = jest.fn();
+  const screen = await render(<DateField label="Date" value="" onChange={onChange} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Date' }));
+  expect(screen.getByRole('button', { name: '8 September 2026' })).not.toBeDisabled();
+  await act(async () => { jest.advanceTimersByTime(1001); });
+  expect(screen.getByRole('button', { name: '8 September 2026' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '9 September 2026' })).not.toBeDisabled();
 });

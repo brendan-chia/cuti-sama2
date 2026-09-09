@@ -6,6 +6,7 @@ import { emptyLogistics, logisticsDraftNotice, logisticsTotals, StaySchema, Tran
 import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/quest';
 import { AppButton } from '@/components/app-button';
 import { FormField } from '@/components/form-field';
+import { nextCalendarDate } from '@/lib/current-date';
 import { DateField } from '@/components/date-field';
 import { money } from './budget-stage';
 import { questStyles as s } from './quest-styles';
@@ -26,7 +27,7 @@ function TransportForm({ room, busy, act }: Props) {
   const saveForTraveller: Props['act'] = (action) => act((action.type === 'transport' || action.type === 'skip_transport') && !own ? { ...action, memberId } : action);
   return <View style={s.stack}>
     <Text style={s.small}>Choose inbound and return journeys from the suggestions. Prices are per person, in MYR.</Text>
-    {room.currentRole === 'organizer' ? <View style={s.stack}><Text style={s.strong}>Transport for</Text><View style={s.row}>{room.members.map((member) => <Pressable key={member.memberId} accessibilityRole="radio" accessibilityLabel={`Transport for ${member.displayName}`} accessibilityState={{ checked: memberId === member.memberId, disabled: busy }} disabled={busy} onPress={() => setChosenMemberId(member.memberId)} style={[s.chip, memberId === member.memberId && s.chipSelected]}><Text style={memberId === member.memberId ? s.chipTextSelected : s.chipText}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></Pressable>)}</View></View> : null}
+    {room.currentRole === 'organizer' && room.travelParty !== 'solo' ? <View style={s.stack}><Text style={s.strong}>Transport for</Text><View style={s.row}>{room.members.map((member) => <Pressable key={member.memberId} accessibilityRole="radio" accessibilityLabel={`Transport for ${member.displayName}`} accessibilityState={{ checked: memberId === member.memberId, disabled: busy }} disabled={busy} onPress={() => setChosenMemberId(member.memberId)} style={[s.chip, memberId === member.memberId && s.chipSelected]}><Text style={memberId === member.memberId ? s.chipTextSelected : s.chipText}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></Pressable>)}</View></View> : null}
     <Choices values={['arrival', 'departure']} value={direction} onChange={setDirection} disabled={busy} />
     <LogisticsOptions key={`${memberId}-${direction}`} room={room} kind="transport" direction={direction} busy={busy} act={saveForTraveller} />
     {existing ? <Text style={s.strong}>Saved: {existing.departureLocation} → {existing.arrivalLocation} · {money(existing.cost)} · {existing.status}</Text> : null}
@@ -39,7 +40,7 @@ function TransportForm({ room, busy, act }: Props) {
 
 function JourneyEditor({ existing, direction, busy, act, saveLabel }: { existing?: Transport; direction: Transport['direction']; busy: boolean; act: Props['act']; saveLabel: string }) {
   const [mode, setMode] = useState<Transport['mode']>(existing?.mode ?? 'flight');
-  const [status, setStatus] = useState<Transport['status']>(existing?.status ?? 'proposed');
+  const [status, setStatus] = useState<Transport['status']>(existing?.status ?? 'selected');
   const [departureLocation, setFrom] = useState(existing?.departureLocation ?? '');
   const [arrivalLocation, setTo] = useState(existing?.arrivalLocation ?? '');
   const [departureAt, setDeparture] = useState(existing?.departureAt ?? '');
@@ -89,11 +90,11 @@ function StayEditor({ room, busy, act, onSaved }: Props & { onSaved: () => void 
     if (await act({ type: 'stay', stay: parsed.data })) onSaved();
   }
   return <View style={s.panel}>
-    <Text style={s.heading}>Add a stay to compare</Text><Text style={s.small}>Copy details from a provider listing. Use the total for all travellers and all nights. These are member-entered estimates, not live quotes.</Text>
+    <Text style={s.heading}>Add a stay to compare</Text><Text style={s.small}>Copy details from a provider listing. Use the total for the entire stay, including all nights. These are member-entered estimates, not live quotes.</Text>
     {field('name', 'Hotel / stay name')}{field('area', 'City / area')}{field('image', 'Image URL')}
     {field('totalCost', 'Total stay price (MYR)')}
     <DateField label="Check-in" value={form.checkIn} onChange={(checkIn) => setForm({ ...form, checkIn })} />
-    <DateField label="Check-out" value={form.checkOut} onChange={(checkOut) => setForm({ ...form, checkOut })} />
+    <DateField label="Check-out" minimumDate={form.checkIn ? nextCalendarDate(form.checkIn) : undefined} value={form.checkOut} onChange={(checkOut) => setForm({ ...form, checkOut })} />
     {field('rating', 'Rating (out of 10)')}{field('distance', 'Distance from main trip area')}
     {field('latitude', 'Stay latitude')}{field('longitude', 'Stay longitude')}
     {field('bookingLink', 'Stay booking link')}{field('provider', 'Source / provider')}
@@ -129,16 +130,16 @@ export function LogisticsSummary({ room }: { room: QuestRoom }) {
   const logistics = room.logistics ?? emptyLogistics;
   const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0);
   return <View style={s.panel}>
-    <Text style={s.kicker}>LOGISTICS SUMMARY</Text><Text style={s.heading}>{room.members.length} travellers</Text>
+    <Text style={s.kicker}>LOGISTICS SUMMARY</Text><Text style={s.heading}>{room.travelParty === 'solo' ? 'Your travel details' : `${room.members.length} travellers`}</Text>
     <Text style={s.strong}>Arrival · local time at destination</Text>
     {room.members.map((member) => { const arrival = logistics.transport.find((item) => item.memberId === member.memberId && item.direction === 'arrival' && item.status !== 'proposed'); return <Text key={member.memberId} style={s.body}>{member.displayName} · {arrival ? `${arrival.arrivalAt.slice(0, 10)} ${arrival.arrivalAt.slice(11, 16)} (${arrival.arrivalLocation}, UTC${arrival.arrivalAt.slice(19)})` : 'To be confirmed'}</Text>; })}
     <Text style={s.strong}>Departure · local time at origin</Text>
     {room.members.map((member) => { const departure = logistics.transport.find((item) => item.memberId === member.memberId && item.direction === 'departure' && item.status !== 'proposed'); return <Text key={member.memberId} style={s.body}>{member.displayName} · {departure ? `${departure.departureAt.slice(0, 10)} ${departure.departureAt.slice(11, 16)} (${departure.departureLocation})` : 'To be confirmed'}</Text>; })}
     <Text style={s.heading}>{totals.stay?.name ?? 'Stay to be confirmed'}</Text>
     {totals.stay ? <Text style={s.body}>{totals.stay.checkIn} – {totals.stay.checkOut}{'\n'}{money(totals.stay.totalCost)} total · {money(totals.stayPerPerson)}/person</Text> : null}
-    <Text style={s.body}>Average transport/person · {money(Math.round(totals.averageTransport * 100) / 100)}</Text>
-    <Text style={s.strong}>Shared activity budget/person · {money(totals.remaining)}</Text>
-    <Text style={s.small}>Uses the lowest remaining amount so everyone can afford the shared plan. Unknown costs still need to be reserved.</Text>
+    <Text style={s.body}>{room.travelParty === 'solo' ? 'Your transport' : 'Average transport/person'} · {money(Math.round(totals.averageTransport * 100) / 100)}</Text>
+    <Text style={s.strong}>{room.travelParty === 'solo' ? 'Your remaining budget' : 'Shared activity budget/person'} · {money(totals.remaining)}</Text>
+    <Text style={s.small}>{room.travelParty === 'solo' ? 'Available for food, activities and local transport. Reserve money for costs still to be confirmed.' : 'Uses the lowest remaining amount so everyone can afford the shared plan. Unknown costs still need to be reserved.'}</Text>
     {totals.draft ? <Text style={s.error}>Draft itinerary · {logisticsDraftNotice}</Text> : null}
   </View>;
 }
@@ -164,17 +165,17 @@ export function LogisticsStage(props: Props) {
       {logistics.staySkipped ? <Text style={s.small}>Stay marked for later.</Text> : null}
     </View> : null}
     <View style={s.success} testID="logistics-budget"><Text style={s.kicker}>YOUR TRIP BUDGET</Text>
-      <Text style={s.body}>Trip budget per person · {money(room.budgetSummary?.comfortablePerPerson ?? 0)}</Text>
+      <Text style={s.body}>{room.travelParty === 'solo' ? 'Your trip budget' : 'Trip budget per person'} · {money(room.budgetSummary?.comfortablePerPerson ?? 0)}</Text>
       <Text style={s.body}>Transport · −{money(own.transportCost)}</Text><Text style={s.body}>Accommodation · −{money(totals.stayPerPerson)}</Text>
       <Text style={s.heading}>Remaining · {money(own.remaining)}</Text>
       <Text style={s.body}>{money(own.remaining)} available for food, activities and local transport</Text>
       {totals.draft ? <Text style={s.small}>Provisional: unknown transport and stay costs are not deducted yet.</Text> : null}
-      {totals.remaining < 0 ? <Text accessibilityRole="alert" style={s.error}>Selected logistics exceed the group budget. Choose cheaper transport or a cheaper stay before generating.</Text> : null}
+      {totals.remaining < 0 ? <Text accessibilityRole="alert" style={s.error}>Selected logistics exceed the trip budget. Choose cheaper transport or a cheaper stay before generating.</Text> : null}
     </View>
     {tab === 'Summary' ? <><LogisticsSummary room={room} /><AppButton label="Edit" variant="secondary" disabled={busy} onPress={() => navigate('Transport')} />
       {room.currentRole === 'organizer' ? <AppButton label={totals.draft ? 'Confirm & Generate Draft Itinerary' : 'Confirm & Generate Itinerary'} disabled={busy || totals.remaining < 0} onPress={() => void finish(totals.draft)} /> : <Text style={s.body}>The organiser can confirm this summary and generate the itinerary.</Text>}
     </> : <>{tab === 'Transport' ? <AppButton label="Next: Accommodation" disabled={busy} onPress={() => navigate('Accommodation')} /> : null}<AppButton label="Review logistics summary" variant={tab === 'Transport' ? 'secondary' : 'primary'} disabled={busy} onPress={() => navigate('Summary')} /></>}
-    {room.stage === 'complete' && onItinerary ? <AppButton label="View our itinerary" variant="secondary" onPress={onItinerary} /> : null}
+    {room.stage === 'complete' && onItinerary ? <AppButton label={room.travelParty === "solo" ? "View my itinerary" : "View our itinerary"} variant="secondary" onPress={onItinerary} /> : null}
     {tab !== 'Summary' && room.currentRole === 'organizer' ? <AppButton label="Skip for now" variant="secondary" disabled={busy} onPress={() => navigate('Summary')} /> : null}
   </View>;
 }

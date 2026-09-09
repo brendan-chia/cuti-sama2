@@ -14,6 +14,7 @@ import { AttractionMap } from './attraction-map';
 import { LogisticsStage } from './logistics-stage';
 import { BudgetStage, money } from './budget-stage';
 import { CountryPicks } from './country-picks';
+import { DestinationAnnouncement } from './destination-announcement';
 import { CountryVote } from './country-vote';
 import { questStyles as s } from './quest-styles';
 import { loadQuest, subscribeToQuest, updateQuest } from './service';
@@ -37,7 +38,7 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
   if (!country) return <Text accessibilityRole="alert" style={s.error}>The selected country could not be loaded. Refresh the quest to try again.</Text>;
   const organizer = room.currentRole === 'organizer';
   const votes = room.results.find((result) => result.countryCode === country.code)?.agreeCount;
-  const mapCountry = { ...country, attractions: [...country.attractions, ...(room.importedPlaces ?? []).map((place) => ({ ...place, category: 'From your crew', description: place.address }))] };
+  const mapCountry = { ...country, attractions: [...country.attractions, ...(room.importedPlaces ?? []).map((place) => ({ ...place, category: room.travelParty === 'solo' ? 'Your saved places' : 'From your crew', description: place.address }))] };
   return <View style={s.stack}>
     <View style={s.success}><Text style={s.kicker}>DESTINATION UNLOCKED</Text><Text style={s.title}>{country.flag} {country.name}</Text><Text style={s.body}>{room.travelParty !== 'solo' && votes !== undefined ? `${votes} of ${room.members.length} travellers voted yes. ` : ''}{country.tagline}</Text></View>
     <PlaceImportPanel tripId={room.tripId} countryName={country.name} disabled={busy} onConfirmed={onConfirmed} />
@@ -51,25 +52,27 @@ function QuestSummary({ room, onItinerary }: { room: QuestRoom; onItinerary?: ()
   const country = countryByCode(room.selectedCountryCode);
   return <View style={s.stack}>
     <View style={styles.ticket}>
-      <Text style={styles.ticketKicker}>CUTISAMA2 · YOUR GROUP’S PLAN</Text>
+      <Text style={styles.ticketKicker}>CUTISAMA2 · YOUR TRIP PLAN</Text>
       <Text style={styles.ticketTitle}>{country?.flag} {country?.name}</Text>
       <Text style={styles.ticketBody}>{room.period ? periodLabel(room.period) : ''}</Text>
       <View style={styles.ticketDivider} />
       <Text style={styles.ticketKicker}>THE STOPS YOU PICKED</Text>
       {[...(country?.attractions ?? []), ...(room.importedPlaces ?? [])].filter((place) => room.attractionIds.includes(place.id)).map((place, index) => <Text key={place.id} style={styles.ticketBody}>{String(index + 1).padStart(2, '0')}  {place.name}</Text>)}
       <View style={styles.ticketDivider} />
-      <Text style={styles.ticketKicker}>GROUP SPENDING CEILING</Text>
+      <Text style={styles.ticketKicker}>TRIP SPENDING LIMIT</Text>
       <Text style={styles.ticketTitle}>{room.budgetSummary ? money(room.budgetSummary.comfortablePerPerson) : '—'}</Text>
-      <Text style={styles.ticketBody}>per person · {room.members.length} travellers · whole trip</Text>
+      <Text style={styles.ticketBody}>{room.travelParty === 'solo' ? 'Your whole trip' : `per person · ${room.members.length} travellers · whole trip`}</Text>
     </View>
-    <Text style={s.body}>Six stops, one happy landing. Your dates, destination, places and budget are saved for everyone in the room.</Text>
-    <Text style={s.body}>Turn your selected places into a day-by-day itinerary, with time for travel and meals, within your group’s budget.</Text>
-    {onItinerary ? <AppButton label={room.currentRole === 'organizer' ? 'Generate our itinerary' : 'View our itinerary'} testID="open-quest-itinerary" onPress={onItinerary} /> : null}
+    <Text style={s.body}>Your dates, destination, places and budget are saved.</Text>
+    <Text style={s.body}>Turn your selected places into a day-by-day itinerary, with time for travel and meals, within your trip budget.</Text>
+    {onItinerary ? <AppButton label={room.travelParty === 'solo' ? 'Generate my itinerary' : room.currentRole === 'organizer' ? 'Generate our itinerary' : 'View our itinerary'} testID="open-quest-itinerary" onPress={onItinerary} /> : null}
   </View>;
 }
 
 export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQuest, updateAction = updateQuest, subscribeAction = subscribeToQuest, suggestAction = suggestTripPeriods }: Props) {
   const [room, setRoom] = useState<QuestRoom | null>(null);
+  const [announcedCountry, setAnnouncedCountry] = useState<string | null>(null);
+  const acceptedRoom = useRef<QuestRoom | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -78,7 +81,12 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
   const refreshFailed = useRef(false);
   const alive = useRef(true);
   const accept = useCallback((next: QuestRoom) => {
-    if (alive.current) setRoom((current) => current && current.revision > next.revision ? current : next);
+    if (!alive.current || (acceptedRoom.current && acceptedRoom.current.revision > next.revision)) return;
+    const previous = acceptedRoom.current;
+    acceptedRoom.current = next;
+    setRoom(next);
+    if (previous?.stage === 'voting' && next.stage === 'explore' && next.travelParty !== 'solo') setAnnouncedCountry(next.selectedCountryCode);
+    else if (next.stage !== 'explore') setAnnouncedCountry(null);
   }, []);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const refresh = useCallback(async () => {
@@ -111,7 +119,7 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
     finally { mutation.current = false; if (alive.current) setBusy(false); }
   }
 
-  if (!room) return <Screen scrollRef={screenScroll}><View style={s.stack}><Text style={s.title}>{error ? 'Your quest is waiting.' : 'Gathering your next adventure…'}</Text>{error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Try again" onPress={() => void refresh()} /></> : <Text style={s.body}>Opening the shared plan for your group.</Text>}<AppButton label="Back to the lobby" variant="secondary" onPress={onBack} /></View></Screen>;
+  if (!room) return <Screen scrollRef={screenScroll}><View style={s.stack}><Text style={s.title}>{error ? 'Your quest is waiting.' : 'Gathering your next adventure…'}</Text>{error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Try again" onPress={() => void refresh()} /></> : <Text style={s.body}>Opening your trip plan.</Text>}<AppButton label="Back to the lobby" variant="secondary" onPress={onBack} /></View></Screen>;
   const logisticsOpen = room.stage === 'logistics' || room.stage === 'complete';
   const logisticsDraft = logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0).draft;
   const completed = room.stage === 'complete' && !logisticsDraft;
@@ -123,11 +131,12 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
   const field = room.stage === 'timing' ? 'availabilitySubmitted' : room.stage === 'picks' ? 'picksSubmitted' : room.stage === 'voting' ? 'votesSubmitted' : room.stage === 'budget' ? 'budgetSubmitted' : null;
   const ready = field ? room.members.filter((member) => member[field]).length : room.members.length;
   return <Screen testID="trip-quest-screen" scrollRef={screenScroll}>
+    <DestinationAnnouncement countryCode={announcedCountry} onDismiss={() => setAnnouncedCountry(null)} />
     <View style={s.stack}>
       <View style={s.between}><Pressable accessibilityRole="button" onPress={onBack}><Text style={s.link}>‹ Trip lobby</Text></Pressable><BrandLogo compact /></View>
       {!voting ? <Text numberOfLines={1} style={s.small}>{room.tripName}</Text> : null}
       <FlightPath stage={index} solo={solo} />
-      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? 'From group chat to game plan.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? 'You made the big decisions. Together.' : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
+      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? (solo ? 'Your adventure is ready.' : 'From group chat to game plan.') : solo && room.stage === 'timing' ? 'Choose your travel dates.' : solo && room.stage === 'budget' ? 'Plan your spending.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? (solo ? 'Your decisions, your adventure.' : 'You made the big decisions. Together.') : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
       {error ? <View style={s.success}><Text accessibilityRole="alert" style={s.error}>{error}</Text>{unavailable ? <AppButton label="Reconnect & refresh" variant="secondary" onPress={() => { setError(null); void refresh(); }} /> : <Pressable accessibilityRole="button" onPress={() => setError(null)}><Text style={s.link}>Dismiss</Text></Pressable>}</View> : null}
       {!solo && !completed && !logisticsOpen ? <View><View style={s.between}><Text style={s.kicker}>YOUR TRAVEL CREW</Text><Text accessibilityLiveRegion="polite" style={s.small}>{field ? `${ready} / ${room.members.length} ready` : 'Explore together'}</Text></View>{!voting ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crew}>
         {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName} numberOfLines={1}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}

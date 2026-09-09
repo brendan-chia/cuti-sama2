@@ -52,12 +52,14 @@ it('restores a pending operation and retries with its original idempotency key',
   expect(generateAction).toHaveBeenCalledWith(tripId, operationKey);
 });
 
-it('shows progress and a same-operation retry control after the timeout threshold', async () => {
+it('checks progress without submitting a second generation after the timeout threshold', async () => {
   const never = new Promise<never>(() => undefined); const generateAction = jest.fn(() => never);
   const screen = await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} loadAction={jest.fn(async () => locked)} generateAction={generateAction} slowAfterMs={0} />);
   await fireEvent.press(await screen.findByTestId('generate-itinerary'));
   expect(screen.getByTestId('itinerary-progress')).toBeTruthy();
-  await waitFor(() => expect(screen.getByTestId('retry-itinerary-inline')).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId('check-itinerary-progress')).toBeTruthy());
+  await fireEvent.press(screen.getByTestId('check-itinerary-progress'));
+  expect(generateAction).toHaveBeenCalledTimes(1);
 });
 
 it('shows one retry action and no new-generation action after a failed operation', async () => {
@@ -67,4 +69,14 @@ it('shows one retry action and no new-generation action after a failed operation
   expect(screen.getByTestId('retry-itinerary-error')).toBeTruthy();
   expect(screen.queryByTestId('retry-itinerary')).toBeNull();
   expect(screen.queryByTestId('generate-itinerary')).toBeNull();
+});
+
+it('a participant opening a pending itinerary can only view progress', async () => {
+  const generateAction = jest.fn();
+  const state = { ...locked, currentRole: 'member' as const, operation: { idempotencyKey: operationKey, status: 'pending' as const, startedAt: new Date().toISOString(), error: null } };
+  const screen = await render(<ItineraryScreen tripId={tripId} onBack={jest.fn()} autoGenerate loadAction={jest.fn(async () => state)} generateAction={generateAction} />);
+  expect(await screen.findByTestId('itinerary-progress')).toBeTruthy();
+  expect(screen.queryByTestId('generate-itinerary')).toBeNull();
+  expect(screen.queryByTestId('retry-itinerary')).toBeNull();
+  expect(generateAction).not.toHaveBeenCalled();
 });

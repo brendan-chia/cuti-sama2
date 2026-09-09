@@ -84,7 +84,7 @@ describe('trip quest shared planning flow', () => {
     const { screen, updateAction } = await openQuest(room);
     expect(screen.queryByText('QUEST COMPLETE')).toBeNull();
     expect(screen.getByText('CHAPTER 6 · LOGISTICS')).toBeTruthy();
-    expect(screen.getByText('Choose a journey')).toBeTruthy();
+    expect(screen.getByText('Add or edit my own booking')).toBeTruthy();
     expect(screen.queryByLabelText('Departure city / airport')).toBeNull();
     await fireEvent.press(screen.getByText('Add or edit my own booking'));
     expect(screen.getByLabelText('Departure city / airport')).toBeTruthy();
@@ -109,7 +109,7 @@ describe('trip quest shared planning flow', () => {
       ['Arrival date', '2027-12-04'], ['Arrival local time', '14:30'], ['Arrival UTC offset', '+09:00'],
       ['Estimated transport price (MYR)', '850'],
     ]) await fireEvent.changeText(screen.getByLabelText(label), value);
-    await fireEvent.press(screen.getByText('○ selected'));
+    expect(screen.getByText('● selected')).toBeTruthy();
     await fireEvent.press(screen.getByText('Save Aina’s transport'));
     expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'transport', memberId, transport: {
       direction: 'arrival', mode: 'flight', departureLocation: 'KUL', arrivalLocation: 'NRT',
@@ -366,4 +366,37 @@ describe('trip quest shared planning flow', () => {
     await waitFor(() => expect(screen.getAllByText(/10 Feb 2028.*15 Feb 2028/)).toHaveLength(2));
     expect(screen.queryByText(/10 Jan 2028.*15 Jan 2028/)).toBeNull();
   });
+});
+
+ it('solo dates confirm directly without shared preferences or recommendations', async () => {
+  const { screen, updateAction } = await openQuest(roomWith({ travelParty: 'solo', stage: 'timing', period: null, members: [baseRoom.members[0]] }));
+  expect(screen.queryByText('Find our best dates')).toBeNull();
+  expect(screen.queryByText('Add unavailable dates')).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText('Start date'), '2027-12-04');
+  await fireEvent.changeText(screen.getByLabelText('End date'), '2027-12-08');
+  await fireEvent.press(screen.getByText('Confirm my dates'));
+  expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'availability', startsOn: '2027-12-04', endsOn: '2027-12-08', preferences: { flexibility: 'exact', daysOff: [], unavailable: [] } });
+ });
+ it('solo budget uses personal wording and saves a limit', async () => {
+  const { screen, updateAction } = await openQuest(roomWith({ travelParty: 'solo', stage: 'budget', members: [baseRoom.members[0]] }));
+  expect(screen.queryByText('Play my budget card')).toBeNull();
+  expect(screen.queryByText(/group’s spending ceiling/)).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText('My trip budget (MYR)'), '3000');
+  await fireEvent.press(screen.getByText('Save my budget'));
+  expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'budget', amount: 3000 });
+ });
+
+it.each(['organizer', 'member'] as const)('announces the decided destination to the %s when voting becomes explore', async currentRole => {
+  const start = { ...votingRoom(), currentRole };
+  const decided = { ...start, stage: 'explore' as const, selectedCountryCode: 'JP', revision: 2 };
+  const loadAction = jest.fn().mockResolvedValueOnce(start).mockResolvedValue(decided);
+  const { screen, notify } = await openQuest(start, { loadAction });
+  expect(screen.queryByTestId('destination-announcement')).toBeNull();
+  await act(async () => notify());
+  await waitFor(() => expect(screen.getByTestId('destination-announcement')).toBeTruthy());
+  expect(screen.getByText('You’re going to Japan.')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('dismiss-destination-announcement'));
+  expect(screen.queryByTestId('destination-announcement')).toBeNull();
+  await act(async () => notify());
+  expect(screen.queryByTestId('destination-announcement')).toBeNull();
 });

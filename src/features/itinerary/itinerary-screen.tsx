@@ -55,10 +55,13 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
   const [operationKey, setOperationKey] = useState<string | null>(null); const [loading, setLoading] = useState(true); const [generating, setGenerating] = useState(false); const [slow, setSlow] = useState(false); const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
   const autoStarted = useRef(false);
+  const running = useRef(false);
+  const [retryExpired, setRetryExpired] = useState(false);
   const refresh = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const next = await loadAction(tripId); setState(next); setVersion(next.latest);
+      setRetryExpired(Boolean(next.operation && Date.now() - Date.parse(next.operation.startedAt) >= 180_000));
       if (next.operation?.status === 'pending') { setOperationKey(next.operation.idempotencyKey); setSlow(Date.now() - Date.parse(next.operation.startedAt) >= slowAfterMs); }
       else if (next.operation?.status === 'failed') { setOperationKey(next.operation.idempotencyKey); setError(next.operation.error); setSlow(true); }
       else { setOperationKey(null); setSlow(false); }
@@ -68,7 +71,11 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   const run = useCallback(async (requestedKey?: string) => {
-    const key = requestedKey ?? await generationOperationKey(tripId, state?.lockedDestination?.lockedAt);
+    if (state?.currentRole !== 'organizer' || running.current) return;
+    running.current = true;
+    let key: string;
+    try { key = requestedKey ?? await generationOperationKey(tripId, state?.lockedDestination?.lockedAt); }
+    catch { running.current = false; setError('Could not start the request. Please try again.'); return; }
     const sequence = ++requestSequence.current; setOperationKey(key); setGenerating(true); setSlow(false); setError(null);
     const timer = setTimeout(() => { if (requestSequence.current === sequence) setSlow(true); }, slowAfterMs);
     try {
@@ -76,8 +83,8 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
       if (requestSequence.current === sequence) { setVersion(result.version); setSlow(false); await refresh(); }
     } catch (cause) {
       if (requestSequence.current === sequence) { setError(cause instanceof Error ? cause.message : 'Could not generate the itinerary.'); setSlow(true); }
-    } finally { clearTimeout(timer); if (requestSequence.current === sequence) setGenerating(false); }
-  }, [generateAction, refresh, slowAfterMs, tripId, state?.lockedDestination?.lockedAt]);
+    } finally { running.current = false; clearTimeout(timer); if (requestSequence.current === sequence) setGenerating(false); }
+  }, [generateAction, refresh, slowAfterMs, tripId, state]);
 
   useEffect(() => {
     if (autoGenerate && !autoStarted.current && !loading && !error && state?.currentRole === 'organizer' && state.lockedDestination && !state.latest && !state.operation && !generating) {
@@ -87,27 +94,27 @@ export function ItineraryScreen({ tripId, onBack, onReview, onHome, onGroup, onM
   }, [autoGenerate, loading, error, state, generating, run]);
 
   useEffect(() => {
-    if (state?.currentRole !== 'member' || version) return;
+    if (!state || version || generating) return;
     const timer = setInterval(() => void refresh(), 15000);
     return () => clearInterval(timer);
-  }, [state?.currentRole, version, refresh]);
+  }, [state, version, generating, refresh]);
 
   if (loading && !state) return <Screen scroll={false}><View style={styles.center}><Text style={styles.title}>Restoring itinerary…</Text></View></Screen>;
   if (!state) return <Screen scroll={false}><View style={styles.center}><Text accessibilityRole="alert" style={styles.error}>{error ?? 'The itinerary is unavailable.'}</Text><View style={styles.action}><AppButton label="Try again" onPress={() => void refresh()} /></View></View></Screen>;
 
-  const locked = state.lockedDestination; const retryKey = operationKey ?? createUuid(); const retryPending = Boolean(operationKey) && slow;
+  const locked = state.lockedDestination; const retryKey = operationKey ?? createUuid(); const pending = state.operation?.status === 'pending'; const retryPending = Boolean(operationKey) && slow && (!pending || retryExpired); const waiting = generating || pending;
   const footer = version ? <TripBottomNav onHome={onHome ?? onBack} onItinerary={() => undefined} onOpen={() => onReview?.(1)} onGroup={onGroup} onMore={onMore ?? onBack} /> : locked && !error && state.currentRole === 'organizer' ? <View style={styles.generateFooter}>
-    {!generating && !retryPending ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
+    {!waiting && !retryPending ? <AppButton label="Generate itinerary" onPress={() => void run()} testID="generate-itinerary" /> : null}
     {!generating && retryPending ? <AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary" variant="secondary" /> : null}
   </View> : undefined;
 
   return <Screen contentStyle={styles.content} footer={footer} testID="itinerary-screen">
     <ItineraryTopBar onBack={onBack} title="Itinerary" />
-    {!locked ? <View style={styles.padded}><Text style={styles.kicker}>TRIP PLAN</Text><Text style={styles.title}>Destination required</Text><View style={styles.notice} testID="destination-required"><Text style={styles.sectionTitle}>Lock a destination first</Text><Text style={styles.body}>Generation stays unavailable until the group has locked its final destination.</Text></View></View> : null}
+    {!locked ? <View style={styles.padded}><Text style={styles.kicker}>TRIP PLAN</Text><Text style={styles.title}>Destination required</Text><View style={styles.notice} testID="destination-required"><Text style={styles.sectionTitle}>Lock a destination first</Text><Text style={styles.body}>Generation stays unavailable until your destination is confirmed.</Text></View></View> : null}
     {locked && !version ? <View style={styles.padded}><Text style={styles.kicker}>AI ITINERARY</Text><Text style={styles.title}>{locked.name}</Text>
-      {generating ? <View style={styles.notice} testID="itinerary-progress"><Text style={styles.sectionTitle}>{slow ? 'Still building your draft…' : 'Building your trip…'}</Text><Text accessibilityLiveRegion="polite" style={styles.body}>{slow ? 'This is taking longer than expected. You can safely retry the same request.' : 'Balancing the group’s pace, budget, and must-haves.'}</Text>{slow ? <View style={styles.action}><AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary-inline" variant="secondary" /></View> : null}</View> : null}
+      {waiting ? <View style={styles.notice} testID="itinerary-progress"><Text style={styles.sectionTitle}>{slow ? 'Still building your draft…' : 'Building your trip…'}</Text><Text accessibilityLiveRegion="polite" style={styles.body}>{slow ? 'This is taking longer than expected. Check progress while the current request continues.' : 'Balancing your trip’s pace, budget, and must-haves.'}</Text>{slow ? <View style={styles.action}><AppButton label="Check progress" onPress={() => void refresh()} testID="check-itinerary-progress" variant="secondary" /></View> : null}</View> : null}
       {error ? <View style={styles.errorBox}><Text accessibilityRole="alert" style={styles.error}>{error}</Text>{state.currentRole === 'organizer' ? <View style={styles.action}><AppButton label="Retry same request" onPress={() => void run(retryKey)} testID="retry-itinerary-error" variant="secondary" /></View> : null}</View> : null}
-      {!generating && !error ? <Text style={styles.intro}>{state.currentRole === 'organizer' ? 'Build a day-by-day plan using your dates, selected places, traveller count and group budget.' : 'Your organiser will generate the shared itinerary. It will appear here when it is ready.'}</Text> : null}
+      {!waiting && !error ? <Text style={styles.intro}>{state.currentRole === 'organizer' ? 'Build a day-by-day plan using your dates, selected places, traveller count and trip budget.' : 'Your organiser will generate the shared itinerary. It will appear here when it is ready.'}</Text> : null}
     </View> : null}
     {version ? <View testID="stored-itinerary">
       <View style={styles.hero}>

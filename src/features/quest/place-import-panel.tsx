@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { normalizeSocialUrl, type PlaceImportResult } from '../../../packages/contracts/src/place-import';
@@ -10,6 +10,8 @@ import { confirmTripPlaces, importTripPlaces } from './place-import-service';
 import { VideoImportPanel } from './video-import-panel';
 import { isSocialVideoUrl } from '../../../packages/contracts/src/social-video';
 import { questStyles as s } from './quest-styles';
+import { loadInspiration } from '@/features/inspiration/service';
+import { pendingInspiration, clearPendingInspiration } from '@/features/inspiration/planning';
 import { SavedIdeasPicker } from '@/features/inspiration/saved-ideas-picker';
 
 type Props = { tripId: string; countryName: string; disabled?: boolean; onConfirmed: (room: QuestRoom) => void; importAction?: typeof importTripPlaces; confirmAction?: typeof confirmTripPlaces };
@@ -27,6 +29,19 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
   const working = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const id = await pendingInspiration(tripId);
+      if (!id) return;
+      const item = (await loadInspiration()).find(idea => idea.id === id);
+      if (!active) return;
+      if (!item?.analysis?.places.length) { setError('This saved idea is not ready. Choose another saved inspiration below.'); return; }
+      setText(item.analysis.places.map(place => `${place.name}${place.location ? `, ${place.location}` : ''}`).join('\n'));
+      setCaptionOnly(true); setShowFallback(true); setOpen(true);
+    })().catch(() => { if (active) setError('Could not load the inspiration for this trip. Choose it from saved inspiration below.'); });
+    return () => { active = false; };
+  }, [tripId]);
   async function find() {
     if (working.current || disabled) return;
     working.current = true; setBusy(true); setError(null); setSaved(false); setResult(null); setSelected([]);
@@ -55,7 +70,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     working.current = true; setBusy(true); setError(null);
     try {
       const room = await confirmAction(result.importId, selected);
-      onConfirmed(room); setSaved(true); setResult(null); setSelected([]); setText(''); setImage(undefined); setShowFallback(false);
+      onConfirmed(room); void clearPendingInspiration(tripId).catch(() => {}); setSaved(true); setResult(null); setSelected([]); setText(''); setImage(undefined); setShowFallback(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not confirm these places.'); }
     finally { working.current = false; setBusy(false); }
   }
@@ -67,7 +82,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     {!open ? <AppButton label="＋ Add a travel post" onPress={() => setOpen(true)} disabled={disabled} /> : <View style={s.stack}>
       <FormField label="Social post link" placeholder="Paste a TikTok, Instagram, or YouTube link" autoCapitalize="none" autoCorrect={false} value={sourceUrl} editable={!busy && !disabled} onChangeText={(value) => { setSourceUrl(value); setCaptionOnly(false); setResult(null); setSaved(false); setError(null); setText(''); setImage(undefined); setShowFallback(false); }} />
       {videoMode ? <VideoImportPanel tripId={tripId} sourceUrl={sourceUrl} caption="" disabled={disabled} onConfirmed={onConfirmed} onFallback={() => { setCaptionOnly(true); setShowFallback(true); }} /> : <>
-      <Text style={s.small}>We’ll read the public caption for place names. For names shown only in a photo or carousel slide, add a screenshot. Only places you confirm are shared with your crew.</Text>
+      <Text style={s.small}>We’ll read the public caption for place names. For names shown only in a photo or carousel slide, add a screenshot. Only places you confirm are added to your trip.</Text>
       {showFallback ? <View style={s.stack}>
         <FormField label="Caption or place names" placeholder="Paste the caption or the names shown in the post" multiline maxLength={6000} value={text} editable={!busy && !disabled} onChangeText={setText} />
         <Text style={s.small}>The caption or screenshot you submit is sent to our AI reader.</Text>
@@ -86,7 +101,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
         {result.candidates.length ? <><Text style={s.small}>Choose the matching locations, not every alternative. Place data © OpenStreetMap contributors.</Text><AppButton label={`Confirm ${selected.length} ${selected.length === 1 ? 'place' : 'places'}`} disabled={disabled || !selected.length} loading={busy} onPress={() => void confirm()} /></> : null}
       </View> : null}
       </>}
-      {saved ? <Text accessibilityLiveRegion="polite" style={s.strong}>✓ Places confirmed. Your crew can now find them on the map.</Text> : null}
+      {saved ? <Text accessibilityLiveRegion="polite" style={s.strong}>✓ Places confirmed. Select them on the map below and save your stops to include them in the itinerary.</Text> : null}
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
     </View>}
   </View>;

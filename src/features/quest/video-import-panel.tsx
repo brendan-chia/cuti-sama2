@@ -22,7 +22,7 @@ export function VideoImportPanel({tripId,sourceUrl,caption,disabled,onConfirmed,
  return <View style={s.stack} testID="video-import-panel">
   <Text style={s.heading}>Find places from your post</Text>
   <Text style={s.small}>We’ll read the caption and analyse photos, carousel slides, or video scenes and audio to find places.</Text>
-  <Text style={s.small}>Up to 20 photos or videos per post, with up to 2 minutes per video. Check the matches before sharing them with your crew.</Text>
+  <Text style={s.small}>Up to 20 photos or videos per post, with up to 2 minutes per video. Check the matches before adding them to your trip.</Text>
   {!active?<AppButton label="Find the places" disabled={disabled||busy||!sourceUrl.trim()} loading={busy} onPress={()=>void start()}/>:null}
   {job?<View style={s.success}>
    <Text accessibilityLiveRegion="polite" style={s.body}>{job.message}</Text>

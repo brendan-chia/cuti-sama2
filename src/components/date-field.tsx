@@ -1,3 +1,4 @@
+import { calendarDate, useCurrentDate } from '@/lib/current-date';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
@@ -27,7 +28,8 @@ function displayDate(value: string) {
 export function DateField({ error, label, minimumDate, onChange, required = false, value }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [month, setMonth] = useState(() => new Date());
-  const minimum = minimumDate && parseDate(minimumDate) ? minimumDate : undefined;
+  const today = useCurrentDate();
+  const minimum = minimumDate && parseDate(minimumDate) && minimumDate > today ? minimumDate : today;
   const selected = parseDate(value);
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
@@ -41,7 +43,8 @@ export function DateField({ error, label, minimumDate, onChange, required = fals
   });
   function toggle() {
     if (!showPicker) {
-      const initial = selected && (!minimum || value >= minimum) ? selected : (minimum ? parseDate(minimum)! : new Date());
+      const freshMinimum = minimum > calendarDate() ? minimum : calendarDate();
+      const initial = selected && value >= freshMinimum ? selected : parseDate(freshMinimum)!;
       setMonth(new Date(initial.getFullYear(), initial.getMonth(), 1, 12));
     }
     setShowPicker(!showPicker);
@@ -64,7 +67,7 @@ export function DateField({ error, label, minimumDate, onChange, required = fals
         const date = dateOnly(new Date(year, monthIndex, day, 12));
         const disabled = Boolean(minimum && date < minimum);
         const checked = date === value;
-        return <Pressable key={column} accessibilityRole="button" accessibilityLabel={displayDate(date)} accessibilityState={{ selected: checked, disabled }} disabled={disabled} onPress={() => { onChange(date); setShowPicker(false); }} style={({ pressed }) => [styles.dayCell, checked && styles.selectedDay, disabled && styles.disabled, pressed && styles.pressed]}><Text style={[styles.dayText, checked && styles.selectedText]}>{day}</Text></Pressable>;
+        return <Pressable key={column} accessibilityRole="button" accessibilityLabel={displayDate(date)} accessibilityState={{ selected: checked, disabled }} disabled={disabled} onPress={() => { if (date < minimum || date < calendarDate()) return; onChange(date); setShowPicker(false); }} style={({ pressed }) => [styles.dayCell, checked && styles.selectedDay, disabled && styles.disabled, pressed && styles.pressed]}><Text style={[styles.dayText, checked && styles.selectedText]}>{day}</Text></Pressable>;
       })}</View>)}
       <Text style={styles.hint}>Select a day to confirm your date.</Text>
     </View> : null}

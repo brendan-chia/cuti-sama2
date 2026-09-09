@@ -12,7 +12,7 @@ test('AI estimate needs explicit application and changing input discards it', as
   const screen = await render(<BudgetRecommendation tripId="trip-id" disabled={false} onApply={apply} />);
   await fireEvent.press(screen.getByText('Recommend my budget'));
   await waitFor(() => expect(screen.getByText('RM 2,420')).toBeTruthy());
-  expect(mockInvoke).toHaveBeenCalledWith('recommend-budget', { body: { tripId: 'trip-id', departure: 'Kuala Lumpur', style: 'comfortable' }, timeout: 45000 });
+  expect(mockInvoke).toHaveBeenCalledWith('recommend-budget', { body: { tripId: 'trip-id', departure: 'Kuala Lumpur', style: 'comfortable' }, timeout: 105000 });
   expect(apply).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByText('Use this amount in my budget'));
   expect(apply).toHaveBeenCalledWith(2420);

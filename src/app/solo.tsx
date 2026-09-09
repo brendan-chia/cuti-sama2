@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Alert, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { queueInspiration } from '@/features/inspiration/planning';
 import { Screen } from '@/components/screen';
 import { FormField } from '@/components/form-field';
 import { AppButton } from '@/components/app-button';
@@ -10,6 +11,7 @@ import { idempotency } from '@/lib/idempotency';
 import { saveLastTripId } from '@/lib/secure-storage';
 
 export default function Solo() {
+  const { inspirationId } = useLocalSearchParams<{ inspirationId?: string }>();
   const router = useRouter(); const [name, setName] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   async function create() {
     setBusy(true); setError('');
@@ -17,6 +19,10 @@ export default function Solo() {
       const key = await idempotency.keyFor('create', 'solo-trip', { name: name.trim() });
       const trip = await travellerRpc('create_solo_trip', { p_name: name.trim(), p_key: key });
       await saveLastTripId(trip.tripId); await idempotency.complete('create', 'solo-trip', key);
+      if (inspirationId) {
+        try { await queueInspiration(trip.tripId, inspirationId); }
+        catch { Alert.alert('Trip created', 'Your inspiration is still saved. Choose it from Explore when you plan your stops.'); }
+      }
       router.replace({ pathname: '/trip/[tripId]/quest', params: { tripId: trip.tripId } });
     } catch(e) { setError(e instanceof Error ? e.message : 'Could not create your trip.'); } finally { setBusy(false); }
   }

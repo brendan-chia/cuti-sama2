@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { AvailabilitySchema, DatePreferencesSchema, type DatePreferences, type QuestAction, type QuestRoom, type TripPeriod } from '../../../packages/contracts/src/quest';
 import { AppButton } from '@/components/app-button';
+import { nextCalendarDate, useCurrentDate } from '@/lib/current-date';
 import { DateField } from '@/components/date-field';
 import { questStyles as s } from './quest-styles';
 
@@ -29,7 +30,8 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
   const submitted = room.members.filter((member) => member.availabilitySubmitted).length;
   const allReady = submitted === room.members.length;
   const days = (Date.parse(endsOn) - Date.parse(startsOn)) / 86400000 + 1;
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const today = useCurrentDate();
+  const earliestStart = nextCalendarDate(today);
   const valid = AvailabilitySchema.safeParse({ startsOn, endsOn }).success && startsOn > today && days >= 1 && days <= 30;
   const savedPreferences = room.ownDatePreferences ?? defaults();
   const savedStart = room.ownAvailability?.startsOn ?? '';
@@ -50,12 +52,20 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
   const validBlock = AvailabilitySchema.safeParse({ startsOn: blockedStart, endsOn: blockedEnd }).success && blockedEnd >= blockedStart;
   const recommendation = room.dateRecommendation;
   const nameFor = (id: string) => `${room.members.find((member) => member.memberId === id)?.displayName ?? 'Traveller'}${id === room.currentMemberId ? ' (you)' : ''}`;
+  if (room.travelParty === 'solo') return <View style={s.panel}>
+    <Text style={s.heading}>When would you like to travel?</Text>
+    <Text style={s.body}>Choose a start date from tomorrow onwards, then pick your destination.</Text>
+    <DateField label="Start date" minimumDate={earliestStart} required value={startsOn} onChange={setStartsOn} />
+    <DateField label="End date" required value={endsOn} minimumDate={startsOn && startsOn > earliestStart ? startsOn : earliestStart} onChange={setEndsOn} />
+    {startsOn && endsOn && !valid ? <Text style={s.error}>Choose a future trip of 1–30 days.</Text> : null}
+    <AppButton label="Confirm my dates" testID="save-quest-availability" loading={busy} disabled={!valid} onPress={() => void act({ type: 'availability', startsOn, endsOn, preferences: { flexibility: 'exact', daysOff: [], unavailable: [] } })} />
+  </View>;
   return <View style={s.stack}>
     <View style={s.panel}>
       <Text style={s.heading}>Which dates would you propose?</Text>
       <Text style={s.small}>Share your preferred period. We’ll combine everyone’s preferences, flexibility and Malaysian national holidays into a recommendation.</Text>
-      <DateField label="Proposed start date" required value={startsOn} onChange={setStartsOn} />
-      <DateField label="Proposed end date" required value={endsOn} minimumDate={startsOn || undefined} onChange={setEndsOn} />
+      <DateField label="Proposed start date" minimumDate={earliestStart} required value={startsOn} onChange={setStartsOn} />
+      <DateField label="Proposed end date" required value={endsOn} minimumDate={startsOn && startsOn > earliestStart ? startsOn : earliestStart} onChange={setEndsOn} />
       <Text style={s.strong}>How flexible is your start date?</Text>
       <View style={s.row}>{flexibilityOptions.map(([value, label]) => <Pressable key={value} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: preferences.flexibility === value, disabled: busy }} disabled={busy} style={[s.chip, preferences.flexibility === value && s.chipSelected]} onPress={() => setPreferences({ ...preferences, flexibility: value })}><Text style={[s.chipText, preferences.flexibility === value && s.chipTextSelected]}>{label}</Text></Pressable>)}</View>
       <Text style={s.small}>We keep a proposed trip length where possible and show any length changes before you confirm.</Text>

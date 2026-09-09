@@ -49,12 +49,14 @@ describe('country map geography', () => {
     expect(panned.latitude).toBe(0);
   });
 
-  it('gives each supported country three distinct real map locations', () => {
+  it('gives every country a balanced catalog with contemporary options', () => {
     const ids = countries.flatMap((country) => country.attractions.map((attraction) => attraction.id));
     expect(new Set(ids).size).toBe(ids.length);
     expect(countries).toHaveLength(24);
     for (const country of countries) {
-      expect(country.attractions.length).toBeGreaterThanOrEqual(3);
+      expect(country.attractions.length).toBeGreaterThanOrEqual(5);
+      expect(country.attractions.slice(0, 2).every(attraction => !['History', 'Culture'].includes(attraction.category))).toBe(true);
+      expect(country.attractions.every(attraction => attraction.sourceUrl?.startsWith('https://'))).toBe(true);
       expect(country.attractions.every((attraction) => attraction.id.startsWith(`${country.code.toLowerCase()}-`))).toBe(true);
     }
     expect(countryByCode(null)).toBeUndefined();
@@ -85,7 +87,7 @@ describe('attraction map accessible selection', () => {
     expect(choice.props.accessibilityState).toEqual({ checked: true, disabled: true });
     await fireEvent.press(choice);
     expect(onToggle).not.toHaveBeenCalled();
-    expect(screen.getByText('1/3')).toBeTruthy();
+    expect(screen.getByText(`1/${country.attractions.length}`)).toBeTruthy();
     expect(screen.getByText('Drag to explore · locate a place below')).toBeTruthy();
   });
 
@@ -93,7 +95,7 @@ describe('attraction map accessible selection', () => {
     const onToggle = jest.fn();
     await render(<AttractionMap country={country} selectedIds={[]} onToggle={onToggle} />);
     await fireEvent(screen.getByTestId('country-map-viewport'), 'layout', { nativeEvent: { layout: { width: 328, height: 310 } } });
-    await fireEvent.press(screen.getByRole('checkbox', { name: 'Fushimi Inari Taisha, map pin 1' }));
+    await fireEvent.press(screen.getByRole('checkbox', { name: `Fushimi Inari Taisha, map pin ${country.attractions.findIndex(place => place.id === 'jp-fushimi-inari') + 1}` }));
     expect(onToggle).toHaveBeenCalledWith('jp-fushimi-inari');
     expect(screen.getAllByTestId(/^country-map-tile-/).length).toBeLessThanOrEqual(9);
   });

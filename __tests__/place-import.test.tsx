@@ -5,6 +5,10 @@ import type { QuestRoom } from '../packages/contracts/src/quest';
 
 jest.mock('@/features/quest/video-import-service',()=>({latestVideoImport:jest.fn(async()=>null),startVideoImport:jest.fn(),videoStatus:jest.fn()}));
 
+const mockPendingInspiration = jest.fn().mockResolvedValue(null);
+jest.mock('@/features/inspiration/planning', () => ({ pendingInspiration: (...args: unknown[]) => mockPendingInspiration(...args), clearPendingInspiration: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/features/inspiration/service', () => ({ loadInspiration: jest.fn().mockResolvedValue([{ id: 'saved-idea', analysis: { places: [{ name: 'Kek Lok Si Temple', location: 'Penang, Malaysia' }] } }]) }));
+
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn(async () => ({ canceled: true })) }));
 const candidate = { id: 'osm-node-123', name: 'Kek Lok Si Temple', address: 'Air Itam, Penang, Malaysia', countryCode: 'MY', latitude: 5.4, longitude: 100.3, evidence: 'Kek Lok Si Temple, Penang', sourceUrl: 'https://www.openstreetmap.org/node/123' };
 const result = { importId: '11111111-1111-4111-8111-111111111111', candidates: [candidate], status: 'ready' as const, message: 'Check the address before confirming.' };
@@ -73,4 +77,16 @@ it('offers a screenshot only as fallback after automatic post analysis fails', a
   await waitFor(()=>expect(screen.getByText('Replace screenshot')).toBeTruthy());
   await fireEvent.press(screen.getByText('Find the places'));
   await waitFor(()=>expect(importAction).toHaveBeenCalledWith('trip',{sourceUrl:'https://www.instagram.com/p/CxKCu0BPls7/?img_index=3',text:'',image:'data:image/jpeg;base64,/9j/AAAA'}));
+});
+
+
+it('prefills the inspiration queued for this trip and still requires location confirmation', async () => {
+  mockPendingInspiration.mockResolvedValueOnce('saved-idea');
+  const importAction = jest.fn(async () => result);
+  const confirmAction = jest.fn();
+  const screen = await render(<PlaceImportPanel tripId="inspired-trip" countryName="Malaysia" importAction={importAction} confirmAction={confirmAction} onConfirmed={jest.fn()} />);
+  await waitFor(() => expect(screen.getByLabelText('Caption or place names').props.value).toBe('Kek Lok Si Temple, Penang, Malaysia'));
+  await fireEvent.press(screen.getByText('Find the places'));
+  await waitFor(() => expect(importAction).toHaveBeenCalledWith('inspired-trip', { sourceUrl: '', text: 'Kek Lok Si Temple, Penang, Malaysia' }));
+  expect(confirmAction).not.toHaveBeenCalled();
 });
