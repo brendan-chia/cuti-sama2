@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { colors } from '@/theme/tokens';
+import { BottomNavigation } from '@/components/bottom-navigation';
 
 export const unstable_settings = { initialRouteName: 'index' };
 
@@ -21,6 +22,9 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="trips" options={{ title: 'My trips' }} />
+        <Stack.Screen name="new-trip" options={{ title: 'Create trip' }} />
+        <Stack.Screen name="social" options={{ title: 'Social' }} />
         <Stack.Screen name="inspiration" options={{ title: 'Saved inspiration' }} />
         <Stack.Screen name="profile" options={{ title: 'My travel passport' }} />
         <Stack.Screen name="solo" options={{ title: 'Solo adventure' }} />
@@ -41,6 +45,7 @@ export default function RootLayout() {
         <Stack.Screen name="trip/[tripId]/itinerary/revise" options={{ title: 'Revise itinerary' }} />
         <Stack.Screen name="trip/[tripId]/itinerary/[version]" options={{ headerShown: false }} />
       </Stack>
+      <BottomNavigation />
     </GestureHandlerRootView>
   );
 }

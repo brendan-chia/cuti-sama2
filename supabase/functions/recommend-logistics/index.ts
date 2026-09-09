@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { requestLogisticsOptions } from '../_shared/logistics-options.ts';
+import { LogisticsRecommendationError, requestLogisticsOptions } from '../_shared/logistics-options.ts';
 import { normalizeDeparture } from '../_shared/budget-cache.ts';
 import { costContext, priceBudgetOptions } from '../_shared/budget-basis.ts';
 
@@ -19,15 +19,21 @@ Deno.serve(async request => {
     if (user.error || !user.data.user) return json({ error: 'Session expired. Please sign in again.' }, 401);
     const { data: room, error } = await client.rpc('get_trip_quest', { p_trip_id: input.data.tripId });
     if (error) return json({ error: 'Trip access unavailable.' }, 403);
-    if (!room.period || !room.selectedCountryCode || !room.budgetSummary) return json({ error: 'Choose dates, a destination and a budget first.' }, 400);
+    if (!room?.period || !room.selectedCountryCode || !room.budgetSummary) return json({ error: 'Choose dates, a destination and a budget first.' }, 400);
     if (input.data.kind === 'stays' && room.period.startsOn === room.period.endsOn) return json({ transport: [], stays: [] });
     const saved = await client.from('trip_budget_basis').select('context,departure,options,estimate').eq('trip_id', input.data.tripId).eq('user_id', user.data.user.id).maybeSingle();
-    if (saved.error) throw new Error('Could not load the saved budget basis.');
-    const departure = input.data.departure ?? saved.data?.departure ?? 'Kuala Lumpur';
-    const basis = saved.data?.context === costContext(room) && normalizeDeparture(departure) === normalizeDeparture(saved.data.departure) ? saved.data : null;
+    // A saved estimate is an optional cache, not a prerequisite for recommendations.
+    // Manual budgets and transient cache failures must still reach the AI provider.
+    const cached = saved.error ? null : saved.data;
+    const departure = input.data.departure ?? cached?.departure ?? 'Kuala Lumpur';
+    const basis = cached?.context === costContext(room) && normalizeDeparture(departure) === normalizeDeparture(cached.departure) ? cached : null;
     const key = input.data.kind === 'stays' ? 'stays' : input.data.direction;
     const options = basis?.options?.[key] ?? await requestLogisticsOptions(room, { ...input.data, departure });
     return json({ ...priceBudgetOptions(options, room, basis?.estimate, basis?.options), departure });
-  } catch { return json({ error: 'Could not load travel suggestions. Please retry.' }, 503); }
+  } catch (cause) {
+    if (cause instanceof LogisticsRecommendationError) return json({ error: cause.message }, cause.status);
+    if (cause instanceof Error && (cause.name === 'TimeoutError' || cause.name === 'AbortError')) return json({ error: 'Travel suggestions took too long. Please retry.' }, 504);
+    return json({ error: 'Could not load travel suggestions. Please retry.' }, 503);
+  }
 });
 

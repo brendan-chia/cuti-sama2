@@ -13,7 +13,7 @@ import { questStyles as s } from './quest-styles';
 
 type Props = { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean>; onItinerary?: () => void; onSectionChange?: () => void };
 function Choices<T extends string>({ values, value, onChange, disabled }: { values: readonly T[]; value: T; onChange: (value: T) => void; disabled: boolean }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{values.map((item) => <Pressable key={item} accessibilityRole="radio" accessibilityState={{ checked: item === value, disabled }} disabled={disabled} onPress={() => onChange(item)} style={s.chip}><Text style={item === value ? s.strong : s.small}>{item === value ? '● ' : '○ '}{item}</Text></Pressable>)}</View>;
+  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{values.map((item) => <Pressable key={item} accessibilityRole="radio" accessibilityState={{ checked: item === value, disabled }} disabled={disabled} onPress={() => onChange(item)} style={s.chip}><Text style={item === value ? s.strong : s.small}>{item === value ? '● ' : '○ '}{item === 'arrival' ? 'Arrival' : item === 'departure' ? 'Departure' : item}</Text></Pressable>)}</View>;
 }
 
 function TransportForm({ room, busy, act }: Props) {

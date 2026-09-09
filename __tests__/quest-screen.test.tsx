@@ -372,6 +372,8 @@ describe('trip quest shared planning flow', () => {
   const { screen, updateAction } = await openQuest(roomWith({ travelParty: 'solo', stage: 'timing', period: null, members: [baseRoom.members[0]] }));
   expect(screen.queryByText('Find our best dates')).toBeNull();
   expect(screen.queryByText('Add unavailable dates')).toBeNull();
+  expect(screen.queryByLabelText('Unavailable from')).toBeNull();
+  expect(screen.queryByLabelText('Unavailable until')).toBeNull();
   await fireEvent.changeText(screen.getByLabelText('Start date'), '2027-12-04');
   await fireEvent.changeText(screen.getByLabelText('End date'), '2027-12-08');
   await fireEvent.press(screen.getByText('Confirm my dates'));

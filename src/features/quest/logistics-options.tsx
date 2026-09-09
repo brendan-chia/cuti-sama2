@@ -4,10 +4,9 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { AppButton } from '@/components/app-button';
 import { FormField } from '@/components/form-field';
 import { ensureAnonymousSession } from '@/lib/auth';
-import { requireSupabase } from '@/lib/supabase';
-import { edgeFunctionErrorMessage } from '@/lib/edge-function-error';
+import { loadLogisticsRecommendations } from './recommend-logistics';
 import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/quest';
-import { LogisticsRecommendationsSchema, type LogisticsRecommendations } from '../../../packages/contracts/src/logistics-recommendations';
+import { type LogisticsRecommendations } from '../../../packages/contracts/src/logistics-recommendations';
 import { money } from './budget-stage';
 import { JourneyRecommendations, journeyTheme } from './journey-recommendations';
 import { questStyles as s } from './quest-styles';
@@ -36,9 +35,7 @@ export function LogisticsOptions({ room, kind, direction = 'arrival', busy, act 
           if (active) setResult(cached.data);
           return;
         }
-        const { data, error: failure } = await requireSupabase().functions.invoke('recommend-logistics', { body: { tripId, kind, direction, departure: query || undefined } });
-        if (failure) throw new Error(await edgeFunctionErrorMessage(failure, 'Could not load options.'));
-        const parsed = LogisticsRecommendationsSchema.parse(data);
+        const parsed = await loadLogisticsRecommendations({ tripId, kind, direction, departure: query || undefined });
         if (session.user?.id) {
           if (optionCache.size >= 24) optionCache.delete(optionCache.keys().next().value!);
           optionCache.set(key, { expires: Date.now() + 5 * 60_000, data: parsed });
@@ -79,6 +76,6 @@ export function LogisticsOptions({ room, kind, direction = 'arrival', busy, act 
         })()} /> : null}
       </View>;
     })}
-    {result && !result.stays.length && kind === 'stays' ? <Text style={s.body}>No overnight stay is needed for a one-day trip.</Text> : null}
+    {result && !result.stays.length ? <Text style={s.body}>No overnight stay is needed for a one-day trip.</Text> : null}
   </View>;
 }

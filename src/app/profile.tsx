@@ -17,7 +17,7 @@ export default function Profile() {
   const { section } = useLocalSearchParams<{ section?: string }>();
   const showPassport = !section || section === 'passport';
   const showSettings = !section || section === 'settings';
-  const showTrips = !section || section === 'trips';
+  const showTrips = section === 'trips';
   const [name, setName] = useState(''); const [avatar, setAvatar] = useState<string | null>(null);
   const [places, setPlaces] = useState(''); const [code, setCode] = useState(''); const [referral, setReferral] = useState('');
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
@@ -50,6 +50,7 @@ export default function Profile() {
   }
   return <Screen><View style={s.stack}>
     <Text style={s.title}>{section === 'settings' ? 'Account settings' : section === 'trips' ? 'My trips & memories' : 'Your travel passport'}</Text>
+    {showPassport ? <AppButton label="My trips & memories" variant="secondary" onPress={() => router.push('/trips')} /> : null}
     {showPassport ? <AppButton label="Saved inspiration" variant="secondary" onPress={() => router.push('/inspiration')} /> : null}
     {showPassport ? <Text style={s.body}>Keep your favourites, memories and next adventures together.</Text> : null}
     {message ? <Text accessibilityRole="alert" style={s.body}>{message}</Text> : null}
