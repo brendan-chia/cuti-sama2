@@ -15,14 +15,14 @@ it('queues inspiration before opening the selected trip', async () => {
   await waitFor(() => expect(screen.getByText('Use these in Bangkok')).toBeTruthy());
   await fireEvent.press(screen.getByText('Use these in Bangkok'));
   await waitFor(() => expect(mockQueue).toHaveBeenCalledWith('trip', 'idea'));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/trip/[tripId]/quest', params: { tripId: 'trip' } });
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/trip/[tripId]', params: { tripId: 'trip', section: 'places' } });
 });
-it('passes inspiration to a new trip and excludes trips beyond Explore', async () => {
+it('passes inspiration to a new trip and keeps existing plans available', async () => {
   mockQuest.mockResolvedValue({ stage: 'budget' });
   const screen = await render(<UseInspiration inspirationId="idea" />);
   await fireEvent.press(screen.getByText('Use these in a trip'));
   await waitFor(() => expect(screen.queryByText('Preparing your trips…')).toBeNull());
-  expect(screen.queryByText('Use these in Bangkok')).toBeNull();
+  expect(screen.getByText('Use these in Bangkok')).toBeTruthy();
   await fireEvent.press(screen.getByText('Start a solo trip with these ideas'));
   expect(mockPush).toHaveBeenCalledWith({ pathname: '/solo', params: { inspirationId: 'idea' } });
   expect(mockQueue).not.toHaveBeenCalled();

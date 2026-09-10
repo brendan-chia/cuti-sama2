@@ -4,7 +4,6 @@ import type { TripSummary } from '../../../packages/contracts/src/trip';
 import { AppButton } from '@/components/app-button';
 import { FormField } from '@/components/form-field';
 import { Screen } from '@/components/screen';
-import { FlightPath } from '@/components/flight-path';
 import { createTrip } from '@/features/trips/service';
 import { buildCreateTripRequest, initialCreateTripForm, readableValidationError } from '@/features/trips/validation';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -12,15 +11,6 @@ import { recoveryKind, recoveryMessage } from '@/features/recovery/errors';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 type Props = { onCreated: (trip: TripSummary) => void; createTripAction?: typeof createTrip; configured?: boolean };
-const chapters = [
-  ['01', 'Find your window', 'Propose travel dates and compare everyone’s suggestions.'],
-  ['02', 'Play your wishlist', 'Everyone picks up to three favourite countries.'],
-  ['03', 'Swipe to decide', 'Vote on the group’s countries and reveal a winner.'],
-  ['04', 'Explore the map', 'Highlight the attractions you want to visit.'],
-  ['05', 'Find your comfort zone', 'Agree on a budget that fits everyone.'],
-  ['06', 'Get there. Settle in.', 'Choose transport and a stay, or plan a draft for now.'],
-];
-
 export function CreateTripScreen({ onCreated, createTripAction = createTrip, configured = isSupabaseConfigured }: Props) {
   const [tripName, setTripName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,14 +25,14 @@ export function CreateTripScreen({ onCreated, createTripAction = createTrip, con
     catch (cause) { const kind = recoveryKind(cause); setError(kind === 'unknown' ? readableValidationError(cause) : recoveryMessage(kind)); }
     finally { inFlight.current = false; setSubmitting(false); }
   }
-  return <Screen testID="create-trip-screen" footer={<AppButton label="Create our Trip Room" testID="create-trip-submit" disabled={!configured} loading={submitting} onPress={() => void submit()} />}>
+  return <Screen testID="create-trip-screen" footer={<AppButton label="Create trip" testID="create-trip-submit" disabled={!configured} loading={submitting} onPress={() => void submit()} />}>
     <View style={styles.stack}>
-      <FlightPath />
+      <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 28, lineHeight: 34, fontWeight: '700' }}>Start a group trip</Text>
+      <Text style={styles.body}>Give your plan a name. Dates, places and people can come next.</Text>
       {!configured ? <View accessibilityRole="alert" style={styles.notice}><Text style={styles.heading}>Trip rooms are unavailable</Text><Text style={styles.body}>The planning service isn’t connected yet. Please try again once it’s available.</Text></View> : null}
       <FormField label="Trip name" autoCapitalize="words" maxLength={80} placeholder="e.g. The annual escape" value={tripName} onChangeText={(value) => { setTripName(value); setError(null); }} />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      <View style={styles.chapters}>{chapters.map(([number, title, detail]) => <View key={number} style={styles.chapter}><View style={styles.number}><Text style={styles.numberText}>{number}</Text></View><View style={styles.chapterCopy}><Text style={styles.heading}>{title}</Text><Text style={styles.small}>{detail}</Text></View></View>)}</View>
-      <Text style={styles.small}>Invite up to 8 travellers, including you. Gather everyone in the lobby before starting your quest.</Text>
+      <Text style={styles.body}>Invite up to 8 travellers, including you. Everyone can contribute to the shared plan.</Text>
     </View>
   </Screen>;
 }

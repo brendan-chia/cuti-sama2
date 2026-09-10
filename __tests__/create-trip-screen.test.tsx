@@ -11,14 +11,13 @@ const createdTrip: TripSummary = {
 };
 
 describe('CreateTripScreen', () => {
-  it('starts with a trip name and explains the five planning chapters', async () => {
+  it('starts with the trip name without a chapter tutorial', async () => {
     const screen = await render(<CreateTripScreen configured createTripAction={jest.fn()} onCreated={jest.fn()} />);
     expect(screen.getByLabelText('Trip name')).toBeTruthy();
     expect(screen.queryByLabelText('Destination')).toBeNull();
     expect(screen.queryByLabelText('Destination shortlist')).toBeNull();
-    for (const chapter of ['Find your window', 'Play your wishlist', 'Swipe to decide', 'Explore the map', 'Find your comfort zone']) {
-      expect(screen.getByText(chapter)).toBeTruthy();
-    }
+    expect(screen.queryByTestId('flight-path')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Create trip' })).toBeTruthy();
   });
 
   it('submits a valid normalized request and returns the created room', async () => {

@@ -27,6 +27,7 @@ export function AppButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={onPress}
@@ -38,16 +39,13 @@ export function AppButton({
         inactive ? styles.disabled : null,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.paper : colors.ink} />
-      ) : (
         <View style={styles.labelRow}>
+          {loading ? <ActivityIndicator color={variant === 'primary' ? colors.paper : colors.ink} /> : null}
           {leading}
           <Text style={[styles.label, variant === 'primary' ? styles.primaryLabel : null]}>
             {label}
           </Text>
         </View>
-      )}
     </Pressable>
   );
 }
@@ -59,6 +57,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 54,
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
   primary: {
     backgroundColor: colors.sky,
@@ -85,6 +84,8 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '700',
     letterSpacing: 0.1,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   primaryLabel: {
     color: colors.paper,

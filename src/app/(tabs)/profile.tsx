@@ -3,7 +3,7 @@ import { Image, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
-import { TripCarousel } from '@/features/profile/trip-carousel';
+import { TripList } from '@/features/profile/trip-list';
 import { Screen } from '@/components/screen';
 import { AppButton } from '@/components/app-button';
 import { FormField } from '@/components/form-field';
@@ -15,9 +15,10 @@ import { saveIdentityMarker } from '@/lib/secure-storage';
 export default function Profile() {
   const router = useRouter();
   const { section } = useLocalSearchParams<{ section?: string }>();
-  const showPassport = !section || section === 'passport';
-  const showSettings = !section || section === 'settings';
+  const showPassport = section === 'passport';
+  const showSettings = section === 'settings';
   const showTrips = section === 'trips';
+  const [switching, setSwitching] = useState(false);
   const [name, setName] = useState(''); const [avatar, setAvatar] = useState<string | null>(null);
   const [places, setPlaces] = useState(''); const [code, setCode] = useState(''); const [referral, setReferral] = useState('');
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
@@ -49,7 +50,9 @@ export default function Profile() {
     setAvatar(`data:image/jpeg;base64,${encoded}`);
   }
   return <Screen><View style={s.stack}>
-    <Text style={s.title}>{section === 'settings' ? 'Account settings' : section === 'trips' ? 'My trips & memories' : 'Your travel passport'}</Text>
+    <Text style={s.title}>{section === 'settings' ? 'Account settings' : section === 'trips' ? 'My trips & memories' : 'Account'}</Text>
+    {section ? <AppButton label="Back to account" variant="secondary" onPress={() => router.replace('/profile')} /> : null}
+    {!section ? <><Text style={s.body}>{loaded ? `Hello, ${name || 'traveller'}.` : 'Loading your account…'}</Text><AppButton label="Keep trips across devices" onPress={() => router.push({ pathname: '/profile', params: { section: 'settings' } })} /><AppButton label="Edit profile" variant="secondary" onPress={() => router.push({ pathname: '/profile', params: { section: 'passport' } })} /></> : null}
     {showPassport ? <AppButton label="My trips & memories" variant="secondary" onPress={() => router.push('/trips')} /> : null}
     {showPassport ? <AppButton label="Saved inspiration" variant="secondary" onPress={() => router.push('/inspiration')} /> : null}
     {showPassport ? <Text style={s.body}>Keep your favourites, memories and next adventures together.</Text> : null}
@@ -74,11 +77,12 @@ export default function Profile() {
       <FormField label="Password" value={password} onChangeText={setPassword} secureTextEntry />
       <AppButton label="Link my guest account" disabled={busy || !loaded || !email || password.length < 8} onPress={() => void run(async () => { const { error } = await requireSupabase().auth.updateUser({ email: email.trim(), password }); if (error) throw error; setPassword(''); }, 'Check your email to confirm your account.')} />
       <Text style={s.small}>Signing in to an existing account switches profiles; guest trips are not merged.</Text>
-      <AppButton label="Sign in to existing account" variant="secondary" disabled={busy || !email || !password} onPress={() => void run(async () => { const { data, error } = await requireSupabase().auth.signInWithPassword({ email: email.trim(), password }); if (error) throw error; await saveIdentityMarker(data.user.id); setPassword(''); await refresh(); }, 'Signed in.')} />
+      <AppButton label="Sign in to existing account" variant="secondary" disabled={busy || !email || !password} onPress={() => setSwitching(true)} />
+      {switching ? <><Text style={s.body}>Switch accounts? Your current guest trips will not move to the other account. Link this guest account first if you need to keep access.</Text><AppButton label="Switch to existing account" variant="secondary" disabled={busy || !email || !password} onPress={() => void run(async () => { const { data, error } = await requireSupabase().auth.signInWithPassword({ email: email.trim(), password }); if (error) throw error; await saveIdentityMarker(data.user.id); setPassword(''); await refresh(); }, 'Signed in.')} /><AppButton label="Keep current account" variant="secondary" onPress={() => setSwitching(false)} /></> : null}
     </View> : null}
     {loaded && showTrips ? <>
     {!section ? <Text style={s.heading}>My trips & memories</Text> : null}
-    <TripCarousel key={trips.map(trip => trip.id).join(',')} trips={trips} completed={completed} busy={busy}
+    <TripList key={trips.map(trip => trip.id).join(',')} trips={trips} completed={completed} busy={busy}
       onOpen={tripId => router.push({ pathname: '/trip/[tripId]', params: { tripId } })}
       onComplete={tripId => void run(async () => { await travellerRpc('record_completed_trip', { p_trip_id: tripId }); await refresh(); }, 'Trip added to your memories.')}
       onManage={tripId => router.push({ pathname: '/discover', params: { tripId } })} />

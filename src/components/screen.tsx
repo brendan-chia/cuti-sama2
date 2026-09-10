@@ -1,4 +1,5 @@
 import type { PropsWithChildren, ReactNode, Ref } from 'react';
+import { usePathname } from 'expo-router';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +22,8 @@ type ScreenProps = PropsWithChildren<{
 }>;
 
 export function Screen({ children, contentStyle, footer, scroll = true, testID, scrollRef }: ScreenProps) {
+  const pathname = usePathname?.() ?? '';
+  const ownsTop = ['/', '/trips', '/inspiration', '/profile'].includes(pathname) || pathname.endsWith('/quest') || pathname.includes('/itinerary');
   const content = scroll ? (
     <ScrollView
       ref={scrollRef}
@@ -38,8 +41,7 @@ export function Screen({ children, contentStyle, footer, scroll = true, testID, 
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cloud} />
+    <SafeAreaView edges={ownsTop ? ['top', 'left', 'right'] : ['left', 'right']} style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}

@@ -37,9 +37,10 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
   const country = countryByCode(room.selectedCountryCode);
   const solo = room.travelParty === 'solo';
   const ownVotes = room.attractionVotes?.find((vote) => vote.memberId === room.currentMemberId)?.attractionIds ?? [];
-  const [selected, setSelected] = useState(solo ? room.attractionIds : ownVotes);
   const savedKey = JSON.stringify(ownVotes);
-  useEffect(() => { if (!solo) setSelected(JSON.parse(savedKey)); }, [savedKey, solo]);
+  const [selection, setSelection] = useState({ savedKey, ids: solo ? room.attractionIds : ownVotes });
+  const selected = solo || selection.savedKey === savedKey ? selection.ids : ownVotes;
+  const setSelected = (update: (ids: string[]) => string[]) => setSelection({ savedKey, ids: update(selected) });
   const dirty = [...selected].sort().join(',') !== [...ownVotes].sort().join(',');
   const ballots = room.attractionVotes ?? [];
   const allVoted = room.members.every((member) => ballots.some((ballot) => ballot.memberId === member.memberId && ballot.attractionIds.length > 0));
