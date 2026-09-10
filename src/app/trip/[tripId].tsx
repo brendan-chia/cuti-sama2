@@ -1,11 +1,28 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert } from 'react-native';
 import { z } from 'zod';
+
 import { InviteTokenSchema } from '../../../packages/contracts/src/invite';
-import { WorkspaceScreen } from '@/features/workspace/workspace-screen';
-export default function TripWorkspaceRoute() {
-  const { tripId, destination, section } = useLocalSearchParams<{ tripId: string; destination?: string; section?: string }>();
-  const token = InviteTokenSchema.safeParse(tripId);
-  if (token.success) return <Redirect href={{ pathname: '/invite/[token]', params: { token: token.data } }} />;
+import { LobbyScreen } from '@/features/lobby/lobby-screen';
+
+export default function TripLobbyRoute() {
+  const { tripId } = useLocalSearchParams<{ tripId: string }>();
+  const router = useRouter();
+  const inviteToken = InviteTokenSchema.safeParse(tripId);
+  if (inviteToken.success) return <Redirect href={{ pathname: '/invite/[token]', params: { token: inviteToken.data } }} />;
   if (!z.uuid().safeParse(tripId).success) return <Redirect href="/join" />;
-  return <WorkspaceScreen key={tripId} tripId={tripId} destination={destination} initialSection={section} />;
+  return (
+    <LobbyScreen
+      tripId={tripId ?? ''}
+      onInvite={() => router.push({ pathname: '/trip/[tripId]/share', params: { tripId: tripId ?? '' } })}
+      onConstraints={() => router.push({ pathname: '/trip/[tripId]/constraints', params: { tripId: tripId ?? '' } })}
+      onPreferences={() => router.push({ pathname: '/trip/[tripId]/room', params: { tripId: tripId ?? '' } })}
+      onQuest={() => router.push({ pathname: '/trip/[tripId]/quest', params: { tripId: tripId ?? '' } })}
+      onIdentityLost={() => router.replace('/recover')}
+      onAccessRevoked={() => {
+        Alert.alert('Trip Room access ended', 'The organiser removed this membership or the room is no longer available.');
+        router.replace('/');
+      }}
+    />
+  );
 }

@@ -5,7 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { colors } from '@/theme/tokens';
 import { BottomNavigation } from '@/components/bottom-navigation';
 
-export const unstable_settings = { initialRouteName: '(tabs)' };
+export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
   return (
@@ -21,18 +21,19 @@ export default function RootLayout() {
           headerTitleStyle: { fontWeight: '700' },
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="trips" options={{ title: 'My trips' }} />
         <Stack.Screen name="new-trip" options={{ title: 'Create trip' }} />
         <Stack.Screen name="social" options={{ title: 'Social' }} />
+        <Stack.Screen name="inspiration" options={{ title: 'Saved inspiration' }} />
+        <Stack.Screen name="profile" options={{ title: 'My travel passport' }} />
         <Stack.Screen name="solo" options={{ title: 'Solo adventure' }} />
         <Stack.Screen name="discover" options={{ title: 'Discover trips' }} />
-        <Stack.Screen name="create" options={{ title: 'Create a trip' }} />
-        <Stack.Screen name="join" options={{ title: 'Join a trip' }} />
+        <Stack.Screen name="create" options={{ title: 'Create a Trip Room' }} />
+        <Stack.Screen name="join" options={{ title: 'Join a Trip Room' }} />
         <Stack.Screen name="recover" options={{ title: 'Recover room access' }} />
         <Stack.Screen name="invite/[token]" options={{ title: 'Trip invitation' }} />
-        <Stack.Screen name="destination" options={{ title: 'Destination idea' }} />
-        <Stack.Screen name="trip/[tripId]/legacy" options={{ title: 'People and previous planner' }} />
-        <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip overview' }} />
+        <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Lobby' }} />
         <Stack.Screen name="trip/[tripId]/quest" options={{ headerShown: false }} />
         <Stack.Screen name="trip/[tripId]/constraints" options={{ title: 'Trip constraints' }} />
         <Stack.Screen name="trip/[tripId]/room" options={{ title: 'Preference table' }} />

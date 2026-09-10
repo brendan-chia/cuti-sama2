@@ -30,12 +30,12 @@ export async function saveProfile(displayName: string, avatar: string | null, fa
   if (error) throw new Error(error.message);
 }
 
-export type MyTrip = { id: string; name: string; starts_on?: string | null; ends_on: string | null; travel_party: string; planning_started_at: string | null };
+export type MyTrip = { id: string; name: string; ends_on: string | null; travel_party: string; planning_started_at: string | null };
 export async function loadMyTrips() {
   await ensureAnonymousSession();
   const client = requireSupabase();
   const [trips, memories] = await Promise.all([
-    client.from('trips').select('id,name,starts_on,ends_on,travel_party,planning_started_at').order('created_at', { ascending: false }),
+    client.from('trips').select('id,name,ends_on,travel_party,planning_started_at').order('created_at', { ascending: false }),
     client.from('travel_memories').select('trip_id'),
   ]);
   if (trips.error || memories.error) throw new Error(trips.error?.message ?? memories.error?.message);

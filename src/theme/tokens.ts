@@ -1,14 +1,14 @@
 // Palette from assets/images/yellow otter.png: leaf, cocoa, cream and orange.
 export const colors = {
-  background: '#FAFAF6', surface: '#FFFFFF', surfaceTint: '#EDF4DB',
-  ink: '#263128', paper: '#FFFFFF',
+  background: '#FFFBF3', surface: '#FFFFFF', surfaceTint: '#EDF4DB',
+  ink: '#5B402E', paper: '#FFFFFF',
   coral: '#A64B08', coralPressed: '#813805', sand: '#FCE6BE',
   sky: '#4F7027', gold: '#85571F', sun: '#F6C777',
-  textMuted: '#566052', border: '#D9DFC5', danger: '#AE3C32',
-  disabled: '#66705F', overlay: 'rgba(250, 250, 246, 0.96)',
+  textMuted: '#78614F', border: '#D9DFC5', danger: '#AE3C32',
+  disabled: '#969482', overlay: 'rgba(255, 251, 243, 0.96)',
   leaf: '#91B947', orange: '#F58A20', cocoa: '#5B402E',
   // Compatibility aliases let all existing screens share the otter palette.
-  midnight: '#FAFAF6', midnightRaised: '#FFFFFF', midnightSoft: '#EDF4DB', white: '#263128',
+  midnight: '#FFFBF3', midnightRaised: '#FFFFFF', midnightSoft: '#EDF4DB', white: '#5B402E',
 } as const;
 
 export const spacing = {
@@ -23,16 +23,16 @@ export const spacing = {
 
 export const radius = {
   sm: 10,
-  md: 12,
-  lg: 16,
+  md: 16,
+  lg: 24,
   pill: 999,
 } as const;
 
 export const typography = {
   display: 40,
   title: 28,
-  heading: 20,
-  body: 16,
-  small: 14,
-  label: 12,
+  heading: 19,
+  body: 15,
+  small: 12,
+  label: 10,
 } as const;
