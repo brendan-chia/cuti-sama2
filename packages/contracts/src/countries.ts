@@ -95,14 +95,14 @@ export const countries: Country[] = [
     ['taipei-101', 'Taipei 101', 'City', 25.0339, 121.5645, 'Look across Taipei from its signature skyscraper.', 'https://www.taipei-101.com.tw/en/'],
     ['sun-moon-lake', 'Sun Moon Lake', 'Nature', 23.865, 120.915, 'Plan a lakeside break among the central mountains.', 'https://www.sunmoonlake.gov.tw/en'],
     ['national-palace-museum', 'National Palace Museum', 'Culture', 25.1024, 121.5485, 'Explore art and historical objects in Taipei.', 'https://www.npm.gov.tw/?l=2'],
-  ]),
+  ], 'photo-1572715381359-002b1eabd56b'),
   country('PH', 'Philippines', '🇵🇭', 'Reef blues, rice terraces, and island adventures.', 12.7, 122, 5, [
     ["enchanted-kingdom", "Enchanted Kingdom", "Theme park", 14.2826, 121.0977, "Plan a day of rides and entertainment in Santa Rosa, south of Manila.", "https://www.enchantedkingdom.ph/"],
     ["manila-ocean-park", "Manila Ocean Park", "Entertainment", 14.5792, 120.9721, "Explore marine exhibits and indoor attractions beside Manila Bay.", "https://manilaoceanpark.com/"],
     ['tubbataha', 'Tubbataha Reefs', 'Nature', 8.9533, 119.8675, 'Dream up a marine adventure in the Sulu Sea.', heritage(653)],
     ['batad-rice-terraces', 'Batad Rice Terraces', 'Nature', 16.922, 121.136, 'See mountainsides shaped into remarkable rice terraces.', heritage(722)],
     ['underground-river', 'Puerto Princesa Underground River', 'Nature', 10.2, 118.9167, 'Discover Palawan’s limestone cave and river landscape.', heritage(652)],
-  ]),
+  ], 'photo-1658694532749-ba717cad8efd'),
   country('KH', 'Cambodia', '🇰🇭', 'Temple discoveries and stories carved in stone.', 12.8, 104.9, 6, [
     ["phare-circus", "Phare, The Cambodian Circus", "Entertainment", 13.3557, 103.8447, "Enjoy contemporary circus, acrobatics, and storytelling in Siem Reap.", "https://pharecircus.org/"],
     ["aeon-mall-phnom-penh", "AEON Mall Phnom Penh", "Shopping", 11.5479, 104.9339, "Take a city break for shopping, restaurants, and indoor entertainment.", "https://www.aeonmallcambodia.com/"],

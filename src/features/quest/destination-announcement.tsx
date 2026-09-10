@@ -12,7 +12,6 @@ export function DestinationAnnouncement({ countryCode, onDismiss }: { countryCod
       <ScrollView contentContainerStyle={styles.container}>
         <View accessibilityViewIsModal style={styles.panel} testID="destination-announcement">
           <Text style={styles.eyebrow}>DESTINATION DECIDED</Text>
-          <Text style={styles.flag} accessibilityLabel={country.name}>{country.flag}</Text>
           <Text accessibilityRole="header" style={styles.title}>You’re going to {country.name}.</Text>
           <Text style={styles.body}>Your next trip has a destination. Explore the map and choose the places you’d love to visit together.</Text>
           <AppButton label={`Explore ${country.name}`} onPress={onDismiss} testID="dismiss-destination-announcement" />
@@ -26,7 +25,6 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   panel: { width: '100%', maxWidth: 440, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg },
   eyebrow: { color: colors.sky, fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
-  flag: { fontSize: 52, lineHeight: 68 },
   title: { color: colors.ink, fontSize: 30, lineHeight: 38, fontWeight: '800', letterSpacing: -0.5 },
   body: { color: colors.textMuted, fontSize: 16, lineHeight: 25 },
 });

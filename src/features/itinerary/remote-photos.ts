@@ -1,6 +1,7 @@
 const KUALA_LUMPUR_HERO = 'https://images.pexels.com/photos/32644036/pexels-photo-32644036/free-photo-of-kuala-lumpur-skyline-featuring-petronas-towers.jpeg?auto=compress&fit=crop&w=1400&q=82';
 const PETRONAS = 'https://upload.wikimedia.org/wikipedia/commons/0/04/The_Petronas_Twin_Towers_in_Kuala_Lumpur_%28Malaysia%29.JPG';
 const JALAN_ALOR = 'https://upload.wikimedia.org/wikipedia/commons/d/db/Jalan_Alor_-_Kuala_Lumpur.jpg';
+const INDONESIA_HERO = 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&h=600&q=85';
 
 function stableSeed(value: string) {
   let seed = 17;
@@ -14,6 +15,7 @@ function discoveryUrl(query: string, width: number, height: number) {
 }
 
 export function destinationPhotoUrl(destination: string) {
+  if (/\b(indonesia|bali)\b/i.test(destination)) return INDONESIA_HERO;
   if (destination.toLowerCase().includes('kuala lumpur')) return KUALA_LUMPUR_HERO;
   return discoveryUrl(`${destination} skyline travel`, 1200, 720);
 }

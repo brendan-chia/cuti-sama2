@@ -39,6 +39,8 @@ const CountryPicksSchema = z.array(QuestCountryCodeSchema).min(1).max(3)
   .refine((codes) => new Set(codes).size === codes.length, 'Choose each country only once.');
 
 export const QuestActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('attraction_votes'), attractionIds: z.array(z.string().min(1).max(120)).min(1).max(20).refine((ids) => new Set(ids).size === ids.length, 'Choose each attraction once.') }).strict(),
+  z.object({ type: z.literal('compile_attractions') }).strict(),
   AvailabilitySchema.extend({ type: z.literal('availability'), preferences: DatePreferencesSchema.optional() }).strict(),
   z.object({ type: z.literal('period'), period: TripPeriodSchema }).strict(),
   z.object({ type: z.literal('picks'), countryCodes: CountryPicksSchema }).strict(),
@@ -86,6 +88,7 @@ export const QuestRoomSchema = z.object({
   tiedCountryCodes: z.array(QuestCountryCodeSchema),
   selectedCountryCode: QuestCountryCodeSchema.nullable(),
   attractionIds: z.array(z.string()),
+  attractionVotes: z.array(z.object({ memberId: z.uuid(), attractionIds: z.array(z.string()) }).strict()).optional(),
   importedPlaces: z.array(ConfirmedPlaceSchema).optional(),
   logistics: LogisticsSchema.optional(),
   ownBudget: z.number().int().positive().nullable(),

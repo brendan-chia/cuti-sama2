@@ -9,6 +9,8 @@ import { colors, radius, spacing } from '@/theme/tokens';
 import { questStyles as s } from './quest-styles';
 
 type Props = { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean> };
+const availableCountries = countries.slice(0, countries.findIndex((country) => country.code === 'KH') + 1);
+const availableCodes = new Set(availableCountries.map((country) => country.code));
 
 function CountryPhoto({ country }: { country: (typeof countries)[number] }) {
   const [failed, setFailed] = useState(false);
@@ -25,7 +27,7 @@ export function CountryPicks({ room, busy, act }: Props) {
   const [query, setQuery] = useState('');
   const submitted = room.members.find((member) => member.memberId === room.currentMemberId)?.picksSubmitted;
   const [editing, setEditing] = useState(false);
-  const visible = searchCountries(query);
+  const visible = searchCountries(query).filter((country) => availableCodes.has(country.code));
   function toggle(code: QuestCountryCode) {
     setSelected((current) => current.includes(code) ? current.filter((item) => item !== code) : solo ? [code] : current.length < 3 ? [...current, code] : current);
   }
@@ -44,7 +46,7 @@ export function CountryPicks({ room, busy, act }: Props) {
         </Pressable>;
       })}
     </View>
-    <FormField label="Find a country" onChangeText={setQuery} value={query} placeholder="Japan, Thailand, Italy…" />
+    <FormField label="Find a country" onChangeText={setQuery} value={query} placeholder="Japan, Thailand, Philippines…" />
     <Text accessibilityLiveRegion="polite" style={s.small}>{solo ? 'Choose your destination. No voting needed.' : selected.length === 3 ? 'All three slots filled. Remove a pick to swap it.' : `${3 - selected.length} slots left · choose at least one country`}</Text>
     <View style={styles.grid}>{visible.map((country) => {
       const chosen = selected.includes(country.code); const disabled = busy || (!solo && !chosen && selected.length >= 3);
@@ -54,7 +56,7 @@ export function CountryPicks({ room, busy, act }: Props) {
       </Pressable>;
     })}</View>
     {!visible.length ? <Text style={s.body}>No country found in this collection. Try another name.</Text> : null}
-    {!solo ? <Text style={s.small}>A collection of {countries.length} countries to explore together. Each country appears only once in the voting deck, even if several people pick it.</Text> : null}
+    {!solo ? <Text style={s.small}>A collection of {availableCountries.length} countries to explore together. Each country appears only once in the voting deck, even if several people pick it.</Text> : null}
     <AppButton label={solo ? 'Choose destination & explore' : `Submit ${selected.length || 'your'} ${selected.length === 1 ? 'country' : 'countries'}`} testID="submit-country-picks" disabled={!selected.length} loading={busy} onPress={() => void act({ type: 'picks', countryCodes: selected }).then((saved) => { if (saved) setEditing(false); })} />
   </View>;
 }
@@ -67,7 +69,7 @@ const styles = StyleSheet.create({
   grid: { gap: spacing.sm, flexDirection: 'row', flexWrap: 'wrap' },
   country: { width: '48%', flexGrow: 1, maxWidth: '50%', overflow: 'hidden', borderWidth: 2, borderColor: colors.surface, borderRadius: radius.md, backgroundColor: colors.surface },
   countryPhoto: { aspectRatio: 1.35 },
-  photo: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
+  photo: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, overflow: 'hidden', backgroundColor: colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
   photoFallback: { fontSize: 36, color: colors.textMuted },
   caption: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 48, justifyContent: 'center' },
   selection: { position: 'absolute', top: spacing.sm, right: spacing.sm, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },

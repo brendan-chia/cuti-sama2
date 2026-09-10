@@ -6,14 +6,14 @@ import QRCode from 'react-native-qrcode-svg';
 import type { CachedInvitation, InvitationStatus } from '../../../packages/contracts/src/invite';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
-import { closeInvitation, getInvitationStatus, issueInvitation, rotateInvitation } from '@/features/invites/service';
+import { getInvitationStatus, issueInvitation, rotateInvitation } from '@/features/invites/service';
 import { invitationUrlForOrigin } from '@/features/invites/validation';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type State = { status: InvitationStatus; invitation: CachedInvitation | null };
-type Props = { tripId: string; loadAction?: typeof getInvitationStatus; issueAction?: typeof issueInvitation; rotateAction?: typeof rotateInvitation; closeAction?: typeof closeInvitation };
+type Props = { tripId: string; loadAction?: typeof getInvitationStatus; issueAction?: typeof issueInvitation; rotateAction?: typeof rotateInvitation };
 
-export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus, issueAction = issueInvitation, rotateAction = rotateInvitation, closeAction = closeInvitation }: Props) {
+export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus, issueAction = issueInvitation, rotateAction = rotateInvitation }: Props) {
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,18 +38,6 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
     ]);
   }
 
-  function confirmClose() {
-    Alert.alert('Close invitation link?', 'New guests cannot join with this link. Existing members stay in the room.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Close link', style: 'destructive', onPress: async () => {
-        setBusy(true); setError(null);
-        try { const status = await closeAction(tripId); setState({ status, invitation: null }); }
-        catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not close invitation.'); }
-        finally { setBusy(false); }
-      } },
-    ]);
-  }
-
   const invitation = state?.invitation;
   const currentOrigin = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : null;
   const shareUrl = invitation ? invitationUrlForOrigin(invitation, currentOrigin) : null;
@@ -69,8 +57,6 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
         <Text style={styles.expiry}>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</Text>
         <AppButton label="Share invitation" onPress={() => void Share.share({ message: `Join our CutiSama2 Trip Room: ${shareUrl}`, url: shareUrl })} />
         <AppButton label="Copy link" variant="secondary" onPress={() => void Clipboard.setStringAsync(shareUrl)} />
-        <AppButton label="Replace link" variant="secondary" loading={busy} onPress={confirmRotate} />
-        <AppButton label="Close invitations" variant="secondary" loading={busy} onPress={confirmClose} />
       </View> : null}
     </Screen>
   );

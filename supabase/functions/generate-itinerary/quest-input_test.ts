@@ -33,6 +33,11 @@ Deno.test('quest validation requires every date and every selected place at its 
   draft.days[1].activities[0].location.latitude = 0;
   assert(questItineraryConflicts(draft, input).length === 1);
 });
+Deno.test('accepts attraction ballots without sending them to the itinerary model', () => {
+  const input = questItineraryInput({ ...room, attractionVotes: [{ memberId: room.currentMemberId, attractionIds: room.attractionIds }] }, '2026-09-05T10:00:00Z');
+  assert(input.selectedPlaces.length === room.attractionIds.length);
+  assert(!JSON.stringify(input).includes('attractionVotes'));
+});
 
 Deno.test('logistics normalizes selected travel, deducts costs and enforces timezone boundaries', () => {
   const journey = { memberId: room.currentMemberId, direction: 'arrival', mode: 'flight', departureLocation: 'KUL', arrivalLocation: 'NRT', departureAt: '2027-12-04T07:00:00+08:00', arrivalAt: '2027-12-04T14:30:00+09:00', cost: 850, bookingLink: 'https://example.com/private-booking', status: 'selected' };

@@ -14,6 +14,7 @@ import { AttractionMap } from './attraction-map';
 import { LogisticsStage } from './logistics-stage';
 import { BudgetStage, money } from './budget-stage';
 import { CountryPicks } from './country-picks';
+import { CrewChoices } from './crew-choices';
 import { DestinationAnnouncement } from './destination-announcement';
 import { CountryVote } from './country-vote';
 import { questStyles as s } from './quest-styles';
@@ -25,7 +26,7 @@ export const questSteps = [
   { stage: 'timing', label: 'Dates', title: 'Propose your trip dates.', description: 'Share your preferred dates and days you cannot travel. Find a shared period with Malaysian national holidays in mind.' },
   { stage: 'picks', label: 'Wishlist', title: 'Where’s your heart set?', description: 'Play up to three favourite countries. Every traveller gets the same number of slots.' },
   { stage: 'voting', label: 'Vote', title: 'Swipe for your next stop.', description: 'One shared deck. One vote per country, per person. See where your group lands.' },
-  { stage: 'explore', label: 'Explore', title: 'Pin the good stuff.', description: 'Your destination is decided. Explore the map together and let the organiser save your must-see stops.' },
+  { stage: 'explore', label: 'Explore', title: 'Pin the good stuff.', description: 'Choose the places you’d love to visit. Everyone’s votes become your shared stops.' },
   { stage: 'budget', label: 'Budget', title: 'Great memories. Happy wallets.', description: 'Set your whole-trip budget. Find a spending ceiling everyone feels comfortable with.' },
   { stage: 'logistics', label: 'Logistics', title: 'Get there. Settle in.', description: 'How everyone gets there and where everyone stays. Confirm the details or continue with a draft.' },
 ] as const;
@@ -34,7 +35,14 @@ type Props = { tripId: string; onBack: () => void; onItinerary?: () => void; loa
 
 function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean>; onConfirmed: (room: QuestRoom) => void }) {
   const country = countryByCode(room.selectedCountryCode);
-  const [selected, setSelected] = useState(room.attractionIds);
+  const solo = room.travelParty === 'solo';
+  const ownVotes = room.attractionVotes?.find((vote) => vote.memberId === room.currentMemberId)?.attractionIds ?? [];
+  const [selected, setSelected] = useState(solo ? room.attractionIds : ownVotes);
+  const savedKey = JSON.stringify(ownVotes);
+  useEffect(() => { if (!solo) setSelected(JSON.parse(savedKey)); }, [savedKey, solo]);
+  const dirty = [...selected].sort().join(',') !== [...ownVotes].sort().join(',');
+  const ballots = room.attractionVotes ?? [];
+  const allVoted = room.members.every((member) => ballots.some((ballot) => ballot.memberId === member.memberId && ballot.attractionIds.length > 0));
   if (!country) return <Text accessibilityRole="alert" style={s.error}>The selected country could not be loaded. Refresh the quest to try again.</Text>;
   const organizer = room.currentRole === 'organizer';
   const votes = room.results.find((result) => result.countryCode === country.code)?.agreeCount;
@@ -43,8 +51,13 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
     <View style={s.success}><Text style={s.kicker}>DESTINATION UNLOCKED</Text><Text style={s.title}>{country.flag} {country.name}</Text><Text style={s.body}>{room.travelParty !== 'solo' && votes !== undefined ? `${votes} of ${room.members.length} travellers voted yes. ` : ''}{country.tagline}</Text></View>
     <PlaceImportPanel tripId={room.tripId} countryName={country.name} disabled={busy} onConfirmed={onConfirmed} />
     <Text style={s.heading}>{room.travelParty === 'solo' ? 'Your discovery map' : 'Your crew’s discovery map'}</Text>
-    <AttractionMap country={mapCountry} selectedIds={organizer ? selected : room.attractionIds} onToggle={(id) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} disabled={busy || !organizer} />
-    {organizer ? <AppButton label={`Save ${selected.length || 'your'} ${selected.length === 1 ? 'stop' : 'stops'} & unlock budget`} testID="save-quest-attractions" disabled={!selected.length} loading={busy} onPress={() => void act({ type: 'attractions', attractionIds: selected })} /> : <Text style={s.body}>Explore the highlighted attractions while the organiser gathers your group’s choices. The saved stops will appear in your shared plan.</Text>}
+    <AttractionMap country={mapCountry} selectedIds={selected} onToggle={(id) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : current.length < 20 ? [...current, id] : current)} disabled={busy} />
+    <AppButton label={solo ? 'Save stops & continue to budget' : ownVotes.length ? 'Update my attraction votes' : 'Submit my attraction votes'} testID="save-quest-attractions" disabled={!selected.length || (!solo && !dirty)} loading={busy} onPress={() => void act({ type: solo ? 'attractions' : 'attraction_votes', attractionIds: selected })} />
+    {!solo ? <View style={s.stack}>
+      <Text accessibilityLiveRegion="polite" style={s.body}>{ballots.length} of {room.members.length} travellers have voted. Select up to 20 places each.</Text>
+      <CrewChoices room={room} places={mapCountry.attractions} />
+      {organizer ? <AppButton label="Compile voted attractions & continue" testID="compile-quest-attractions" disabled={!allVoted || dirty} loading={busy} onPress={() => void act({ type: 'compile_attractions' })} /> : <Text style={s.small}>Once everyone has voted, your organiser compiles all chosen attractions and opens the budget step.</Text>}
+    </View> : null}
   </View>;
 }
 
@@ -141,7 +154,7 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
       {!solo && !completed && !logisticsOpen ? <View><View style={s.between}><Text style={s.kicker}>YOUR TRAVEL CREW</Text><Text accessibilityLiveRegion="polite" style={s.small}>{field ? `${ready} / ${room.members.length} ready` : 'Explore together'}</Text></View>{!voting ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crew}>
         {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName} numberOfLines={1}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}
       </ScrollView> : null}</View> : null}
-      {room.period && !completed && !voting ? <Text style={s.small}>✓ {periodLabel(room.period)}{room.selectedCountryCode ? ` · ${countryByCode(room.selectedCountryCode)?.name}` : ''}</Text> : null}
+      {room.period && room.stage !== 'picks' && !completed && !voting ? <Text style={s.small}>✓ {periodLabel(room.period)}{room.selectedCountryCode ? ` · ${countryByCode(room.selectedCountryCode)?.name}` : ''}</Text> : null}
       {room.stage === 'timing' ? <TimingStage room={room} busy={busy || unavailable} act={act} recommend={recommend} /> : null}
       {room.stage === 'picks' ? <CountryPicks room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'voting' && !solo ? <CountryVote room={room} busy={busy || unavailable} act={act} /> : null}
