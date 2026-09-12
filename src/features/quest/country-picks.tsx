@@ -77,5 +77,5 @@ const styles = StyleSheet.create({
   selectionText: { color: colors.ink, fontSize: 19, fontWeight: '700' },
   slotCaption: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.sky, paddingVertical: spacing.sm, paddingHorizontal: 4 },
   selectedSlotLabel: { color: colors.paper, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  chosen: { backgroundColor: colors.sky, borderColor: colors.sky }, countryName: { color: colors.ink, fontWeight: '700', fontSize: 14 }, check: { color: colors.paper, fontWeight: '900' },
+  chosen: { backgroundColor: colors.surfaceTint, borderColor: colors.sky }, countryName: { color: colors.ink, fontWeight: '700', fontSize: 14 }, check: { color: colors.paper, fontWeight: '900' },
 });

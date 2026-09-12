@@ -10,10 +10,12 @@ select is(public.get_trip_quest((select id from solo_test))->>'travelParty','sol
 reset role;
 -- Confirm real dates instead of bypassing the date stage.
 set local role authenticated;
-select is(public.update_trip_quest((select id from solo_test), jsonb_build_object('type','availability','startsOn',current_date+1,'endsOn',current_date+4,'preferences',jsonb_build_object('flexibility','exact','daysOff','[]'::jsonb,'unavailable','[]'::jsonb)), '66666666-dddd-4ddd-8ddd-dddddddddddd')->>'stage','picks','confirming solo dates advances directly to destination selection');
+select is(public.update_trip_quest((select id from solo_test), jsonb_build_object('type','availability','startsOn',current_date+1,'endsOn',current_date+4,'preferences',jsonb_build_object('flexibility','exact','daysOff','[]'::jsonb,'unavailable','[]'::jsonb)), '66666666-dddd-4ddd-8ddd-dddddddddddd')->>'stage','budget','confirming solo dates advances to private budgets');
 select is(public.get_trip_quest((select id from solo_test))->'period'->>'startsOn',(current_date+1)::text,'confirmed start date is saved');
-select is(public.update_trip_quest((select id from solo_test), jsonb_build_object('type','availability','startsOn',current_date+1,'endsOn',current_date+4,'preferences',jsonb_build_object('flexibility','exact','daysOff','[]'::jsonb,'unavailable','[]'::jsonb)), '66666666-dddd-4ddd-8ddd-dddddddddddd')->>'stage','picks','confirm date retry is idempotent');
+select is(public.update_trip_quest((select id from solo_test), jsonb_build_object('type','availability','startsOn',current_date+1,'endsOn',current_date+4,'preferences',jsonb_build_object('flexibility','exact','daysOff','[]'::jsonb,'unavailable','[]'::jsonb)), '66666666-dddd-4ddd-8ddd-dddddddddddd')->>'stage','budget','confirm date retry is idempotent');
 set local role authenticated;
+select public.update_trip_quest((select id from solo_test),'{"type":"budget","comfortableBudgetMYR":2000,"maxBudgetMYR":3000}',extensions.gen_random_uuid());
+select is(public.update_trip_quest((select id from solo_test),'{"type":"finish"}',extensions.gen_random_uuid())->>'stage','picks','solo budget unlocks destination selection');
 select throws_ok($$select public.update_trip_quest((select id from solo_test),'{"type":"picks","countryCodes":["JP","TH"]}',extensions.gen_random_uuid())$$,'22023','Choose one destination for your solo trip.','solo cannot submit several destinations');
 select is(public.update_trip_quest((select id from solo_test),'{"type":"picks","countryCodes":["JP"]}','66666666-bbbb-4bbb-8bbb-bbbbbbbbbbbb')->>'stage','explore','solo goes directly to explore');
 select is(public.get_trip_quest((select id from solo_test))->>'selectedCountryCode','JP','chosen destination persists');

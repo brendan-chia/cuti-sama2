@@ -27,7 +27,7 @@ export function BottomNavigation() {
         const create = item.href === '/new-trip';
         return <Pressable key={item.href} accessibilityRole="tab" accessibilityLabel={item.accessibilityLabel} accessibilityState={{ selected }} onPress={() => router.navigate(item.href)} style={({ pressed }) => [s.tab, pressed && s.pressed]}>
           <View style={[s.icon, selected && s.selectedIcon, create && s.create]}>
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={create ? colors.paper : selected ? colors.sky : colors.textMuted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><Path d={item.path} /></Svg>
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={create ? colors.onAction : selected ? colors.sky : colors.textMuted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><Path d={item.path} /></Svg>
           </View>
           <Text style={[s.label, selected && s.selectedLabel]}>{item.label}</Text>
         </Pressable>;
@@ -40,9 +40,9 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', width: '100%', maxWidth: 560, alignSelf: 'center', paddingVertical: 6 },
   tab: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 3 },
   icon: { width: 46, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  selectedIcon: { backgroundColor: colors.surfaceTint },
-  create: { backgroundColor: colors.sky },
-  label: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+  selectedIcon: { backgroundColor: colors.leafSurface },
+  create: { backgroundColor: colors.action },
+  label: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
   selectedLabel: { color: colors.sky, fontWeight: '800' },
   pressed: { opacity: 0.6 },
 });

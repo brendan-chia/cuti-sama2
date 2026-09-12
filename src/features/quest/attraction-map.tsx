@@ -92,7 +92,7 @@ function CountryAttractionMap({ country, selectedIds, onToggle, disabled = false
           })}
         </View>
       </View>
-      {pending && <View pointerEvents="none" style={styles.loading}><ActivityIndicator size="small" color={colors.background} /><Text style={styles.loadingText}>Loading map…</Text></View>}
+      {pending && <View pointerEvents="none" style={styles.loading}><ActivityIndicator size="small" color={colors.sky} /><Text style={styles.loadingText}>Loading map…</Text></View>}
       {allFailed && <View pointerEvents="none" style={styles.mapUnavailable}><Text style={styles.unavailableTitle}>Map unavailable</Text><Text style={styles.unavailableBody}>You can still collect places below.</Text></View>}
       <View style={styles.mapControls}>
         <Pressable accessibilityRole="button" accessibilityLabel="Zoom in on country map" accessibilityState={{ disabled: viewport.zoom >= MAX_MAP_ZOOM }} disabled={viewport.zoom >= MAX_MAP_ZOOM} onPress={() => zoomBy(1)} style={styles.mapControl}><Text style={styles.controlText}>+</Text></Pressable>
@@ -130,11 +130,11 @@ const styles = StyleSheet.create({
   recenterText: { color: colors.ink, fontSize: 26 },
   attribution: { position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.paper, minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
   attributionText: { fontSize: 10, color: colors.ink, textDecorationLine: 'underline' },
-  pin: { position: 'absolute', width: 40, height: 40, backgroundColor: colors.coral, borderColor: colors.ink, borderWidth: 2, borderRadius: 20, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  pin: { position: 'absolute', width: 40, height: 40, backgroundColor: colors.leafSurface, borderColor: colors.sky, borderWidth: 2, borderRadius: 20, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   pinSelected: { backgroundColor: colors.sky, zIndex: 2 },
-  pinText: { fontSize: 16, fontWeight: '900', color: colors.background },
+  pinText: { fontSize: 16, fontWeight: '900', color: colors.ink },
   pinTextSelected: { color: colors.paper },
-  pinTail: { position: 'absolute', bottom: -5, width: 9, height: 9, backgroundColor: colors.coral, transform: [{ rotate: '45deg' }] },
+  pinTail: { position: 'absolute', bottom: -5, width: 9, height: 9, backgroundColor: colors.leafSurface, transform: [{ rotate: '45deg' }] },
   pinTailSelected: { backgroundColor: colors.sky },
   loading: { position: 'absolute', left: spacing.sm, top: spacing.sm, backgroundColor: colors.paper, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.sm, padding: spacing.sm },
   loadingText: { color: colors.ink, fontSize: typography.small },

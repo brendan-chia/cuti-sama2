@@ -16,8 +16,8 @@ export function FormField({ label, hint, error, style, ...inputProps }: FormFiel
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
       <TextInput
         accessibilityLabel={label}
-        placeholderTextColor={colors.disabled}
-        selectionColor={colors.coral}
+        placeholderTextColor={colors.textMuted}
+        selectionColor={colors.sky}
         style={[styles.input, inputProps.multiline ? styles.multiline : null, error ? styles.inputError : null, style]}
         {...inputProps}
       />
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.input,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,

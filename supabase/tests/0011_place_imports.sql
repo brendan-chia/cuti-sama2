@@ -38,8 +38,12 @@ begin
   if jsonb_array_length(snapshot->'importedPlaces') <> 1 then raise exception 'Confirmed place not shared'; end if;
   if (public.begin_place_import(trip, gen_random_uuid(), null)->>'fresh') <> 'true' then raise exception 'Guest cannot import'; end if;
   perform set_config('request.jwt.claim.sub', host_user::text, true);
-  snapshot := public.update_trip_quest(trip, '{"type":"attractions","attractionIds":["osm-node-123"]}', gen_random_uuid());
-  if snapshot->>'stage' <> 'budget' then raise exception 'Confirmed stop cannot be selected'; end if;
+  snapshot := public.update_trip_quest(trip, '{"type":"attraction_votes","attractionIds":["osm-node-123"]}', gen_random_uuid());
+  perform set_config('request.jwt.claim.sub', guest_user::text, true);
+  perform public.update_trip_quest(trip, '{"type":"attraction_votes","attractionIds":["osm-node-123"]}', gen_random_uuid());
+  perform set_config('request.jwt.claim.sub', host_user::text, true);
+  snapshot := public.update_trip_quest(trip, '{"type":"compile_attractions"}', gen_random_uuid());
+  if snapshot->>'stage' <> 'logistics' then raise exception 'Confirmed stop cannot be selected'; end if;
   begin
     perform public.confirm_trip_places((reservation->>'id')::uuid, array['osm-node-123']);
     raise exception 'Confirmation allowed after Explore';

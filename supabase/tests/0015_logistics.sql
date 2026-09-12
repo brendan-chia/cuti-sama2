@@ -14,10 +14,10 @@ update public.trips set planning_started_at=now() where id=(select id from logis
 set local role authenticated;
 select pg_temp.room();
 reset role;
-update public.trip_quests set stage='budget',period='{"startsOn":"2027-10-12","endsOn":"2027-10-16","label":"Trip","reason":"Shared"}',selected_country_code='JP',attraction_ids=array['jp-sensoji'] where trip_id=(select id from logistics_trip);
-update public.trip_quest_inputs set budget=3000 where trip_id=(select id from logistics_trip);
+update public.trip_quests set stage='budget',budget_resume_stage='logistics',period='{"startsOn":"2027-10-12","endsOn":"2027-10-16","label":"Trip","reason":"Shared"}',selected_country_code='JP',attraction_ids=array['jp-sensoji'] where trip_id=(select id from logistics_trip);
+update public.trip_quest_inputs set comfortable_budget_myr=3000,max_budget_myr=3000 where trip_id=(select id from logistics_trip);
 set local role authenticated;
-select is(pg_temp.act('{"type":"finish"}')->>'stage','logistics','Budget opens Quest 6');
+select is(pg_temp.act('{"type":"finish"}')->>'stage','logistics','Legacy Budget resumes Logistics');
 select lives_ok($$select pg_temp.act('{"type":"transport","transport":{"direction":"arrival","mode":"flight","departureLocation":"KUL","arrivalLocation":"NRT","departureAt":"2027-10-12T07:00:00+08:00","arrivalAt":"2027-10-12T14:30:00+09:00","cost":850,"bookingLink":null,"status":"selected"}}')$$,'save a selected inbound journey');
 select is(jsonb_array_length(pg_temp.room()->'logistics'->'transport'),1,'transport persists in the shared room');
 select lives_ok($$select pg_temp.act('{"type":"stay","stay":{"id":"88888888-8888-4888-8888-888888888888","name":"Crew stay","area":"Tokyo","image":"https://example.com/hotel.jpg","latitude":35.7,"longitude":139.7,"totalCost":1050,"checkIn":"2027-10-12","checkOut":"2027-10-16","rating":8.4,"distance":"6 min from station","bookingLink":"https://example.com/book","provider":"Provider"}}')$$,'stay options persist');

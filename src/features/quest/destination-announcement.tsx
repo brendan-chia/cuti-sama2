@@ -21,9 +21,9 @@ export function DestinationAnnouncement({ countryCode, onDismiss }: { countryCod
   </Modal>;
 }
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(18, 32, 42, 0.6)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  panel: { width: '100%', maxWidth: 440, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg },
+  panel: { width: '100%', maxWidth: 440, backgroundColor: colors.surfaceTint, borderWidth: 1, borderColor: colors.leafSurface, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg },
   eyebrow: { color: colors.sky, fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
   title: { color: colors.ink, fontSize: 30, lineHeight: 38, fontWeight: '800', letterSpacing: -0.5 },
   body: { color: colors.textMuted, fontSize: 16, lineHeight: 25 },

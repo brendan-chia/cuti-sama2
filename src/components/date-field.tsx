@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   hint: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
   input: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.input,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   inputError: { borderColor: colors.danger },
   pressed: { opacity: 0.82 },
   value: { color: colors.ink, fontSize: typography.body },
-  placeholder: { color: colors.disabled, fontSize: typography.body },
+  placeholder: { color: colors.textMuted, fontSize: typography.body },
   calendar: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.1 },
   clearButton: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   clearText: { color: colors.sky, fontSize: typography.small, fontWeight: '700' },

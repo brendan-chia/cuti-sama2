@@ -22,7 +22,7 @@ export function questItineraryInput(value: unknown, updatedAt: string) {
   const dayCount = (Date.parse(room.period.endsOn) - Date.parse(room.period.startsOn)) / 86_400_000 + 1;
   if (!selectedPlaces.length || dayCount < 1 || dayCount > 30) throw new Error('Choose places and travel dates spanning 1–30 days.');
   const saved = room.logistics ?? emptyLogistics;
-  const totals = logisticsTotals(saved, room.members.map((member) => member.memberId), room.budgetSummary.comfortablePerPerson);
+  const totals = logisticsTotals(saved, room.members.map((member) => member.memberId), room.budgetSummary.crewHardCeiling);
   if (totals.remaining < 0) throw new Error('Transport and accommodation exceed the group budget. Review Logistics.');
   const journeys = saved.transport.filter((item) => item.status !== 'proposed' && room.members.some((member) => member.memberId === item.memberId))
     .sort((a, b) => a.memberId.localeCompare(b.memberId) || a.direction.localeCompare(b.direction));
@@ -38,7 +38,7 @@ export function questItineraryInput(value: unknown, updatedAt: string) {
     travellerCount: room.members.length, selectedPlaces,
     logistics: { arrivals, departures, groupArrivalAt, groupDepartureAt, draft: totals.draft,
       accommodation: totals.stay ? { name: totals.stay.name, location: { name: totals.stay.area, latitude: totals.stay.latitude, longitude: totals.stay.longitude }, checkIn: totals.stay.checkIn, checkOut: totals.stay.checkOut, totalCost: totals.stay.totalCost } : null,
-      budget: { wholeTripPerPerson: room.budgetSummary.comfortablePerPerson, accommodationPerPerson: totals.stayPerPerson,
+      budget: { wholeTripPerPerson: room.budgetSummary.crewHardCeiling, accommodationPerPerson: totals.stayPerPerson,
         averageTransportPerPerson: totals.averageTransport, remainingPerPerson: totals.remaining, currency: 'MYR' },
     },
     hardConstraints: { budgetMaximum: totals.remaining, currency: room.budgetSummary.currency,

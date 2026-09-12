@@ -128,7 +128,7 @@ function StayCard({ stay, room, busy, act }: Props & { stay: Stay }) {
 
 export function LogisticsSummary({ room }: { room: QuestRoom }) {
   const logistics = room.logistics ?? emptyLogistics;
-  const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0);
+  const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0);
   return <View style={s.panel}>
     <Text style={s.kicker}>LOGISTICS SUMMARY</Text><Text style={s.heading}>{room.travelParty === 'solo' ? 'Your travel details' : `${room.members.length} travellers`}</Text>
     <Text style={s.strong}>Arrival · local time at destination</Text>
@@ -146,11 +146,11 @@ export function LogisticsSummary({ room }: { room: QuestRoom }) {
 
 export function LogisticsStage(props: Props) {
   const { room, busy, act, onItinerary, onSectionChange } = props;
-  const [tab, setTab] = useState(() => room.stage === 'complete' && !logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0).draft ? 'Summary' : 'Transport');
+  const [tab, setTab] = useState(() => room.stage === 'complete' && !logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0).draft ? 'Summary' : 'Transport');
   const [adding, setAdding] = useState(false);
   const navigate = (next: string) => { setTab(next); onSectionChange?.(); };
   const logistics = room.logistics ?? emptyLogistics;
-  const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0);
+  const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0);
   const own = totals.members.find((member) => member.memberId === room.currentMemberId)!;
   async function finish(skip: boolean) { if (await act({ type: 'complete_logistics', skip, revision: room.revision })) onItinerary?.(); }
   return <View style={s.stack}>
@@ -165,7 +165,7 @@ export function LogisticsStage(props: Props) {
       {logistics.staySkipped ? <Text style={s.small}>Stay marked for later.</Text> : null}
     </View> : null}
     <View style={s.success} testID="logistics-budget"><Text style={s.kicker}>YOUR TRIP BUDGET</Text>
-      <Text style={s.body}>{room.travelParty === 'solo' ? 'Your trip budget' : 'Trip budget per person'} · {money(room.budgetSummary?.comfortablePerPerson ?? 0)}</Text>
+      <Text style={s.body}>{room.travelParty === 'solo' ? 'Your trip budget' : 'Trip budget per person'} · {money(room.budgetSummary?.crewHardCeiling ?? 0)}</Text>
       <Text style={s.body}>Transport · −{money(own.transportCost)}</Text><Text style={s.body}>Accommodation · −{money(totals.stayPerPerson)}</Text>
       <Text style={s.heading}>Remaining · {money(own.remaining)}</Text>
       <Text style={s.body}>{money(own.remaining)} available for food, activities and local transport</Text>

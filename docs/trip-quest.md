@@ -1,16 +1,16 @@
 # Trip quest
 
-New trips use a shared, six-chapter planning quest. The lobby collects the group first; starting planning opens the quest and fixes its participant roster. Participants with the same member session or recovered identity can return to the saved stage on another device. Realtime updates, focus refresh, and a 15-second foreground poll keep the room current.
+New trips use a shared, five-chapter planning quest followed by Logistics. The lobby collects the group first; starting planning opens the quest and fixes its participant roster. Participants with the same member session or recovered identity can return to the saved stage on another device. Realtime updates, focus refresh, and a 15-second foreground poll keep the room current.
 
 ## Flow and roles
 
 | Chapter | Everyone | Organiser | Unlock condition |
 | --- | --- | --- | --- |
 | Dates | Save an available date range; update it before dates are locked. | Choose a duration and request suggested travel windows, then lock one. | Everyone has submitted availability and the chosen period fits their shared window. |
+| Budget | Privately save comfortable spending and an absolute maximum for the whole trip. | Continue to Wishlist when all active travellers submit. | Every active traveller has a valid saved pair. |
 | Wishlist | Choose 1–3 distinct favourite countries. Picks can be edited before the voting deck opens. | Participate with the same three-slot limit. | Everyone has submitted at least one country. |
 | Vote | Swipe right to agree or left to pass on every country; equivalent buttons and vote review are available. | Break a positive tie by choosing one of the tied leaders, or restart wishlists after an all-pass result. | Everyone has voted on every distinct country. A sole positive leader is selected automatically. |
 | Explore | Pan, zoom, and locate tourist attractions on the selected country's map. | Collect at least one attraction and save the group's stops. | The organiser saves valid attractions belonging to the winning country. |
-| Budget | Submit a whole-MYR maximum per person for the entire trip. | Open Logistics after everyone submits a budget. | Everyone has a saved budget. |
 | Logistics | Save personal inbound/return transport; add stay options; vote for one stay. | Confirm one stay, review the summary and generate, or skip for a draft. | Budget is complete; unknown logistics do not block draft generation. |
 
 Duplicate country nominations appear once in the voting deck. Results remain hidden until every participant finishes the deck. Each participant has one agree/pass vote per country and may revise it before the reveal. The organiser's tie-break choice is restricted to countries with the highest positive vote count.
@@ -37,9 +37,21 @@ Pan gestures, zoom buttons, an overview reset, and per-attraction Locate buttons
 
 ## Budget meaning
 
-Budgets are whole ringgit amounts from RM 1 to RM 1,000,000, per person for the entire trip, including transport, stays, food, and activities. The shared spending ceiling is the lowest submitted limit, so it does not exceed any participant's answer. It is a target the group must plan within, not an estimated price, quote, affordability guarantee, or cost breakdown.
+Each private `trip_quest_inputs` row stores `comfortable_budget_myr` and `max_budget_myr`, exposed only to its owner as `ownBudget.comfortableBudgetMYR` and `ownBudget.maxBudgetMYR`. Both are whole-trip, per-person amounts from RM 1 to RM 1,000,000; maximum must be at least comfortable spending.
 
-The database restricts individual input rows to their owner. The room exposes submission progress and, after everyone submits, an aggregate budget summary. Aggregate values can reveal information in a small group; the feature does not promise that another person's limit can never be inferred.
+After every active traveller submits, `budgetSummary` contains only `submittedCount`, `crewComfortCeiling` (minimum comfortable spending), `crewHardCeiling` (minimum maximum), and `currency`. There is no averaging, median constraint, individual budget list, or lowest-budget owner. Inactive travellers neither block readiness nor contribute to ceilings. Existing input RLS remains owner-only; realtime broadcasts are invalidation notices with no budget values.
+
+Costs up to and including the comfort ceiling are comfortable. Costs above comfort through the hard ceiling are stretch. Costs above the hard ceiling are infeasible. Logistics and itinerary hard constraints use the hard ceiling. The Budget screen shows the comfort and flexible zones only after all submissions; equal endpoints show no extra stretch room. Destination-specific AI recommendations are no longer mounted in Chapter 2 because the destination has not been chosen yet; the existing recommendation service remains available to later logistics.
+
+`packages/contracts/src/budget.ts` contains pure validation, crew aggregation, affordability and participant strain helpers. Strain is zero at/below comfort, `(cost - comfort) / (maximum - comfort)` within the range, and `{ strain: null, infeasible: true }` above maximum. Equal endpoints never divide by zero. Positive strain up to 0.25 is `slight_stretch`, up to 0.75 is `stretch`, and above 0.75 is `near_limit`; the thresholds live in one constant. Anonymous affordability counts are available for future use in a trusted context. Do not send private input arrays to other clients. Crew Fit is not implemented.
+
+### Existing rooms and rollout
+
+Apply `0037_private_budget_ranges.sql` with the matching client and Edge Function updates. The new client intentionally rejects the old single-value response; old clients cannot submit ambiguous single-amount budget actions. No live database is modified by adding this migration file.
+
+The migration renames the existing private budget column to the maximum field and backfills comfort with the same old amount, preserving historical affordability without granting additional flexibility. Old Budget-stage rooms resume Logistics after confirmation. Other rooms with missing active budgets temporarily return to Budget and resume their previous stage via `budget_resume_stage`; saved dates, picks, ballots, destination, attractions and logistics are retained. Rooms with complete legacy budgets retain their stage. Revisions increase to invalidate previous itinerary inputs and refresh observers.
+
+Quest screens load authoritative RPC snapshots directly rather than using the generic offline room cache. Persisted operation metadata contains only a key and payload fingerprint; new two-field payloads receive new keys. Completed request retries return a fresh room snapshot through the new RPC contract.
 
 ## Backend deployment
 

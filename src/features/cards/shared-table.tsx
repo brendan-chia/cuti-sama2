@@ -16,7 +16,7 @@ export function SharedTable({ submittedCount, participantCount, ownSubmitted, ac
 const styles = StyleSheet.create({
   table: { alignItems: 'center', backgroundColor: colors.surfaceTint, borderColor: colors.border, borderRadius: radius.lg, borderStyle: 'dashed', borderWidth: 2, minHeight: 164, padding: spacing.lg },
   active: { borderColor: colors.gold, transform: [{ scale: 1.015 }] }, stack: { alignItems: 'center', height: 72, justifyContent: 'center', width: 96 },
-  cardBack: { backgroundColor: colors.coral, borderColor: colors.sand, borderRadius: radius.sm, borderWidth: 1, height: 58, position: 'absolute', width: 42 },
+  cardBack: { backgroundColor: colors.leafSurface, borderColor: colors.sand, borderRadius: radius.sm, borderWidth: 1, height: 58, position: 'absolute', width: 42 },
   arrow: { color: colors.gold, fontSize: 34, fontWeight: '300' }, stackCount: { color: colors.ink, fontSize: typography.body, fontWeight: '900', zIndex: 3 },
   title: { color: colors.ink, fontSize: typography.body, fontWeight: '900', marginTop: spacing.sm }, body: { color: colors.textMuted, fontSize: typography.small, lineHeight: 18, marginTop: spacing.xs, maxWidth: 310, textAlign: 'center' },
 });

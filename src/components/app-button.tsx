@@ -27,6 +27,7 @@ export function AppButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={onPress}
@@ -34,12 +35,12 @@ export function AppButton({
       style={({ pressed }) => [
         styles.base,
         variant === 'primary' ? styles.primary : styles.secondary,
-        pressed && !inactive ? styles.pressed : null,
+        pressed && !inactive ? [styles.pressed, variant === 'primary' && styles.primaryPressed] : null,
         inactive ? styles.disabled : null,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.paper : colors.ink} />
+        <ActivityIndicator color={variant === 'primary' ? colors.onAction : colors.ink} />
       ) : (
         <View style={styles.labelRow}>
           {leading}
@@ -59,21 +60,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 54,
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
   primary: {
-    backgroundColor: colors.sky,
+    backgroundColor: colors.action,
+    borderColor: colors.sky,
+    borderWidth: 1,
   },
   secondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceTint,
     borderColor: colors.border,
     borderWidth: 1,
   },
   pressed: {
-    opacity: 0.82,
+    opacity: 1,
     transform: [{ scale: 0.99 }],
   },
+  primaryPressed: { backgroundColor: colors.actionPressed },
   disabled: {
-    opacity: 0.48,
+    opacity: 0.65,
   },
   labelRow: {
     alignItems: 'center',
@@ -85,9 +90,11 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '700',
     letterSpacing: 0.1,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   primaryLabel: {
-    color: colors.paper,
+    color: colors.onAction,
     fontWeight: '800',
   },
 });

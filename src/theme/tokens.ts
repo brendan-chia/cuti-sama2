@@ -1,12 +1,16 @@
 // Palette from assets/images/yellow otter.png: leaf, cocoa, cream and orange.
 export const colors = {
-  background: '#FFFBF3', surface: '#FFFFFF', surfaceTint: '#EDF4DB',
-  ink: '#5B402E', paper: '#FFFFFF',
+  background: '#FFFBF3', surface: '#FFF6E8', surfaceTint: '#EDF4DB',
+  ink: '#593D2C', paper: '#FFFBF3',
   coral: '#A64B08', coralPressed: '#813805', sand: '#FCE6BE',
   sky: '#4F7027', gold: '#85571F', sun: '#F6C777',
   textMuted: '#78614F', border: '#D9DFC5', danger: '#AE3C32',
   disabled: '#969482', overlay: 'rgba(255, 251, 243, 0.96)',
-  leaf: '#91B947', orange: '#F58A20', cocoa: '#5B402E',
+  leaf: '#8CB64A', orange: '#FE7B22', cocoa: '#593D2C',
+  // Logo samples with paired accessible foregrounds; sky stays dark for links.
+  action: '#8CB64A', onAction: '#382819', actionPressed: '#82AC40',
+  leafSurface: '#D9E5B2', surfaceWarm: '#FAE2BF', input: '#FFF9EE',
+  errorSurface: '#FBECE5', scrim: 'rgba(56, 40, 25, 0.58)',
   // Compatibility aliases let all existing screens share the otter palette.
   midnight: '#FFFBF3', midnightRaised: '#FFFFFF', midnightSoft: '#EDF4DB', white: '#5B402E',
 } as const;

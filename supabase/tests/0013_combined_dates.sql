@@ -41,7 +41,7 @@ begin
   rec := jsonb_set(rec,'{calendarVersion}',to_jsonb((select version from public.national_holiday_calendar where id=1)));
   if not public.save_date_recommendation(trip,hm,(snapshot->>'revision')::bigint,rec) then raise exception 'Calendar refresh cannot regenerate'; end if;
   snapshot := public.update_trip_quest(trip,jsonb_build_object('type','period','period',confirmed),gen_random_uuid());
-  if snapshot->>'stage' <> 'picks' then raise exception 'Combined period did not unlock wishlists'; end if;
+  if snapshot->>'stage' <> 'budget' then raise exception 'Combined period did not unlock budgets'; end if;
   if snapshot->'period' <> confirmed then raise exception 'Confirmed dates changed'; end if;
 end; $$;
 rollback;

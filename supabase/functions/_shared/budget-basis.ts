@@ -1,4 +1,4 @@
-type LogisticsContext = { selectedCountryCode: string; period: { startsOn: string; endsOn: string }; members: unknown[]; attractionIds: string[]; importedPlaces?: { id: string }[]; budgetSummary?: { comfortablePerPerson: number } | null };
+type LogisticsContext = { selectedCountryCode: string; period: { startsOn: string; endsOn: string }; members: unknown[]; attractionIds: string[]; importedPlaces?: { id: string }[]; budgetSummary?: { crewHardCeiling: number } | null };
 type Options = { transport: { label: string; reason: string; journey: { cost: number; direction: string; mode: string; departureLocation: string; arrivalLocation: string } }[]; stays: { category?: string; reason: string; stay: { name: string; area: string; totalCost: number } }[] };
 type Estimate = { accommodation: number; returnTravel: number; food: number; activities: number; localTransport: number; contingency: number };
 export function costContext(room: LogisticsContext) {
@@ -22,7 +22,7 @@ export function budgetFromOptions(options: { arrival: Options; departure: Option
   };
 }
 export function priceBudgetOptions(options: Options, room: LogisticsContext & { currentMemberId?: string; logistics?: { selectedStayId: string | null; stays: { id: string; totalCost: number }[]; transport: { memberId: string; direction: string; status: string; cost: number }[] } }, estimate?: Estimate, reference?: { arrival: Options; departure: Options }) {
-  const ceiling = room.budgetSummary?.comfortablePerPerson ?? 0;
+  const ceiling = room.budgetSummary?.crewHardCeiling ?? 0;
   const reserve = estimate ? estimate.food + estimate.activities + estimate.localTransport + estimate.contingency : ceiling * 0.3;
   const selectedStay = room.logistics?.stays.find(s => s.id === room.logistics?.selectedStayId);
   const stayCost = selectedStay ? selectedStay.totalCost / room.members.length : estimate?.accommodation ?? ceiling * 0.3;

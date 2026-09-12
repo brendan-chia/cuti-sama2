@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LogisticsSchema, TransportSchema, StaySchema } from './logistics';
 import { ConfirmedPlaceSchema } from './place-import';
+import { ParticipantBudgetSchema, CrewBudgetSchema } from './budget';
 
 export const QuestStageSchema = z.enum(['timing', 'picks', 'voting', 'explore', 'budget', 'logistics', 'complete']);
 export type QuestStage = z.infer<typeof QuestStageSchema>;
@@ -49,7 +50,7 @@ export const QuestActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('restart_picks') }).strict(),
   z.object({ type: z.literal('attractions'), attractionIds: z.array(z.string().min(1).max(120)).min(1).max(20)
     .refine((ids) => new Set(ids).size === ids.length, 'Choose each attraction only once.') }).strict(),
-  z.object({ type: z.literal('budget'), amount: z.number().int().min(1).max(1_000_000) }).strict(),
+  ParticipantBudgetSchema.safeExtend({ type: z.literal('budget') }),
   z.object({ type: z.literal('finish') }).strict(),
   z.object({ type: z.literal('transport'), transport: TransportSchema, memberId: z.uuid().optional() }).strict(),
   z.object({ type: z.literal('skip_transport'), memberId: z.uuid().optional() }).strict(),
@@ -91,10 +92,7 @@ export const QuestRoomSchema = z.object({
   attractionVotes: z.array(z.object({ memberId: z.uuid(), attractionIds: z.array(z.string()) }).strict()).optional(),
   importedPlaces: z.array(ConfirmedPlaceSchema).optional(),
   logistics: LogisticsSchema.optional(),
-  ownBudget: z.number().int().positive().nullable(),
-  budgetSummary: z.object({
-    submittedCount: z.number().int().nonnegative(), comfortablePerPerson: z.number().int().positive(),
-    currency: z.literal('MYR'),
-  }).strict().nullable(),
+  ownBudget: ParticipantBudgetSchema.nullable(),
+  budgetSummary: CrewBudgetSchema.nullable(),
 }).strict();
 export type QuestRoom = z.infer<typeof QuestRoomSchema>;

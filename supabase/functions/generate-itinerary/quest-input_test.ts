@@ -9,8 +9,8 @@ const room = {
   stage: 'complete', revision: 8, members: [{ memberId: '22222222-2222-4222-8222-222222222222', displayName: 'Private traveller name', availabilitySubmitted: true, picksSubmitted: true, votesSubmitted: true, budgetSubmitted: true }],
   ownAvailability: null, sharedAvailability: null, period: { startsOn: '2027-12-04', endsOn: '2027-12-05', label: 'Trip', reason: 'Shared dates' },
   ownPicks: ['JP'], countries: ['JP'], ownVotes: { JP: true }, results: [], tiedCountryCodes: [], selectedCountryCode: 'JP',
-  attractionIds: [countryByCode('JP')!.attractions[0].id, 'osm-node-123'], ownBudget: 5000,
-  budgetSummary: { submittedCount: 1, comfortablePerPerson: 5000, currency: 'MYR' },
+  attractionIds: [countryByCode('JP')!.attractions[0].id, 'osm-node-123'], ownBudget: { comfortableBudgetMYR: 5000, maxBudgetMYR: 5000 },
+  budgetSummary: { submittedCount: 1, crewComfortCeiling: 5000, crewHardCeiling: 5000, currency: 'MYR' },
   importedPlaces: [{ id: 'osm-node-123', name: 'Tokyo Disneyland Hotel', address: 'Urayasu, Chiba, Japan', countryCode: 'JP', latitude: 35.635, longitude: 139.88,
     evidence: 'Private social caption', sourceUrl: 'https://www.openstreetmap.org/node/123', sourcePost: 'https://www.tiktok.com/@private/video/123', confirmedBy: '22222222-2222-4222-8222-222222222222' }],
 };

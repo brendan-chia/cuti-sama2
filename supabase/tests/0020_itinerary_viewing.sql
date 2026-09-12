@@ -20,7 +20,7 @@ reset role;
 update public.trip_quests set stage='complete', revision=9, selected_country_code='JP',
  period=jsonb_build_object('startsOn','2027-12-04','endsOn','2027-12-08','label','Trip','reason','Shared dates'),
  attraction_ids=array['jp-fuji'] where trip_id=(select id from quest_itinerary_trip);
-update public.trip_quest_inputs set budget=5000 where trip_id=(select id from quest_itinerary_trip);
+update public.trip_quest_inputs set comfortable_budget_myr=5000,max_budget_myr=5000 where trip_id=(select id from quest_itinerary_trip);
 set local role authenticated;
 select is(public.prepare_quest_itinerary((select id from quest_itinerary_trip))->'room'->>'stage','complete','completed quest is available to the generator');
 select is(public.get_planning_itinerary_state((select id from quest_itinerary_trip))->'lockedDestination'->>'name','Japan','existing itinerary UI reads the quest destination');

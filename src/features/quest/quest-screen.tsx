@@ -24,12 +24,13 @@ import { periodLabel, TimingStage } from './timing-stage';
 
 export const questSteps = [
   { stage: 'timing', label: 'Dates', title: 'Propose your trip dates.', description: 'Share your preferred dates and days you cannot travel. Find a shared period with Malaysian national holidays in mind.' },
+  { stage: 'budget', label: 'Budget', title: 'What’s comfortable for you?', description: 'Set a comfortable amount and an absolute maximum. Your exact numbers stay private.' },
   { stage: 'picks', label: 'Wishlist', title: 'Where’s your heart set?', description: 'Play up to three favourite countries. Every traveller gets the same number of slots.' },
   { stage: 'voting', label: 'Vote', title: 'Swipe for your next stop.', description: 'One shared deck. One vote per country, per person. See where your group lands.' },
   { stage: 'explore', label: 'Explore', title: 'Pin the good stuff.', description: 'Choose the places you’d love to visit. Everyone’s votes become your shared stops.' },
-  { stage: 'budget', label: 'Budget', title: 'Great memories. Happy wallets.', description: 'Set your whole-trip budget. Find a spending ceiling everyone feels comfortable with.' },
-  { stage: 'logistics', label: 'Logistics', title: 'Get there. Settle in.', description: 'How everyone gets there and where everyone stays. Confirm the details or continue with a draft.' },
 ] as const;
+
+const logisticsStep = { stage: 'logistics', label: 'Logistics', title: 'Get there. Settle in.', description: 'How everyone gets there and where everyone stays. Confirm the details or continue with a draft.' } as const;
 
 type Props = { tripId: string; onBack: () => void; onItinerary?: () => void; loadAction?: typeof loadQuest; updateAction?: typeof updateQuest; subscribeAction?: typeof subscribeToQuest; suggestAction?: typeof suggestTripPeriods };
 
@@ -38,8 +39,6 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
   const solo = room.travelParty === 'solo';
   const ownVotes = room.attractionVotes?.find((vote) => vote.memberId === room.currentMemberId)?.attractionIds ?? [];
   const [selected, setSelected] = useState(solo ? room.attractionIds : ownVotes);
-  const savedKey = JSON.stringify(ownVotes);
-  useEffect(() => { if (!solo) setSelected(JSON.parse(savedKey)); }, [savedKey, solo]);
   const dirty = [...selected].sort().join(',') !== [...ownVotes].sort().join(',');
   const ballots = room.attractionVotes ?? [];
   const allVoted = room.members.every((member) => ballots.some((ballot) => ballot.memberId === member.memberId && ballot.attractionIds.length > 0));
@@ -52,11 +51,11 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
     <PlaceImportPanel tripId={room.tripId} countryName={country.name} disabled={busy} onConfirmed={onConfirmed} />
     <Text style={s.heading}>{room.travelParty === 'solo' ? 'Your discovery map' : 'Your crew’s discovery map'}</Text>
     <AttractionMap country={mapCountry} selectedIds={selected} onToggle={(id) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : current.length < 20 ? [...current, id] : current)} disabled={busy} />
-    <AppButton label={solo ? 'Save stops & continue to budget' : ownVotes.length ? 'Update my attraction votes' : 'Submit my attraction votes'} testID="save-quest-attractions" disabled={!selected.length || (!solo && !dirty)} loading={busy} onPress={() => void act({ type: solo ? 'attractions' : 'attraction_votes', attractionIds: selected })} />
+    <AppButton label={solo ? 'Save stops & continue to Logistics' : ownVotes.length ? 'Update my attraction votes' : 'Submit my attraction votes'} testID="save-quest-attractions" disabled={!selected.length || (!solo && !dirty)} loading={busy} onPress={() => void act({ type: solo ? 'attractions' : 'attraction_votes', attractionIds: selected })} />
     {!solo ? <View style={s.stack}>
       <Text accessibilityLiveRegion="polite" style={s.body}>{ballots.length} of {room.members.length} travellers have voted. Select up to 20 places each.</Text>
       <CrewChoices room={room} places={mapCountry.attractions} />
-      {organizer ? <AppButton label="Compile voted attractions & continue" testID="compile-quest-attractions" disabled={!allVoted || dirty} loading={busy} onPress={() => void act({ type: 'compile_attractions' })} /> : <Text style={s.small}>Once everyone has voted, your organiser compiles all chosen attractions and opens the budget step.</Text>}
+      {organizer ? <AppButton label="Compile voted attractions & continue" testID="compile-quest-attractions" disabled={!allVoted || dirty} loading={busy} onPress={() => void act({ type: 'compile_attractions' })} /> : <Text style={s.small}>Once everyone has voted, your organiser compiles all chosen attractions and opens Logistics.</Text>}
     </View> : null}
   </View>;
 }
@@ -73,7 +72,7 @@ function QuestSummary({ room, onItinerary }: { room: QuestRoom; onItinerary?: ()
       {[...(country?.attractions ?? []), ...(room.importedPlaces ?? [])].filter((place) => room.attractionIds.includes(place.id)).map((place, index) => <Text key={place.id} style={styles.ticketBody}>{String(index + 1).padStart(2, '0')}  {place.name}</Text>)}
       <View style={styles.ticketDivider} />
       <Text style={styles.ticketKicker}>TRIP SPENDING LIMIT</Text>
-      <Text style={styles.ticketTitle}>{room.budgetSummary ? money(room.budgetSummary.comfortablePerPerson) : '—'}</Text>
+      <Text style={styles.ticketTitle}>{room.budgetSummary ? money(room.budgetSummary.crewHardCeiling) : '—'}</Text>
       <Text style={styles.ticketBody}>{room.travelParty === 'solo' ? 'Your whole trip' : `per person · ${room.members.length} travellers · whole trip`}</Text>
     </View>
     <Text style={s.body}>Your dates, destination, places and budget are saved.</Text>
@@ -134,13 +133,13 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
 
   if (!room) return <Screen scrollRef={screenScroll}><View style={s.stack}><Text style={s.title}>{error ? 'Your quest is waiting.' : 'Gathering your next adventure…'}</Text>{error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Try again" onPress={() => void refresh()} /></> : <Text style={s.body}>Opening your trip plan.</Text>}<AppButton label="Back to the lobby" variant="secondary" onPress={onBack} /></View></Screen>;
   const logisticsOpen = room.stage === 'logistics' || room.stage === 'complete';
-  const logisticsDraft = logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.comfortablePerPerson ?? 0).draft;
+  const logisticsDraft = logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0).draft;
   const completed = room.stage === 'complete' && !logisticsDraft;
   const voting = room.stage === 'voting';
   const solo = room.travelParty === 'solo';
   const steps = solo ? questSteps.filter(step => step.stage !== 'voting') : questSteps;
-  const index = completed ? steps.length : logisticsOpen ? steps.length - 1 : steps.findIndex((step) => step.stage === room.stage);
-  const step = steps[Math.max(0, Math.min(index, steps.length - 1))];
+  const index = logisticsOpen ? steps.length : steps.findIndex((step) => step.stage === room.stage);
+  const step = logisticsOpen ? logisticsStep : steps[Math.max(0, Math.min(index, steps.length - 1))];
   const field = room.stage === 'timing' ? 'availabilitySubmitted' : room.stage === 'picks' ? 'picksSubmitted' : room.stage === 'voting' ? 'votesSubmitted' : room.stage === 'budget' ? 'budgetSubmitted' : null;
   const ready = field ? room.members.filter((member) => member[field]).length : room.members.length;
   return <Screen testID="trip-quest-screen" scrollRef={screenScroll}>
@@ -149,8 +148,8 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
       <View style={s.between}><Pressable accessibilityRole="button" onPress={onBack}><Text style={s.link}>‹ Trip lobby</Text></Pressable><BrandLogo compact /></View>
       {!voting ? <Text numberOfLines={1} style={s.small}>{room.tripName}</Text> : null}
       <FlightPath stage={index} solo={solo} />
-      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? (solo ? 'Your adventure is ready.' : 'From group chat to game plan.') : solo && room.stage === 'timing' ? 'Choose your travel dates.' : solo && room.stage === 'budget' ? 'Plan your spending.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? (solo ? 'Your decisions, your adventure.' : 'You made the big decisions. Together.') : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
-      {error ? <View style={s.success}><Text accessibilityRole="alert" style={s.error}>{error}</Text>{unavailable ? <AppButton label="Reconnect & refresh" variant="secondary" onPress={() => { setError(null); void refresh(); }} /> : <Pressable accessibilityRole="button" onPress={() => setError(null)}><Text style={s.link}>Dismiss</Text></Pressable>}</View> : null}
+      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : logisticsOpen ? 'PLAN YOUR LOGISTICS' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? (solo ? 'Your adventure is ready.' : 'From group chat to game plan.') : solo && room.stage === 'timing' ? 'Choose your travel dates.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? (solo ? 'Your decisions, your adventure.' : 'You made the big decisions. Together.') : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
+      {error ? <View style={s.errorPanel}><Text accessibilityRole="alert" style={s.error}>{error}</Text>{unavailable ? <AppButton label="Reconnect & refresh" variant="secondary" onPress={() => { setError(null); void refresh(); }} /> : <Pressable accessibilityRole="button" onPress={() => setError(null)}><Text style={s.link}>Dismiss</Text></Pressable>}</View> : null}
       {!solo && !completed && !logisticsOpen ? <View><View style={s.between}><Text style={s.kicker}>YOUR TRAVEL CREW</Text><Text accessibilityLiveRegion="polite" style={s.small}>{field ? `${ready} / ${room.members.length} ready` : 'Explore together'}</Text></View>{!voting ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crew}>
         {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName} numberOfLines={1}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}
       </ScrollView> : null}</View> : null}
@@ -158,8 +157,8 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
       {room.stage === 'timing' ? <TimingStage room={room} busy={busy || unavailable} act={act} recommend={recommend} /> : null}
       {room.stage === 'picks' ? <CountryPicks room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'voting' && !solo ? <CountryVote room={room} busy={busy || unavailable} act={act} /> : null}
-      {room.stage === 'explore' ? <ExploreStage room={room} busy={busy || unavailable} act={act} onConfirmed={accept} /> : null}
-      {room.stage === 'budget' ? <BudgetStage room={room} busy={busy || unavailable} act={act} /> : null}
+      {room.stage === 'explore' ? <ExploreStage key={`${room.tripId}:${room.currentMemberId}:${JSON.stringify(room.attractionVotes?.find(vote => vote.memberId === room.currentMemberId)?.attractionIds)}`} room={room} busy={busy || unavailable} act={act} onConfirmed={accept} /> : null}
+      {room.stage === 'budget' ? <BudgetStage key={`${room.tripId}:${room.currentMemberId}:${JSON.stringify(room.ownBudget)}`} room={room} busy={busy || unavailable} act={act} /> : null}
       {logisticsOpen ? <View><LogisticsStage room={room} busy={busy || unavailable} act={act} onItinerary={onItinerary} onSectionChange={() => requestAnimationFrame(() => screenScroll.current?.scrollTo({ y: 0, animated: false }))} /></View> : null}
       {completed ? <QuestSummary room={room} onItinerary={onItinerary} /> : null}
     </View>
@@ -169,5 +168,5 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
 const styles = StyleSheet.create({
   compactTitle: { fontSize: 25, lineHeight: 30 },
   crew: { gap: spacing.lg, paddingVertical: spacing.md }, traveller: { alignItems: 'center', width: 54, gap: spacing.sm }, avatar: { height: 40, width: 40, backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, avatarReady: { borderColor: colors.sky }, avatarText: { color: colors.ink, fontWeight: '800' }, check: { color: colors.paper, backgroundColor: colors.sky, borderRadius: 9, fontSize: 9, width: 15, height: 15, textAlign: 'center', position: 'absolute', right: -4, bottom: -2 }, memberName: { color: colors.textMuted, fontSize: 10, maxWidth: 54 },
-  ticket: { backgroundColor: colors.sand, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md }, ticketKicker: { color: colors.ink, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }, ticketTitle: { color: colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -0.7 }, ticketBody: { color: colors.ink, fontSize: 14, lineHeight: 22 }, ticketDivider: { borderTopColor: colors.disabled, borderTopWidth: 1, borderStyle: 'dashed', marginVertical: spacing.sm },
+  ticket: { borderWidth: 1, borderColor: colors.sun, backgroundColor: colors.surfaceWarm, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md }, ticketKicker: { color: colors.ink, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }, ticketTitle: { color: colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -0.7 }, ticketBody: { color: colors.ink, fontSize: 14, lineHeight: 22 }, ticketDivider: { borderTopColor: colors.disabled, borderTopWidth: 1, borderStyle: 'dashed', marginVertical: spacing.sm },
 });

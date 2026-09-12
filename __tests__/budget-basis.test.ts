@@ -6,7 +6,7 @@ const options = {
   departure: { transport: [transport(400, 'departure')], stays: [] },
   stays: { transport: [], stays: [stay('cheap', 800), stay('mid-range', 1600), stay('expensive', 3200)] },
 };
-const room = { selectedCountryCode: 'JP', period: { startsOn: '2027-12-04', endsOn: '2027-12-08' }, members: [{}, {}], attractionIds: ['a', 'b'], currentMemberId: 'me', budgetSummary: { comfortablePerPerson: 2500 } };
+const room = { selectedCountryCode: 'JP', period: { startsOn: '2027-12-04', endsOn: '2027-12-08' }, members: [{}, {}], attractionIds: ['a', 'b'], currentMemberId: 'me', budgetSummary: { crewComfortCeiling: 2500, crewHardCeiling: 2500 } };
 const estimate = { accommodation: 800, returnTravel: 1200, food: 200, activities: 100, localTransport: 50, contingency: 150 };
 it('builds a budget from both actual travel directions and the chosen tier for every night', () => {
   expect(budgetFromOptions(options, 2, 'comfortable')).toMatchObject({ returnTravel: 1200, accommodation: 800 });

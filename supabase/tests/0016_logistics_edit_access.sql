@@ -16,8 +16,8 @@ insert into public.trip_members(trip_id,user_id,display_name,role) select id,'99
 set local role authenticated;
 select pg_temp.room();
 reset role;
-update public.trip_quests set stage='budget',period='{"startsOn":"2027-10-12","endsOn":"2027-10-16","label":"Trip","reason":"Shared"}',selected_country_code='JP',attraction_ids=array['jp-sensoji'] where trip_id=(select id from logistics_trip);
-update public.trip_quest_inputs set budget=3000 where trip_id=(select id from logistics_trip);
+update public.trip_quests set stage='budget',budget_resume_stage='logistics',period='{"startsOn":"2027-10-12","endsOn":"2027-10-16","label":"Trip","reason":"Shared"}',selected_country_code='JP',attraction_ids=array['jp-sensoji'] where trip_id=(select id from logistics_trip);
+update public.trip_quest_inputs set comfortable_budget_myr=3000,max_budget_myr=3000 where trip_id=(select id from logistics_trip);
 set local role authenticated;
 
 select pg_temp.act('{"type":"finish"}');
