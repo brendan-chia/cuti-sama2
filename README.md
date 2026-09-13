@@ -125,19 +125,74 @@ This flow shows the shared planning journey and where solo travellers skip group
 
 ### 2.3 Mentor Consultation
 
-Feedback below comes from the supplied judges' comments. Dates and mentor names were not supplied. Existing features are noted as responses to the feedback without claiming when or why they were implemented.
+The following feedback was discussed with Jeremy Lau Wei Han on 7 September 2026. Existing features are noted as responses to the feedback.
 
 | Date | Mentor | Feedback Received | What Was Changed |
 | --- | --- | --- | --- |
-| To add | Judges; names to add | Add favourites, personalisation and accounts. | README now explains profile favourites, identity and saved inspiration, including the limits of automatic personalisation. |
-| To add | Judges; names to add | Consider solo trips. | README now describes the existing solo flow and skipped voting steps. |
-| To add | Judges; names to add | View previous trips; consider longevity and whether people will use it. | Added trips and memories, repeat-use rationale and a proposed validation plan. |
-| To add | Judges; names to add | Allow friends and public joining. | Documented invitation and discovery features with eligibility constraints. |
-| To add | Judges; names to add | Highlight the algorithm; consider Gemini for budget recommendations. | Added decision rules, an affordability example and the distinction between AI estimates and personal spending limits. |
-| To add | Judges; names to add | Include competitive analysis and a clearer problem statement. | Added target stakeholders and a sourced comparison with Wanderlog. |
-| To add | Judges; names to add | Too much text; avoid repetitive organiser/participant demonstrations. | Reorganised the README into compact tables and diagrams; added the single-journey demo below. Presentation changes remain to be made. |
+| 7 September 2026 | Jeremy Lau Wei Han | Add favourites, personalisation and accounts. | README now explains profile favourites, identity and saved inspiration, including the limits of automatic personalisation. |
+| 7 September 2026 | Jeremy Lau Wei Han | Consider solo trips. | README now describes the existing solo flow and skipped voting steps. |
+| 7 September 2026 | Jeremy Lau Wei Han | View previous trips; consider longevity and whether people will use it. | Added trips and memories, repeat-use rationale and a proposed validation plan. |
+| 7 September 2026 | Jeremy Lau Wei Han | Allow friends and public joining. | Documented invitation and discovery features with eligibility constraints. |
+| 7 September 2026 | Jeremy Lau Wei Han | Highlight the algorithm; consider Gemini for budget recommendations. | Added decision rules, an affordability example and the distinction between AI estimates and personal spending limits. |
+| 7 September 2026 | Jeremy Lau Wei Han | Include competitive analysis and a clearer problem statement. | Added target stakeholders and a sourced comparison with Wanderlog. |
+| 7 September 2026 | Jeremy Lau Wei Han | Too much text; avoid repetitive organiser/participant demonstrations. | Reorganised the README into compact tables and diagrams; added the single-journey demo below. Presentation changes remain to be made. |
 
-## 3. Demo Plan
+## 3. Design & Prototype
+
+**UI Prototype:** [ Public Link ]
+
+Check that it opens in an incognito window. This can be a link to Figma, Canva, Netlify, Vercel or any other board where you showcase your UI. It can be clickable with hyperlinks or simply ordered screenshots.
+
+We recommend you embed or link 4–8 key screens as images, with a caption on each explaining the interaction
+
+## 4. What Makes It Different
+
+CutiSama2 combines structured group decision-making with personal travel continuity. Its distinctive features are:
+
+| Feature | What makes it different |
+| --- | --- |
+| Private comfort and maximum budgets | Participants contribute real limits without exposing individual amounts. The group plan uses the lowest comfort and maximum ceilings so the itinerary remains affordable for everyone. |
+| Guided planning quest | Dates, budgets, destinations, attractions and logistics are completed as clear stages. This reduces organiser chasing and makes progress visible. |
+| Explainable destination selection | Country nominations are deduplicated, each participant gets one vote per country, results reveal after everyone votes, and ties follow a documented organiser rule. |
+| Solo mode | A solo traveller can use the same planning foundation without unnecessary group invitations or voting. |
+| Personal travel passport | Profiles, favourite places, saved inspiration, previous trips and memories make the product useful between trips. |
+| AI within validated rules | AI ranks or estimates options, while deterministic checks enforce dates, budgets, destination constraints and privacy. |
+| Confirmed place import | Travellers can bring places from saved inspiration into a trip, then explicitly confirm what becomes part of the shared plan. |
+
+Compared with general itinerary tools, the twist is that CutiSama2 makes agreement and affordability first-class decisions before generating a plan.
+
+## 5. Technical Architecture & Feasibility
+
+### Tech stack
+
+| Layer | Technology | Why it was chosen and expected constraints |
+| --- | --- | --- |
+| Frontend | Expo SDK 57, Expo Router, React Native, TypeScript | One codebase for mobile and web with typed navigation and shared components. Native-device testing and platform-specific behaviour remain constraints. |
+| Backend | Supabase Auth, Edge Functions and RPC/database functions | Managed authentication and server-side workflows reduce infrastructure work. Function cold starts, deployment configuration and provider limits remain constraints. |
+| Database | Supabase PostgreSQL with Row Level Security and Realtime | Relational trip state, private participant inputs and secure per-user access fit the data model. Realtime is used for notifications; clients still refetch authorised state. |
+| Validation | Zod contracts and deterministic domain rules | Keeps mobile and server payloads aligned and prevents malformed or contradictory generated plans from being stored. Contracts must be updated across app and functions together. |
+| AI services | Configured Groq/OpenAI-compatible planning provider and OpenAI saved-inspiration analysis | AI assists with ranking, estimates and media extraction while server-side secrets stay private. Provider latency, cost, rate limits and imperfect estimates require fallbacks and validation. |
+| Maps | OpenStreetMap raster tiles | No additional map API key is required for the prototype. Tile usage must follow the OpenStreetMap policy and fresh imagery needs a network connection. |
+| Testing | Jest, React Native Testing Library, pgTAP, Deno and Maestro | Covers app logic, contracts, database rules, Edge Functions and user flows. Live provider, realtime and native-device behaviour still need deployment testing. |
+| Hosting | Expo-compatible build/runtime and a hosted Supabase project | Keeps the prototype deployable with managed services. Production hosting, secrets, quotas and release configuration must be maintained separately. |
+
+### System architecture diagram
+
+The text diagram is stored at [`images/system-architecture.md`](images/system-architecture.md) and can be converted into a visual diagram for the final submission.
+
+### Build plan & scope
+
+The build phase focuses on a demonstrable end-to-end path:
+
+1. Create or enter a trip as a solo traveller or group organiser.
+2. Collect availability and private comfort/maximum budgets.
+3. Select and vote on destinations, then explore attractions on the map.
+4. Add transport and accommodation estimates and review the remaining budget.
+5. Generate a constrained draft itinerary and show its assumptions clearly.
+6. Save the trip, reopen it from trip history and show favourite places or saved inspiration.
+
+The scope excludes live booking, payment processing, guaranteed prices, turn-by-turn navigation and a full social network. Booking links open external providers. These boundaries keep the prototype feasible while demonstrating the core value: helping travellers reach an affordable, explainable plan together.
+## Demo Plan
 
 Use one trip across two prepared sessions instead of repeating the whole journey for each role.
 
@@ -150,7 +205,7 @@ Use one trip across two prepared sessions instead of repeating the whole journey
 
 Keep the presentation focused on one problem, the decision mechanism and the resulting plan. Use screenshots and the flow diagram to support the live demo; prepare a recording if network-dependent services are unavailable.
 
-## 4. Developer Setup
+## Developer Setup
 
 <details>
 <summary>Expand technical stack, setup, verification and project structure</summary>
