@@ -41,10 +41,6 @@ Favourite places are currently saved profile data; this does not imply that ever
 | [TRIPTI.ai](https://tripti.ai/) | Pre-booking group coordination through date scheduling, decision cards, reminders, shared itineraries and expense splitting. | Extend the guided agreement process across dates, destination voting and private comfort/maximum budgets, with affordability enforced as a shared constraint. |
 | [Trip.com Trip.Planner](https://www.trip.com/tripplanner) | AI itinerary generation connected to real-time flights, trains, hotels, restaurants, attractions and an established booking ecosystem. | Help friend groups agree on when and where to travel, and what everyone can afford, before they reach the booking stage. |
 
-Wanderlog already offers [budget tracking and expense splitting](https://wanderlog.com/travel-budget-expense-splitting-app), Mindtrip combines AI planning with collaborative inspiration, and TRIPTI.ai focuses directly on group coordination. Trip.com is an indirect competitor with a much stronger booking and live-inventory ecosystem. Therefore, “AI travel planner,” “collaboration” or “group budgeting” alone is not a convincing distinction.
-
-CutiSama2's intended niche is **affordable group agreement before booking**: collect everyone's availability and private spending limits, apply transparent voting rules, and generate a plan within the group's shared constraints. The product hypothesis is that this process reduces organiser chasing and prevents a group from choosing a trip that some members cannot comfortably afford. This positioning still requires user testing and is not evidence that competitors lack similar capabilities or that travellers will switch.
-
 ## 2. Ideation & Process
 
 ### 2.1 Ideas We Considered
@@ -55,12 +51,9 @@ This table summarises the current implementation and directions raised by the ju
 | --- | --- |
 | Guided group planning quest (Chosen) | Gives the organiser and participants a shared sequence of decisions. |
 | Private budget ranges (Chosen) | Makes affordability part of planning without identifying the lowest-budget traveller. |
-| Solo planning (Chosen) | Extends usefulness beyond group trips and skips unnecessary voting. |
-| Profiles, favourite places and saved inspiration (Chosen) | Lets travellers keep personal ideas between trips. |
 | Previous trips and memories (Chosen) | Supports returning users and continuity after a trip ends. |
 | Invitations and public discovery (Chosen) | Supports existing friends and discoverable trips, subject to joining rules. |
 | AI assistance with validated constraints (Chosen) | Helps with suggestions while keeping key decisions explainable. |
-| Gemini specifically for budgeting (Suggested; not confirmed as selected) | The underlying need is useful cost estimates; provider choice is separate from user-controlled spending limits. |
 | Automatic personalisation from all favourites (Future evaluation) | Saving favourites exists; broader recommendation integration needs explicit design and validation. |
 | Card-game interface, with each card representing a travel idea (Dropped) | The card metaphor made the experience playful, but it limited how much information users could compare at once. Dates, budgets, destinations and logistics need clear forms and summaries, so using cards for every decision would add extra steps and make planning harder to scan. The guided quest concept kept the sense of progression without making every interaction behave like a card game. |
 | Overcooked-style participant split screen combined with cards (Dropped) | Dividing the screen by participant would become crowded on mobile and would not scale well as the group size changed. It also implied that everyone had to participate at the same time, while CutiSama2 needs to support friends replying at different times and keep personal budgets private. A shared quest with individual submissions provides clearer progress without exposing each traveller's private input. |
@@ -87,13 +80,13 @@ The following feedback was discussed with Jeremy Lau Wei Han on 7 September 2026
 
 | Date | Mentor | Feedback Received | What Was Changed |
 | --- | --- | --- | --- |
-| 7 September 2026 | Jeremy Lau Wei Han | Add favourites, personalisation and accounts. | README now explains profile favourites, identity and saved inspiration, including the limits of automatic personalisation. |
-| 7 September 2026 | Jeremy Lau Wei Han | Consider solo trips. | README now describes the existing solo flow and skipped voting steps. |
-| 7 September 2026 | Jeremy Lau Wei Han | View previous trips; consider longevity and whether people will use it. | Added trips and memories, repeat-use rationale and a proposed validation plan. |
-| 7 September 2026 | Jeremy Lau Wei Han | Allow friends and public joining. | Documented invitation and discovery features with eligibility constraints. |
-| 7 September 2026 | Jeremy Lau Wei Han | Highlight the algorithm; consider Gemini for budget recommendations. | Added decision rules, an affordability example and the distinction between AI estimates and personal spending limits. |
-| 7 September 2026 | Jeremy Lau Wei Han | Include competitive analysis and a clearer problem statement. | Added target stakeholders and a sourced comparison with Wanderlog. |
-| 7 September 2026 | Jeremy Lau Wei Han | Too much text; avoid repetitive organiser/participant demonstrations. | Reorganised the README into compact tables and diagrams; added the single-journey demo below. Presentation changes remain to be made. |
+| 7/9/2026 | Jeremy Lau Wei Han | Add favourites, personalisation and accounts. | README now explains profile favourites, identity and saved inspiration, including the limits of automatic personalisation. |
+| 7/9/2026 | Jeremy Lau Wei Han | Consider solo trips. | README now describes the existing solo flow and skipped voting steps. |
+| 7/9/2026 | Jeremy Lau Wei Han | View previous trips; consider longevity and whether people will use it. | Added trips and memories, repeat-use rationale and a proposed validation plan. |
+| 7/9/2026 | Jeremy Lau Wei Han | Allow friends and public joining. | Documented invitation and discovery features with eligibility constraints. |
+| 7/9/2026 | Jeremy Lau Wei Han | Highlight the algorithm; consider Gemini for budget recommendations. | Added decision rules, an affordability example and the distinction between AI estimates and personal spending limits. |
+| 7/9/2026 | Jeremy Lau Wei Han | Include competitive analysis and a clearer problem statement. | Added target stakeholders and a sourced comparison with Wanderlog. |
+| 7/9/2026 | Jeremy Lau Wei Han | Too much text; avoid repetitive organiser/participant demonstrations. | Reorganised the README into compact tables and diagrams; added the single-journey demo below. Presentation changes remain to be made. |
 
 ## 3. Design & Prototype
 
