@@ -89,7 +89,7 @@ The following feedback was discussed with Jeremy Lau Wei Han on 7 September 2026
 
 ## 3. Design & Prototype
 
-**UI Prototype:** [View the CutiSama2 prototype on Canva](https://www.canva.com/design/DAHVEjjtaHw/5iotBNE3G4fXbxUN1TPgtQ/edit?ui=e30)
+**UI Prototype:** [View the CutiSama2 prototype on Canva](https://canva.link/jv8y05dy9n6exli)
 
 ## 4. What Makes It Different
 
