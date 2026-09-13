@@ -1,6 +1,6 @@
 # Trip Mode and Rescue My Day
 
-The generated quest itinerary and its saved itinerary screen expose **View trip**, opening `/trip/[tripId]/mode`.
+My trips exposes **Change plan** on current, started trip cards. It checks that the itinerary is generated, then opens `/trip/[tripId]/mode?changePlan=true` with rescue options expanded. The itinerary no longer contains the old View trip entry. Back to my trips returns to the trip list.
 
 Trip Mode shows a selectable day, suggested start/end times, Completed / Next / Upcoming status, and **Plans changed**. Today uses the device calendar date; other days are clearly labelled previews. Only the organiser (including a solo trip owner) records crew completion or applies a rescue. Members can inspect proposals. Refreshing or returning to the screen retrieves shared state.
 

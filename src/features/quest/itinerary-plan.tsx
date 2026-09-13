@@ -1,5 +1,3 @@
-import { useRouter } from 'expo-router';
-import { AppButton } from '@/components/app-button';
 import { emptyLogistics, logisticsDraftNotice, logisticsTotals } from '../../../packages/contracts/src/logistics';
 import { ItineraryDays } from '@/components/itinerary-days';
 import { useMemo, useState } from 'react';
@@ -11,7 +9,6 @@ import { colors, radius, spacing } from '@/theme/tokens';
 import { estimatedDuration, placeLabel } from '@/lib/presentation';
 
 export function ItineraryPlan({ room }: { room: QuestRoom }) {
-  const router = useRouter();
   const [showNotes, setShowNotes] = useState(false);
   const result = useMemo(() => {
     try { return { plan: planQuest(room), error: null }; }
@@ -22,7 +19,6 @@ export function ItineraryPlan({ room }: { room: QuestRoom }) {
   const draft = logisticsTotals(room.logistics ?? emptyLogistics, room.members.map(member => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0).draft;
   const names = new Map(questPlaces(room).map(place => [place.id, placeLabel(place.name)]));
   return <View style={s.stack} testID="deterministic-itinerary">
-    <AppButton label="View trip" onPress={() => router.push({ pathname: '/trip/[tripId]/mode' as never, params: { tripId: room.tripId } })} />
     <View style={styles.intro}><Text accessibilityRole="header" style={s.heading}>Your day-by-day trip</Text><Text style={styles.meta}>Suggested times. Adjust each day to your pace.</Text></View>
     {draft ? <Text style={s.small}>Draft itinerary · {logisticsDraftNotice}</Text> : null}
     <ItineraryDays>{plan.days.map((day, index) => <View key={day.date} style={styles.day}>

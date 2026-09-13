@@ -10,10 +10,11 @@ type Props = {
   busy: boolean;
   onOpen: (id: string) => void;
   onComplete: (id: string) => void;
+  onChangePlan?: (id: string) => void;
   onManage: (id: string) => void;
 };
 
-export function TripCarousel({ trips, completed, busy, onOpen, onComplete, onManage }: Props) {
+export function TripCarousel({ trips, completed, busy, onOpen, onComplete, onManage, onChangePlan }: Props) {
   const [index, setIndex] = useState(0);
   const [width, setWidth] = useState(300);
   const scroll = useRef<ScrollView>(null);
@@ -43,6 +44,7 @@ export function TripCarousel({ trips, completed, busy, onOpen, onComplete, onMan
             <Text style={styles.body}>{trip.travel_party === 'solo' ? 'Solo adventure' : 'Group trip'}{completed.has(trip.id) ? ' · Completed' : ''}</Text>
             <View style={styles.actions}>
               <AppButton label="Open trip" onPress={() => onOpen(trip.id)} />
+              {onChangePlan && trip.planning_started_at && !completed.has(trip.id) ? <AppButton label="Change plan" variant="secondary" disabled={busy} onPress={() => onChangePlan(trip.id)} /> : null}
               {!completed.has(trip.id) ? <AppButton label="Record as completed" disabled={busy} variant="secondary" onPress={() => onComplete(trip.id)} /> : null}
               {!trip.planning_started_at && trip.travel_party !== 'solo' ? <AppButton label="Manage public listing" variant="secondary" onPress={() => onManage(trip.id)} /> : null}
             </View>

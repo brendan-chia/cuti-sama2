@@ -14,8 +14,8 @@ import { rescueDay, type Disruption, type Rescue } from './rescue';
 import { loadTripMode, saveTripMode } from './service';
 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-export function TripModeScreen({ tripId, onBack, loadRoom = loadQuest, loadAction = loadTripMode, saveAction = saveTripMode }: {
-  tripId: string; onBack: () => void; loadRoom?: typeof loadQuest; loadAction?: typeof loadTripMode; saveAction?: typeof saveTripMode;
+export function TripModeScreen({ tripId, onBack, startWithRescue = false, backLabel = 'Back to itinerary', loadRoom = loadQuest, loadAction = loadTripMode, saveAction = saveTripMode }: {
+  tripId: string; onBack: () => void; startWithRescue?: boolean; backLabel?: string; loadRoom?: typeof loadQuest; loadAction?: typeof loadTripMode; saveAction?: typeof saveTripMode;
 }) {
   const [room, setRoom] = useState<QuestRoom | null>(null);
   const [state, setState] = useState<TripModeState | null>(null);
@@ -38,10 +38,16 @@ export function TripModeScreen({ tripId, onBack, loadRoom = loadQuest, loadActio
       const data = saved.data ?? { days: planQuest(next).days, completedIds: [] };
       if (request !== epoch.current) return;
       setRoom(next); setState({ ...saved, data });
-      setDate(current => data.days.some(d => d.date === current) ? current : data.days.find(d => d.date === localDate())?.date ?? data.days[0].date);
+      if (startWithRescue) {
+        const firstDay = data.days.find(d => d.date === localDate()) ?? data.days[0];
+        setDate(firstDay.date);
+        setTarget(firstDay.stops.find(stop => !data.completedIds.includes(stop.attractionId))?.attractionId ?? '');
+        setReason(null); setNoMatch(false); setRescuing(true);
+      }
+      if (!startWithRescue) setDate(current => data.days.some(d => d.date === current) ? current : data.days.find(d => d.date === localDate())?.date ?? data.days[0].date);
     } catch (cause) { if (request === epoch.current) setError(cause instanceof Error ? cause.message : 'Could not load Trip Mode.'); }
     finally { if (request === epoch.current) setLoading(false); }
-  }, [tripId, loadRoom, loadAction]);
+  }, [tripId, loadRoom, loadAction, startWithRescue]);
   useFocusEffect(useCallback(() => { void refresh(); return () => { epoch.current++; }; }, [refresh]));
   async function persist(data: TripModeData, message: string) {
     if (!room || !state || saving.current || room.currentRole !== 'organizer') return;
@@ -68,7 +74,7 @@ export function TripModeScreen({ tripId, onBack, loadRoom = loadQuest, loadActio
     setProposal(result); setNoMatch(!result);
   }
   return <Screen testID="trip-mode-screen"><View style={s.stack}>
-    <AppButton label="Back to itinerary" variant="secondary" onPress={onBack} />
+    <AppButton label={backLabel} variant="secondary" onPress={onBack} />
     <Text style={s.kicker}>TRIP MODE</Text><Text accessibilityRole="header" style={s.title}>{room?.tripName ?? 'Your trip, as it happens'}</Text>
     {loading ? <Text style={s.body}>Loading your shared day…</Text> : null}
     {error ? <View style={s.stack}><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Reload trip" variant="secondary" disabled={busy} onPress={() => void refresh()} /></View> : null}

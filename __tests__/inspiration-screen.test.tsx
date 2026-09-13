@@ -12,12 +12,14 @@ it('prioritizes places and reveals evidence and management actions on demand',as
  const screen=await render(<InspirationFolder />);
  await waitFor(()=>expect(screen.getByText('Cheow Lan Lake')).toBeTruthy());
  expect(screen.queryByText('Video 1 at 18s: visible name')).toBeNull();
+ expect(screen.getByRole('button',{name:'Delete saved link: A lake escape'})).toBeTruthy();
  await fireEvent.press(screen.getByRole('button',{name:'Details for A lake escape'}));
  expect(screen.getByText('Video 1 at 18s: visible name')).toBeTruthy();
- await fireEvent.press(screen.getByRole('button',{name:'Remove saved link'}));
+ await fireEvent.press(screen.getByRole('button',{name:'Delete saved link: A lake escape'}));
  expect(mockRemove).not.toHaveBeenCalled();
- await fireEvent.press(screen.getByRole('button',{name:'Confirm removal'}));
+ await fireEvent.press(screen.getByRole('button',{name:'Delete saved link'}));
  await waitFor(()=>expect(mockRemove).toHaveBeenCalledWith('idea'));
+ await waitFor(()=>expect(screen.queryByText('Cheow Lan Lake')).toBeNull());
 });
 it('opens editing with the original values and preserves save and analysis behavior',async()=>{
  const screen=await render(<InspirationFolder />);
@@ -35,4 +37,17 @@ it('keeps search and empty results usable',async()=>{
  await fireEvent.changeText(screen.getByLabelText('Search saved ideas'),'Kyoto');
  expect(screen.getByText('Nothing here just yet.')).toBeTruthy();
  expect(screen.queryByText('Cheow Lan Lake')).toBeNull();
+});
+
+it('allows cancelling deletion and preserves the saved post if deletion fails',async()=>{
+ const screen=await render(<InspirationFolder />);
+ await screen.findByText('Cheow Lan Lake');
+ await fireEvent.press(screen.getByRole('button',{name:'Delete saved link: A lake escape'}));
+ await fireEvent.press(screen.getByRole('button',{name:'Keep it'}));
+ expect(mockRemove).not.toHaveBeenCalled();
+ mockRemove.mockRejectedValueOnce(new Error('Could not delete. Try again.'));
+ await fireEvent.press(screen.getByRole('button',{name:'Delete saved link: A lake escape'}));
+ await fireEvent.press(screen.getByRole('button',{name:'Delete saved link'}));
+ await screen.findByText('Could not delete. Try again.');
+ expect(screen.getByText('Cheow Lan Lake')).toBeTruthy();
 });

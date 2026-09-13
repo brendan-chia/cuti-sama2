@@ -88,8 +88,18 @@ Future adventures.</Text>
           {item.analysis?.planningNotes.map((note, index) => <Text key={index} style={s.small}>{note}</Text>)}
           {item.analysis?.tags.length ? <Text style={styles.folder}>{item.analysis.tags.join(' · ')}</Text> : null}
           <AppButton label="Edit folder or caption" variant="secondary" disabled={busy} onPress={() => edit(item)} />
-          {removeId === item.id ? <><Text style={s.body}>Remove this saved link and its analysis?</Text><AppButton label="Confirm removal" disabled={busy} onPress={() => void run(async () => { await removeInspiration(item.id); setItems(await loadInspiration()); setRemoveId(null); })} /><AppButton label="Keep it" variant="secondary" onPress={() => setRemoveId(null)} /></> : <Pressable accessibilityRole="button" disabled={busy} style={styles.textAction} onPress={() => setRemoveId(item.id)}><Text style={styles.remove}>Remove saved link</Text></Pressable>}
         </View> : null}
+        {removeId === item.id ? <View style={styles.details}>
+          <Text style={s.body}>Delete this saved link and its analysis?</Text>
+          <AppButton label="Delete saved link" loading={busy} onPress={() => void run(async () => {
+            await removeInspiration(item.id);
+            setItems(current => current.filter(saved => saved.id !== item.id));
+            setDetails(current => current.filter(id => id !== item.id));
+            setRemoveId(null);
+            setMessage('Saved link deleted.');
+          })} />
+          <AppButton label="Keep it" variant="secondary" disabled={busy} onPress={() => setRemoveId(null)} />
+        </View> : <Pressable accessibilityRole="button" accessibilityLabel={`Delete saved link: ${item.analysis?.title ?? item.source_url}`} accessibilityState={{ disabled: busy }} disabled={busy} style={styles.textAction} onPress={() => setRemoveId(item.id)}><Text style={styles.remove}>Delete saved link</Text></Pressable>}
       </View>;
     })}
   </View></Screen>;

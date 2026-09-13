@@ -1,0 +1,45 @@
+export const demoTrips = [
+  {
+    id: 'demo-penang', name: 'Penang food & heritage weekend', host: 'Aina',
+    destination: 'George Town, Penang', dates: '16–18 October 2026',
+    budget: 'RM 450–650 per person', travellers: 3, capacity: 6,
+    description: 'An easygoing weekend of hawker food, street art and heritage walks.',
+    included: 'Estimate covers a shared stay, meals and local transport. Travel to Penang is separate.',
+    meeting: 'Meet at the George Town accommodation on Friday afternoon.',
+    style: 'Relaxed pace · Food lovers · Small group',
+    days: [
+      'Friday: Check in, explore Armenian Street and share a hawker dinner.',
+      'Saturday: Breakfast market, heritage walk and a free afternoon for cafés.',
+      'Sunday: Slow breakfast, waterfront stroll and departures after lunch.',
+    ],
+  },
+  {
+    id: 'demo-langkawi', name: 'Langkawi slow island escape', host: 'Daniel',
+    destination: 'Pantai Cenang, Langkawi', dates: '6–9 November 2026',
+    budget: 'RM 900–1,200 per person', travellers: 4, capacity: 8,
+    description: 'Beach time, sunset dinners and room to unwind without a packed schedule.',
+    included: 'Estimate covers shared accommodation, meals and island transport. Flights and optional tours are separate.',
+    meeting: 'Meet at the Pantai Cenang stay on Friday evening.',
+    style: 'Slow mornings · Beach time · Optional activities',
+    days: [
+      'Friday: Arrive, settle in and meet the group over dinner.',
+      'Saturday: Beach morning and an optional island tour, subject to weather.',
+      'Sunday: Café breakfast, free time and sunset together.',
+      'Monday: Breakfast and check out; leave time for airport transfers.',
+    ],
+  },
+  {
+    id: 'demo-cameron', name: 'Cameron Highlands fresh-air break', host: 'Mei',
+    destination: 'Tanah Rata, Cameron Highlands', dates: '20–22 November 2026',
+    budget: 'RM 400–600 per person', travellers: 2, capacity: 5,
+    description: 'A cool-weather getaway with tea gardens, gentle walks and warm meals.',
+    included: 'Estimate covers a shared stay, meals and local transport. Transport to Tanah Rata is separate.',
+    meeting: 'Meet in Tanah Rata on Friday afternoon; discuss carpooling after joining.',
+    style: 'Nature · Gentle walking · Early evenings',
+    days: [
+      'Friday: Arrive, check in and get to know everyone over dinner.',
+      'Saturday: Tea garden visit, lunch and a short walk if weather allows.',
+      'Sunday: Local market, breakfast and an early afternoon departure.',
+    ],
+  },
+] as const;

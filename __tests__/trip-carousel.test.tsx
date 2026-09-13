@@ -23,3 +23,10 @@ test('completed trips hide completion action and single cards hide navigation', 
   expect(screen.queryByText('Record as completed')).toBeNull();
   expect(screen.queryByLabelText('Next trip')).toBeNull();
 });
+
+test('opens change plan from the selected current trip card', async () => {
+  const onChangePlan = jest.fn();
+  const screen = await render(<TripCarousel trips={[{ ...trips[0], planning_started_at: '2026-09-13T00:00:00Z' }]} completed={new Set()} busy={false} onOpen={jest.fn()} onComplete={jest.fn()} onManage={jest.fn()} onChangePlan={onChangePlan} />);
+  await fireEvent.press(screen.getByText('Change plan'));
+  expect(onChangePlan).toHaveBeenCalledWith('solo');
+});

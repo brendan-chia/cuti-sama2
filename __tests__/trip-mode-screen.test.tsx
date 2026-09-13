@@ -41,10 +41,10 @@ async function open(role: 'organizer' | 'member' = 'organizer', failure = false)
   await waitFor(() => expect(screen.getByText('Next')).toBeTruthy());
   return { screen, saveAction };
 }
-test('generated itinerary exposes View trip navigation', async () => {
+test('generated itinerary no longer exposes the moved change-plan entry', async () => {
   const screen = await render(<ItineraryPlan room={room} />);
-  await fireEvent.press(screen.getByText('View trip'));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/trip/[tripId]/mode', params: { tripId: room.tripId } });
+  expect(screen.queryByText('View trip')).toBeNull();
+  expect(screen.getByText('Your day-by-day trip')).toBeTruthy();
 });
 test('previews rain replacement without saving, cancels, then applies and completes', async () => {
   const { screen, saveAction } = await open();
@@ -68,4 +68,12 @@ test('save conflicts leave the old timeline intact and offer reload', async () =
   await fireEvent.press(screen.getByText('Mark completed'));
   await waitFor(() => expect(screen.getByText('Reload trip')).toBeTruthy());
   expect(screen.getByText('Next')).toBeTruthy(); expect(screen.queryByText('✓ Completed')).toBeNull();
+});
+
+test('My trips entry opens rescue options immediately without saving', async () => {
+  const saveAction = jest.fn();
+  const screen = await render(<TripModeScreen tripId={room.tripId} onBack={jest.fn()} startWithRescue backLabel="Back to my trips" loadRoom={async () => room} loadAction={async () => ({ revision: 0, data: mockData })} saveAction={saveAction} />);
+  expect(await screen.findByText('What happened?')).toBeTruthy();
+  expect(screen.getByText('Back to my trips')).toBeTruthy();
+  expect(saveAction).not.toHaveBeenCalled();
 });

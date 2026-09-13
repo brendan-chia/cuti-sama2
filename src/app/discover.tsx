@@ -1,3 +1,4 @@
+import { DemoTrips } from '@/features/discovery/demo-trips';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -37,6 +38,8 @@ export default function Discover() {
       <AppButton label="Publish trip" disabled={busy || description.trim().length < 10} onPress={() => void run(() => publish(true))} />
       <AppButton label="Hide listing" disabled={busy} variant="secondary" onPress={() => void run(() => publish(false))} />
     </View> : null}
+    {!tripId ? <DemoTrips /> : null}
+    <Text accessibilityRole="header" style={s.heading}>Community trips</Text>
     <FormField label="Your name when joining" value={name} onChangeText={setName} maxLength={50} />
     <AppButton label="Refresh trips" disabled={busy} variant="secondary" onPress={() => void run(refresh)} />
     {loaded && !listings.length ? <Text style={s.body}>No open trips yet. Start a group trip and publish it from your profile.</Text> : null}
