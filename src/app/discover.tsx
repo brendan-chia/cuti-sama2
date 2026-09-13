@@ -32,6 +32,7 @@ export default function Discover() {
     await refresh(); setMessage(published ? 'Your trip is now public.' : 'Listing hidden.');
   }
   return <Screen><View style={s.stack}><Text style={s.title}>Find your travel people</Text><Text style={s.body}>Browse open trips and join a small group. Joining closes when planning begins.</Text>
+    <FormField label="Your name when joining" value={name} onChangeText={setName} maxLength={50} />
     {message ? <Text accessibilityRole="alert" style={s.error}>{message}</Text> : null}
     {tripId ? <View style={s.panel}><Text style={s.heading}>Open your trip to the public</Text><Text style={s.body}>Only the organiser can publish. Your trip name and this description will be public. New members can access the shared Trip Room.</Text>
       <FormField label="Public trip description" multiline maxLength={1000} value={description} onChangeText={setDescription} placeholder="Destination, travel dates, interests and who you'd like to travel with" />
@@ -40,7 +41,6 @@ export default function Discover() {
     </View> : null}
     {!tripId ? <DemoTrips /> : null}
     <Text accessibilityRole="header" style={s.heading}>Community trips</Text>
-    <FormField label="Your name when joining" value={name} onChangeText={setName} maxLength={50} />
     <AppButton label="Refresh trips" disabled={busy} variant="secondary" onPress={() => void run(refresh)} />
     {loaded && !listings.length ? <Text style={s.body}>No open trips yet. Start a group trip and publish it from your profile.</Text> : null}
     {listings.map(trip => <View style={s.panel} key={trip.id}><Text style={s.heading}>{trip.name}</Text><Text style={s.body}>{trip.description}</Text><Text style={s.small}>{trip.starts_on ?? 'Dates to decide'} · {trip.travellers}/8 travellers</Text>
