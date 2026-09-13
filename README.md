@@ -19,10 +19,6 @@ Our target users are students, budget-conscious travellers and friend groups. Th
 
 CutiSama2 turns travel planning into a guided quest: agree on dates, set private budgets, choose countries, vote, explore places and arrange logistics. Everyone contributes through a shared process, while the organiser confirms key decisions. Solo mode removes group voting so independent travellers can plan directly. Personal profiles, favourite places, saved inspiration and trip history give travellers reasons to return for their next adventure.
 
-### Feature Set
-
-These features are represented in the repository; live availability depends on the matching backend migrations, services and configuration.
-
 | Feature | What travellers can do |
 | --- | --- |
 | Group planning quest | Submit availability, nominate countries and vote before the organiser confirms shared decisions. |
@@ -43,9 +39,14 @@ Favourite places are currently saved profile data; this does not imply that ever
 | Alternative | Existing strengths | CutiSama2's intended focus |
 | --- | --- | --- |
 | [Wanderlog](https://wanderlog.com/) | Itinerary planning, maps, collaboration, budgeting and AI assistance. | Guided group agreement, private comfort/hard budget ranges and explicit voting rules. |
+| [Mindtrip](https://mindtrip.ai/) | AI-generated itineraries, group collaboration, personalised recommendations and the ability to turn saved social or web inspiration into trip plans. | Use explicit decision rules and private affordability limits to balance the needs of the whole group before producing the itinerary. |
+| [TRIPTI.ai](https://tripti.ai/) | Pre-booking group coordination through date scheduling, decision cards, reminders, shared itineraries and expense splitting. | Extend the guided agreement process across dates, destination voting and private comfort/maximum budgets, with affordability enforced as a shared constraint. |
+| [Trip.com Trip.Planner](https://www.trip.com/tripplanner) | AI itinerary generation connected to real-time flights, trains, hotels, restaurants, attractions and an established booking ecosystem. | Help friend groups agree on when and where to travel, and what everyone can afford, before they reach the booking stage. |
 | Group chats and separate saved-place lists | Familiar tools for discussing ideas and collecting inspiration. | Bring submissions, decisions and the resulting plan into one repeatable flow. |
 
-Wanderlog already offers [budget tracking and expense splitting](https://wanderlog.com/travel-budget-expense-splitting-app), so “AI travel planner” or “group budgeting” alone is not a convincing distinction. Our hypothesis is that collecting everyone's constraints before finalising a destination reduces coordination work. This is a positioning hypothesis, not evidence that competitors lack equivalent capabilities or that users will switch.
+Wanderlog already offers [budget tracking and expense splitting](https://wanderlog.com/travel-budget-expense-splitting-app), Mindtrip combines AI planning with collaborative inspiration, and TRIPTI.ai focuses directly on group coordination. Trip.com is an indirect competitor with a much stronger booking and live-inventory ecosystem. Therefore, “AI travel planner,” “collaboration” or “group budgeting” alone is not a convincing distinction.
+
+CutiSama2's intended niche is **affordable group agreement before booking**: collect everyone's availability and private spending limits, apply transparent voting rules, and generate a plan within the group's shared constraints. The product hypothesis is that this process reduces organiser chasing and prevents a group from choosing a trip that some members cannot comfortably afford. This positioning still requires user testing and is not evidence that competitors lack similar capabilities or that travellers will switch.
 
 ### Will People Keep Using It?
 
@@ -70,6 +71,8 @@ This table summarises the current implementation and directions raised by the ju
 | AI assistance with validated constraints (Chosen) | Helps with suggestions while keeping key decisions explainable. |
 | Gemini specifically for budgeting (Suggested; not confirmed as selected) | The underlying need is useful cost estimates; provider choice is separate from user-controlled spending limits. |
 | Automatic personalisation from all favourites (Future evaluation) | Saving favourites exists; broader recommendation integration needs explicit design and validation. |
+| Card-game interface, with each card representing a travel idea (Dropped) | The card metaphor made the experience playful, but it limited how much information users could compare at once. Dates, budgets, destinations and logistics need clear forms and summaries, so using cards for every decision would add extra steps and make planning harder to scan. The guided quest concept kept the sense of progression without making every interaction behave like a card game. |
+| Overcooked-style participant split screen combined with cards (Dropped) | Dividing the screen by participant would become crowded on mobile and would not scale well as the group size changed. It also implied that everyone had to participate at the same time, while CutiSama2 needs to support friends replying at different times and keep personal budgets private. A shared quest with individual submissions provides clearer progress without exposing each traveller's private input. |
 
 ### 2.2 Ideation Boards
 
