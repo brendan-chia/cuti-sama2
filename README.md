@@ -87,28 +87,6 @@ The following boards document the team's ideation process and the development of
 
 ![Ideation board 3](assets/images/ideation3.jpg)
 
-The diagram below summarises how the main planning problems connect to CutiSama2's features.
-
-```mermaid
-flowchart TD
-    A[Trip planning friction] --> B[Conflicting availability]
-    A --> C[Different spending limits]
-    A --> D[Scattered destination ideas]
-    A --> E[Organiser chases replies]
-    B --> F[Shared feasible dates]
-    C --> G[Private budget ranges]
-    D --> H[Favourites and saved inspiration]
-    E --> I[Guided submissions and voting]
-    F --> J[A plan the group can agree on]
-    G --> J
-    H --> J
-    I --> J
-```
-
-This problem-to-solution map connects coordination difficulties to the features intended to address them.
-
-This flow shows the shared planning journey and where solo travellers skip group coordination.
-
 ### 2.3 Mentor Consultation
 
 The following feedback was discussed with Jeremy Lau Wei Han on 7 September 2026. Existing features are noted as responses to the feedback.
@@ -134,12 +112,10 @@ CutiSama2 combines structured group decision-making with personal travel continu
 | Feature | What makes it different |
 | --- | --- |
 | Reels to saved places | Travellers can save a public Instagram Reel or TikTok, let CutiSama2 extract the places mentioned or shown, review the results, and confirm selected locations for a future trip. This turns travel inspiration into usable planning data instead of leaving it buried in social media bookmarks. |
-| Private comfort and maximum budgets | Participants contribute real limits without exposing individual amounts. The group plan uses the lowest comfort and maximum ceilings so the itinerary remains affordable for everyone. |
-| Guided planning quest | Dates, budgets, destinations, attractions and logistics are completed as clear stages. This reduces organiser chasing and makes progress visible. |
-| Explainable destination selection | Country nominations are deduplicated, each participant gets one vote per country, results reveal after everyone votes, and ties follow a documented organiser rule. |
-| Solo mode | A solo traveller can use the same planning foundation without unnecessary group invitations or voting. |
 | Personal travel passport | Profiles, favourite places, saved inspiration, previous trips and memories make the product useful between trips. |
+| Private comfort and maximum budgets | Participants contribute real limits without exposing individual amounts. The group plan uses the lowest comfort and maximum ceilings so the itinerary remains affordable for everyone. |
 | AI within validated rules | AI ranks or estimates options, while deterministic checks enforce dates, budgets, destination constraints and privacy. |
+| Guided planning quest | Dates, budgets, destinations, attractions and logistics are completed as clear stages. This reduces organiser chasing and makes progress visible. |
 
 Compared with general itinerary tools, the twist is that CutiSama2 makes agreement and affordability first-class decisions before generating a plan.
 
@@ -160,7 +136,7 @@ Compared with general itinerary tools, the twist is that CutiSama2 makes agreeme
 
 ### System architecture diagram
 
-![CutiSama2 system architecture](assets/images/cutisama2-architecture-diagram.png)
+![CutiSama2 system architecture](assets/images/cutisama2-arch-diagram.png)
 
 The diagram shows the main request and data flow. Deterministic rules protect privacy and trip constraints while AI assists with ranking, estimates and media analysis.
 
