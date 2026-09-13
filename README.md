@@ -107,19 +107,7 @@ flowchart TD
 
 This problem-to-solution map connects coordination difficulties to the features intended to address them.
 
-```mermaid
-flowchart LR
-    A[Start trip] --> B{Solo or group?}
-    B -->|Group| C[Invite crew]
-    C --> D[Dates and private budgets]
-    D --> E[Country wishlist and vote]
-    B -->|Solo| F[Choose dates, budget and country]
-    E --> G[Explore and select places]
-    F --> G
-    G --> H[Transport and accommodation]
-    H --> I[Review and generate itinerary]
-    I --> J[Reopen trip and save memories]
-```
+![CutiSama2 system architecture](assets/images/cutisama2-architecture-diagram.png)
 
 This flow shows the shared planning journey and where solo travellers skip group coordination.
 
@@ -151,13 +139,13 @@ CutiSama2 combines structured group decision-making with personal travel continu
 
 | Feature | What makes it different |
 | --- | --- |
+| Reels to saved places | Travellers can save a public Instagram Reel or TikTok, let CutiSama2 extract the places mentioned or shown, review the results, and confirm selected locations for a future trip. This turns travel inspiration into usable planning data instead of leaving it buried in social media bookmarks. |
 | Private comfort and maximum budgets | Participants contribute real limits without exposing individual amounts. The group plan uses the lowest comfort and maximum ceilings so the itinerary remains affordable for everyone. |
 | Guided planning quest | Dates, budgets, destinations, attractions and logistics are completed as clear stages. This reduces organiser chasing and makes progress visible. |
 | Explainable destination selection | Country nominations are deduplicated, each participant gets one vote per country, results reveal after everyone votes, and ties follow a documented organiser rule. |
 | Solo mode | A solo traveller can use the same planning foundation without unnecessary group invitations or voting. |
 | Personal travel passport | Profiles, favourite places, saved inspiration, previous trips and memories make the product useful between trips. |
 | AI within validated rules | AI ranks or estimates options, while deterministic checks enforce dates, budgets, destination constraints and privacy. |
-| Confirmed place import | Travellers can bring places from saved inspiration into a trip, then explicitly confirm what becomes part of the shared plan. |
 
 Compared with general itinerary tools, the twist is that CutiSama2 makes agreement and affordability first-class decisions before generating a plan.
 
@@ -178,7 +166,9 @@ Compared with general itinerary tools, the twist is that CutiSama2 makes agreeme
 
 ### System architecture diagram
 
-The text diagram is stored at [`images/system-architecture.md`](images/system-architecture.md) and can be converted into a visual diagram for the final submission.
+![CutiSama2 system architecture](assets/images/cutisama2-architecture-diagram.png)
+
+The diagram shows the main request and data flow. Deterministic rules protect privacy and trip constraints while AI assists with ranking, estimates and media analysis.
 
 ### Build plan & scope
 
