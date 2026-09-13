@@ -8,7 +8,7 @@ export function extractInviteToken(value: string) {
 
   try {
     const url = new URL(trimmed);
-    const segments = url.pathname.split('/').filter(Boolean);
+    const segments = (url.protocol === 'cutisama2:' ? url.hostname + url.pathname : url.pathname).split('/').filter(Boolean);
     const inviteIndex = segments.lastIndexOf('invite');
     const token = inviteIndex >= 0 ? segments[inviteIndex + 1] : undefined;
     const parsed = InviteTokenSchema.safeParse(token);
@@ -26,5 +26,17 @@ export function invitationUrlForOrigin(invitation: CachedInvitation, origin?: st
     return `${url.origin}/invite/${encodeURIComponent(invitation.token)}`;
   } catch {
     return invitation.inviteUrl;
+  }
+}
+
+/** The browser counterpart of an Expo Go development link on the same server. */
+export function invitationBrowserUrl(invitation: CachedInvitation, appUrl: string) {
+  try {
+    const url = new URL(appUrl);
+    if (url.protocol !== 'exp:' && url.protocol !== 'exps:') return null;
+    const secure = url.protocol === 'exps:' || url.hostname.endsWith('.exp.direct');
+    return invitationUrlForOrigin(invitation, (secure ? 'https://' : 'http://') + url.host);
+  } catch {
+    return null;
   }
 }

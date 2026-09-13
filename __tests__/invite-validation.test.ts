@@ -1,4 +1,4 @@
-import { extractInviteToken, invitationUrlForOrigin } from '@/features/invites/validation';
+import { extractInviteToken, invitationUrlForOrigin, invitationBrowserUrl } from '@/features/invites/validation';
 import { IssuedInvitationSchema } from '../packages/contracts/src/invite';
 
 const token = 'A'.repeat(43);
@@ -40,4 +40,18 @@ describe('invitation URL host selection', () => {
   it('keeps the canonical URL when no web origin is available', () => {
     expect(invitationUrlForOrigin(invitation, null)).toBe(invitation.inviteUrl);
   });
+});
+
+test('accepts Expo Go and installed-app invitation links', () => {
+  expect(extractInviteToken('exp://192.168.1.20:8081/--/invite/' + token)).toBe(token);
+  expect(extractInviteToken('cutisama2://invite/' + token)).toBe(token);
+  expect(extractInviteToken('cutisama2:///invite/' + token)).toBe(token);
+});
+
+test('provides browser invitations for LAN and tunnel demos', () => {
+  const invitation = { token, inviteUrl: 'https://example.com/invite/' + token } as Parameters<typeof invitationBrowserUrl>[0];
+  expect(invitationBrowserUrl(invitation, 'exp://192.168.1.20:8081/--/invite/' + token)).toBe('http://192.168.1.20:8081/invite/' + token);
+  expect(invitationBrowserUrl(invitation, 'exp://demo.exp.direct/--/invite/' + token)).toBe('https://demo.exp.direct/invite/' + token);
+  expect(invitationBrowserUrl(invitation, 'exps://demo.example/--/invite/' + token)).toBe('https://demo.example/invite/' + token);
+  expect(invitationBrowserUrl(invitation, 'cutisama2://invite/' + token)).toBeNull();
 });

@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { fireEvent, render } from '@testing-library/react-native';
 import { ShareInvitationScreen } from '@/features/invites/share-invitation-screen';
 import type { IssuedInvitation } from '../packages/contracts/src/invite';
@@ -23,4 +24,18 @@ test('offers retry if automatic preparation fails', async () => {
   await screen.findByText('Connection lost');
   await fireEvent.press(screen.getByText('Try again'));
   expect(await screen.findByText('Share invitation')).toBeTruthy();
+});
+
+jest.mock('expo-linking', () => ({
+  createURL: (path: string) => 'exp://192.168.1.20:8081/--/' + path,
+}));
+
+test('copies the running demo browser address for a laptop participant', async () => {
+  const copy = jest.spyOn(Clipboard, 'setStringAsync').mockResolvedValue(true);
+  const screen = await render(<ShareInvitationScreen tripId={tripId} loadAction={async () => ({ status: invitation, invitation })} />);
+  await fireEvent.press(await screen.findByText('Copy browser link'));
+  expect(copy).toHaveBeenCalledWith('http://192.168.1.20:8081/invite/' + invitation.token);
+  await fireEvent.press(screen.getByText('Copy link'));
+  expect(copy).toHaveBeenCalledWith('exp://192.168.1.20:8081/--/invite/' + invitation.token);
+  copy.mockRestore();
 });
