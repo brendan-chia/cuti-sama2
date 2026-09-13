@@ -2,7 +2,7 @@
 
 **Team:** Brendan Chia Yan Fei, Neo Li Xin, Chew Chiu Xian  
 **Problem Statement:** Travel Planner  
-**Video Presentation:** [Youtube Link](https://www.youtube.com/watch?v=6MbxPRiEul0)
+**Video Presentation:** [Youtube Link](https://www.youtube.com/watch?v=SmZNXjGssQs)
 
 **Presentation Slides:** [View the CutiSama2 pitch deck on Canva](https://canva.link/e0cj10tgzjpw03b)
 
