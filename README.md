@@ -3,9 +3,7 @@
 **Team:** Brendan Chia Yan Fei, Neo Li Xin, Chew Chiu Xian  
 **Problem Statement:** Travel Planner  
 **Video Presentation:** To add — unlisted YouTube link  
-**Presentation Slides:** To add — public link
-
-> From “where should we go?” to a trip everyone can agree on.
+**Presentation Slides:** [View the CutiSama2 pitch deck on Canva](https://canva.link/e0cj10tgzjpw03b)
 
 ## 1. Project Overview
 
@@ -42,17 +40,10 @@ Favourite places are currently saved profile data; this does not imply that ever
 | [Mindtrip](https://mindtrip.ai/) | AI-generated itineraries, group collaboration, personalised recommendations and the ability to turn saved social or web inspiration into trip plans. | Use explicit decision rules and private affordability limits to balance the needs of the whole group before producing the itinerary. |
 | [TRIPTI.ai](https://tripti.ai/) | Pre-booking group coordination through date scheduling, decision cards, reminders, shared itineraries and expense splitting. | Extend the guided agreement process across dates, destination voting and private comfort/maximum budgets, with affordability enforced as a shared constraint. |
 | [Trip.com Trip.Planner](https://www.trip.com/tripplanner) | AI itinerary generation connected to real-time flights, trains, hotels, restaurants, attractions and an established booking ecosystem. | Help friend groups agree on when and where to travel, and what everyone can afford, before they reach the booking stage. |
-| Group chats and separate saved-place lists | Familiar tools for discussing ideas and collecting inspiration. | Bring submissions, decisions and the resulting plan into one repeatable flow. |
 
 Wanderlog already offers [budget tracking and expense splitting](https://wanderlog.com/travel-budget-expense-splitting-app), Mindtrip combines AI planning with collaborative inspiration, and TRIPTI.ai focuses directly on group coordination. Trip.com is an indirect competitor with a much stronger booking and live-inventory ecosystem. Therefore, “AI travel planner,” “collaboration” or “group budgeting” alone is not a convincing distinction.
 
 CutiSama2's intended niche is **affordable group agreement before booking**: collect everyone's availability and private spending limits, apply transparent voting rules, and generate a plan within the group's shared constraints. The product hypothesis is that this process reduces organiser chasing and prevents a group from choosing a trip that some members cannot comfortably afford. This positioning still requires user testing and is not evidence that competitors lack similar capabilities or that travellers will switch.
-
-### Will People Keep Using It?
-
-Favourite places and saved inspiration provide value before a trip; saved plans and memories provide value afterwards. Solo mode makes the app useful even when friends are unavailable. These support repeat use, but adoption and retention still need validation.
-
-**Proposed validation:** Ask student and friend groups to plan a real trip, compare time to agreement with their usual method, record where participants abandon the flow, and check whether they return to plan another trip. Track AI cost per completed plan and repeat usage to assess operating sustainability. No user-study results or market-size claims are asserted here.
 
 ## 2. Ideation & Process
 
