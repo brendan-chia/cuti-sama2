@@ -24,7 +24,7 @@ export function BudgetStage({ room, busy, act }: { room: QuestRoom; busy: boolea
       {room.ownBudget ? <Text accessibilityLiveRegion="polite" style={s.small}>Your budget is saved. You can update it before continuing.</Text> : null}
       <AppButton label={room.ownBudget ? 'Update my budget' : 'Save my budget'} testID="submit-quest-budget" disabled={!parsed.success || busy} loading={busy} onPress={() => { if (parsed.success) void act({ type: 'budget', ...parsed.data }); }} />
     </View>
-    {allReady && room.budgetSummary ? <View style={s.success} testID="crew-budget-zones">
+    {allReady && room.budgetSummary ? !solo ? <View style={s.success} testID="crew-budget-zones">
       <Text style={s.heading}>{solo ? 'Your Comfort Zone' : 'Crew Comfort Zone'}</Text>
       <Text style={s.strong}>Up to {money(room.budgetSummary.crewComfortCeiling)}/person</Text>
       <Text style={s.heading}>Flexible Zone</Text>
@@ -34,7 +34,7 @@ export function BudgetStage({ room, busy, act }: { room: QuestRoom; busy: boolea
       </> : <Text style={s.body}>No extra stretch room beyond the comfort zone.</Text>}
       <Text style={s.strong}>Above {money(room.budgetSummary.crewHardCeiling)}/person</Text>
       <Text style={s.body}>{solo ? 'May exceed your maximum.' : "May exceed someone's maximum."}</Text>
-    </View> : <Text style={s.small}>{solo ? 'Save your budget to continue.' : 'Your crew’s spending zones appear once everyone saves.'}</Text>}
+    </View> : null : <Text style={s.small}>{solo ? 'Save your budget to continue.' : 'Your crew’s spending zones appear once everyone saves.'}</Text>}
     {room.ownBudget && unsaved ? <Text style={s.small}>Save your changes before continuing.</Text> : null}
     {room.currentRole === 'organizer' ? <AppButton label="Continue the quest" testID="finish-trip-quest" disabled={!allReady || busy || unsaved} loading={busy} onPress={() => void act({ type: 'finish' })} /> : <Text style={s.small}>{allReady ? 'Your organiser can now continue the quest.' : 'The next chapter unlocks after everyone submits.'}</Text>}
   </View>;

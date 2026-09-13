@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode, Ref } from 'react';
+import { useState, type PropsWithChildren, type ReactNode, type Ref } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,10 +21,12 @@ type ScreenProps = PropsWithChildren<{
 }>;
 
 export function Screen({ children, contentStyle, footer, scroll = true, testID, scrollRef }: ScreenProps) {
+  const [width, setWidth] = useState(0);
+  const gutters = { paddingHorizontal: width < 600 ? spacing.lg : spacing.xl };
   const content = scroll ? (
     <ScrollView
       ref={scrollRef}
-      contentContainerStyle={[styles.content, contentStyle]}
+      contentContainerStyle={[styles.content, gutters, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       testID={testID}
@@ -32,21 +34,21 @@ export function Screen({ children, contentStyle, footer, scroll = true, testID, 
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.content, contentStyle]} testID={testID}>
+    <View style={[styles.content, gutters, contentStyle]} testID={testID}>
       {children}
     </View>
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cloud} />
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <View style={styles.maxWidth}>
+        <View style={styles.maxWidth} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
           {content}
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
+          {footer ? <View style={[styles.footer, gutters]}>{footer}</View> : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -54,7 +56,6 @@ export function Screen({ children, contentStyle, footer, scroll = true, testID, 
 }
 
 const styles = StyleSheet.create({
-  cloud: { position: 'absolute', right: -70, top: 90, width: 220, height: 80, borderRadius: 80, backgroundColor: colors.paper, opacity: 0.35, transform: [{ rotate: '-18deg' }] },
   safeArea: {
     flex: 1,
     overflow: 'hidden',
@@ -66,20 +67,20 @@ const styles = StyleSheet.create({
   maxWidth: {
     alignSelf: 'center',
     flex: 1,
-    maxWidth: 560,
+    maxWidth: 720,
     width: '100%',
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xxl,
   },
   footer: {
     backgroundColor: colors.background,
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },

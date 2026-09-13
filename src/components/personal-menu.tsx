@@ -22,7 +22,7 @@ export function PersonalMenu() {
     { label: 'Settings', icon: '⚙', section: 'settings' },
   ];
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel="Open personal space" accessibilityState={{ expanded: open }} onPress={() => setOpen(true)} style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Open personal space" aria-expanded={open} accessibilityState={{ expanded: open }} onPress={() => setOpen(true)} style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}>
       {avatar ? <Image source={{ uri: avatar }} onError={() => setAvatar(null)} style={styles.photo} /> : <Text style={styles.initial}>{name.trim().slice(0, 1).toUpperCase() || '◎'}</Text>}
     </Pressable>
     <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>

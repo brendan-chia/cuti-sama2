@@ -1,5 +1,22 @@
 import { z } from 'zod';
 
+// Conservative identity: keep identically named places in different locations separate.
+export function deduplicateInspirationPlaces<T extends { name: string; location?: string; evidence: string }>(places: T[], evidenceLimit = 400): T[] {
+  const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/&/g, ' and ').replace(/[\p{P}\p{Z}\s]+/gu, ' ').trim();
+  const unique = new Map<string, T>();
+  for (const place of places) {
+    const key = JSON.stringify([normalize(place.name), normalize(place.location ?? '')]);
+    const existing = unique.get(key);
+    if (!existing) unique.set(key, { ...place });
+    else if (!existing.evidence.includes(place.evidence)) {
+      // Keep supporting evidence from both scenes when it fits, without inventing a quote.
+      const combined = `${existing.evidence}\n${place.evidence}`;
+      if (combined.length <= evidenceLimit) existing.evidence = combined;
+    }
+  }
+  return [...unique.values()];
+}
+
 export function inspirationUrl(input: string) {
   const url = new URL(input.trim());
   if (url.protocol !== 'https:' || url.username || url.password || url.port || !url.hostname.includes('.') || /^(localhost|127\.|10\.|192\.168\.|169\.254\.|\[)/.test(url.hostname)) throw new Error('Use a public HTTPS post link.');
@@ -22,7 +39,7 @@ export type InspirationAnalysis = z.infer<typeof InspirationAnalysisSchema>;
 export const InspirationSchema = z.object({
   id: z.uuid(), source_url: z.string(), folder: z.string(), caption: z.string(),
   status: z.enum(['saved', 'analyzing', 'ready', 'needs_input', 'failed']),
-  analysis: InspirationAnalysisSchema.nullable(), message: z.string(),
+  analysis: InspirationAnalysisSchema.transform(analysis => ({ ...analysis, places: deduplicateInspirationPlaces(analysis.places) })).nullable(), message: z.string(),
   source_text: z.string(), provider: z.string().nullable(), model: z.string().nullable(),
   created_at: z.string(), updated_at: z.string(),
 });

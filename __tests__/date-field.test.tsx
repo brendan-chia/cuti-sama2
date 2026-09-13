@@ -54,3 +54,13 @@ test('an open calendar updates its minimum when midnight passes', async () => {
   expect(screen.getByRole('button', { name: '8 September 2026' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '9 September 2026' })).not.toBeDisabled();
 });
+
+ test('shows both range endpoints and connects the intervening dates', async () => {
+  const screen = await render(<DateField label="End date" rangeStart="2026-09-13" minimumDate="2026-09-13" value="2026-09-19" onChange={jest.fn()} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'End date' }));
+  expect(screen.getByRole('button', { name: '13 September 2026' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByRole('button', { name: '19 September 2026' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByRole('button', { name: '12 September 2026' })).toBeDisabled();
+  for (let day = 13; day <= 19; day++) expect(screen.getByTestId(`date-range-2026-09-${day}`)).toBeTruthy();
+  expect(screen.queryByTestId('date-range-2026-09-20')).toBeNull();
+});

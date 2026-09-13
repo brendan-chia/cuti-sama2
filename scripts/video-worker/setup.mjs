@@ -9,5 +9,5 @@ process.loadEnvFile(file);
 mkdirSync('.tmp',{recursive:true});
 const secretPath='.tmp/video-worker-secret.env';writeFileSync(secretPath,`VIDEO_WORKER_TOKEN=${process.env.VIDEO_WORKER_TOKEN}\n`,{mode:0o600});
 const cli=process.env.SUPABASE_CLI||'supabase';
-try{execFileSync(cli,['secrets','set','--env-file',secretPath],{stdio:['ignore','pipe','pipe'],windowsHide:true});console.log('Local worker token configured. No Groq or database admin keys are stored on the worker.');}
+try{execFileSync(cli,['secrets','set','--env-file',secretPath],{stdio:['ignore','pipe','pipe'],windowsHide:true});console.log('Local worker token configured. No OpenAI or database admin keys are stored on the worker.');}
 finally{const {unlinkSync}=await import('node:fs');unlinkSync(secretPath);}

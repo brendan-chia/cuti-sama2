@@ -1,3 +1,4 @@
+import { isSocialVideoUrl } from '../../../packages/contracts/src/social-video.ts';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { authenticatedClient,corsHeaders,json } from '../_shared/invites.ts';
@@ -15,11 +16,13 @@ Deno.serve(async request=>{
   if(owned.error||!owned.data)return json({error:'Saved link unavailable.'},404);
   if(owned.data.status==='ready')return json({status:'ready'});
   const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
+  const media=isSocialVideoUrl(owned.data.source_url);
   const lease=crypto.randomUUID(); const stale=new Date(Date.now()-120000).toISOString();
   if(owned.data.status==='analyzing' && owned.data.updated_at>stale)return json({status:'analyzing'});
   if(['failed','needs_input'].includes(owned.data.status) && Date.now()-Date.parse(owned.data.updated_at)<15000)return json({error:'Wait a few seconds before retrying.'},429);
-  const claimed=await admin.from('saved_inspiration').update({status:'analyzing',lease,updated_at:new Date().toISOString(),message:'Reading public post content…'}).eq('id',id).eq('user_id',owned.data.user_id).eq('updated_at',owned.data.updated_at).select().maybeSingle();
+  const claimed=await admin.from('saved_inspiration').update({status:'analyzing',lease,updated_at:new Date().toISOString(),media_state:media?{queued:true}:null,message:media?'Waiting for the media worker to analyze video frames and audio…':'Reading public post content…'}).eq('id',id).eq('user_id',owned.data.user_id).eq('updated_at',owned.data.updated_at).select().maybeSingle();
   if(claimed.error)throw claimed.error;if(!claimed.data)return json({status:'analyzing'});
+  if(media)return json({status:'analyzing'},202);
   const job=(async()=>{
     let source='';
     try {

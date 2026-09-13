@@ -1,3 +1,4 @@
+import { placeLabel } from '@/lib/presentation';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Attraction } from '../../../packages/contracts/src/countries';
@@ -24,7 +25,7 @@ export function CrewChoices({ room, places }: { room: QuestRoom; places: Attract
         return <View key={place.id} style={styles.item}>
           <View style={styles.row}>
             <View style={styles.place}>
-              <Text style={styles.name}>{place.name}</Text>
+              <Text style={styles.name}>{placeLabel(place.name)}</Text>
               <Text style={styles.meta}>{place.category}{own ? ' · You voted' : ''}{voters.length === room.members.length ? ' · Everyone’s pick' : ''}</Text>
             </View>
             <View style={styles.tally} accessibilityLabel={`${voters.length} ${voters.length === 1 ? 'vote' : 'votes'} out of ${room.members.length} travellers`} accessible>
@@ -37,10 +38,10 @@ export function CrewChoices({ room, places }: { room: QuestRoom; places: Attract
       })}
     </View>
     <View style={styles.actions}>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: showVoters }} onPress={() => setShowVoters(!showVoters)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}><Text style={styles.link}>{showVoters ? 'Hide voters' : 'See who voted'}</Text></Pressable>
-      {choices.length > 5 ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: showAll }} onPress={() => setShowAll(!showAll)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}><Text style={styles.link}>{showAll ? 'Show fewer places' : `Show all ${choices.length} places`}</Text></Pressable> : null}
+      <Pressable accessibilityRole="button" aria-expanded={showVoters} accessibilityState={{ expanded: showVoters }} onPress={() => setShowVoters(!showVoters)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}><Text style={styles.link}>{showVoters ? 'Hide voters' : 'See who voted'}</Text></Pressable>
+      {choices.length > 5 ? <Pressable accessibilityRole="button" aria-expanded={showAll} accessibilityState={{ expanded: showAll }} onPress={() => setShowAll(!showAll)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}><Text style={styles.link}>{showAll ? 'Show fewer places' : `Show all ${choices.length} places`}</Text></Pressable> : null}
     </View>
-    <Text style={styles.footnote}>Every voted place is included when your organiser compiles the stops.</Text>
+    <Text style={styles.footnote}>Your organiser reviews these votes and chooses the itinerary stops.</Text>
   </View>;
 }
 

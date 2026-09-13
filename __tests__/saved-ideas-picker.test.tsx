@@ -6,9 +6,9 @@ test('only completed analyses can supply place names for trip confirmation',asyn
  mockLoad.mockResolvedValue([{id:'1',status:'ready',folder:'Japan',analysis:{title:'Kyoto food',places:[{name:'Nishiki Market',location:'Kyoto'}]}},{id:'2',status:'needs_input',folder:'Japan',analysis:null}]);
  const choose=jest.fn();const screen=await render(<SavedIdeasPicker onChoose={choose} />);
  await fireEvent.press(screen.getByText('Choose from my saved inspiration'));
- await waitFor(()=>expect(screen.getByText('Kyoto food')).toBeTruthy());
+ await waitFor(()=>expect(screen.getByText('Use all 1 place')).toBeTruthy());
  expect(choose).not.toHaveBeenCalled();
- await fireEvent.press(screen.getByText('Kyoto food'));
- expect(choose).toHaveBeenCalledWith('Nishiki Market, Kyoto');
- expect(screen.queryByText('Kyoto food')).toBeNull();
+ await fireEvent.press(screen.getByText('Use all 1 place'));
+ expect(choose).toHaveBeenCalledWith('Nishiki Market, Kyoto', '1');
+ expect(screen.queryByText('Use all 1 place')).toBeNull();
 });

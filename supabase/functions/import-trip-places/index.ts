@@ -1,3 +1,4 @@
+import { InspirationAnalysisSchema, deduplicateInspirationPlaces } from '../../../packages/contracts/src/inspiration.ts';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeSocialUrl, PlaceImportRequestSchema, type PlaceCandidate } from '../../../packages/contracts/src/place-import.ts';
 import { authenticatedClient, corsHeaders, json } from '../_shared/invites.ts';
@@ -26,25 +27,35 @@ Deno.serve(async (request) => {
     const parsed = PlaceImportRequestSchema.safeParse(JSON.parse(new TextDecoder().decode(body)));
     if (!parsed.success) return json({ error: 'Add a valid link, caption, or screenshot under 3 MB.' }, 400);
     const input = parsed.data;
-    const sourceUrl = input.sourceUrl ? normalizeSocialUrl(input.sourceUrl) : null;
+    let savedNames: { name: string; evidence: string }[] | undefined;
+    let sourceUrl = input.sourceUrl ? normalizeSocialUrl(input.sourceUrl) : null;
+    if (input.inspirationId) {
+      // The authenticated client applies ownership RLS; never load private ideas with admin.
+      const { data: idea, error } = await client.from('saved_inspiration').select('status,analysis,source_url').eq('id', input.inspirationId).maybeSingle();
+      if (error || !idea || idea.status !== 'ready') return json({ error: 'Saved inspiration is unavailable or not ready.' }, 400);
+      const analysis = InspirationAnalysisSchema.parse(idea.analysis);
+      savedNames = deduplicateInspirationPlaces(analysis.places).map(place => ({ name: [place.name, place.location].filter(Boolean).join(', '), evidence: place.evidence }));
+      sourceUrl = idea.source_url;
+    }
     const { data: reservation, error } = await client.rpc('begin_place_import', { p_trip_id: input.tripId, p_request_id: input.requestId, p_source_url: sourceUrl });
     if (error) return json({ error: error.message }, error.code === '42501' ? 403 : 400);
     importId = reservation.id;
     if (reservation.status !== 'pending') return json({ importId, candidates: reservation.candidates, status: reservation.status, message: reservation.message });
     if (!reservation.fresh) return json({ error: 'This import is still being read. Try again shortly.' }, 409);
     let caption = input.text;
-    if (sourceUrl) {
+    if (sourceUrl && !savedNames) {
       try { caption = [caption, await readPublicPost(sourceUrl)].filter(Boolean).join('\n'); } catch { /* A readable caption or screenshot remains usable. */ }
     }
     let candidates: PlaceCandidate[] = [];
-    if (caption || input.image) {
-      const names = await extractPlaces(caption, input.image);
+    if (savedNames || caption || input.image) {
+      const names = savedNames ?? await extractPlaces(caption, input.image);
       for (const name of names) {
         const matches = await findPlaces(name.name, name.evidence, reservation.countryCode);
         for (const match of matches) if (!candidates.some((item) => item.id === match.id)) candidates.push(match);
       }
     }
-    candidates = await translatePlacesToEnglish(candidates);
+    candidates = candidates.slice(0, 12);
+    if (!savedNames) candidates = await translatePlacesToEnglish(candidates);
     const status = candidates.length ? 'ready' : 'needs_input';
     const unreadable = Boolean(sourceUrl && !caption.trim() && !input.image);
     const message = unreadable

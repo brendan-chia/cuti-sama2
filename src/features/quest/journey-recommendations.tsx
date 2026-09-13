@@ -87,7 +87,7 @@ export function JourneyRecommendations({ options, busy, act, open }: Props) {
     </View>
     {options.length > 1 ? <View>
       <View style={styles.dots}>
-        {options.map((option, i) => <Pressable key={i} accessibilityRole="button" accessibilityLabel={`Show option ${i + 1}: ${option.label}`} accessibilityState={{ selected: i === activeIndex }} onPress={() => go(i)} style={styles.dotTarget}>
+        {options.map((option, i) => <Pressable key={i} accessibilityRole="button" accessibilityLabel={`Show option ${i + 1}: ${option.label}`} aria-pressed={i === activeIndex} accessibilityState={{ selected: i === activeIndex }} onPress={() => go(i)} style={styles.dotTarget}>
           <View style={[styles.dot, i === activeIndex && styles.dotActive]} />
         </Pressable>)}
       </View>

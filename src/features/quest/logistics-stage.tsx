@@ -1,6 +1,6 @@
 import { LogisticsOptions } from './logistics-options';
 import { useState } from 'react';
-import { Image, Linking, Pressable, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { emptyLogistics, logisticsDraftNotice, logisticsTotals, StaySchema, TransportSchema, type Stay, type Transport } from '../../../packages/contracts/src/logistics';
 import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/quest';
@@ -10,10 +10,11 @@ import { nextCalendarDate } from '@/lib/current-date';
 import { DateField } from '@/components/date-field';
 import { money } from './budget-stage';
 import { questStyles as s } from './quest-styles';
+import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 type Props = { room: QuestRoom; busy: boolean; act: (action: QuestAction) => Promise<boolean>; onItinerary?: () => void; onSectionChange?: () => void };
 function Choices<T extends string>({ values, value, onChange, disabled }: { values: readonly T[]; value: T; onChange: (value: T) => void; disabled: boolean }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{values.map((item) => <Pressable key={item} accessibilityRole="radio" accessibilityState={{ checked: item === value, disabled }} disabled={disabled} onPress={() => onChange(item)} style={s.chip}><Text style={item === value ? s.strong : s.small}>{item === value ? '● ' : '○ '}{item === 'arrival' ? 'Arrival' : item === 'departure' ? 'Departure' : item}</Text></Pressable>)}</View>;
+  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{values.map((item) => <Pressable key={item} accessibilityRole="radio" aria-checked={item === value} aria-disabled={disabled} accessibilityState={{ checked: item === value, disabled }} disabled={disabled} onPress={() => onChange(item)} style={s.chip}><Text style={item === value ? s.strong : s.small}>{item === value ? '● ' : '○ '}{item === 'arrival' ? 'Arrival' : item === 'departure' ? 'Departure' : item}</Text></Pressable>)}</View>;
 }
 
 function TransportForm({ room, busy, act }: Props) {
@@ -27,7 +28,7 @@ function TransportForm({ room, busy, act }: Props) {
   const saveForTraveller: Props['act'] = (action) => act((action.type === 'transport' || action.type === 'skip_transport') && !own ? { ...action, memberId } : action);
   return <View style={s.stack}>
     <Text style={s.small}>Choose inbound and return journeys from the suggestions. Prices are per person, in MYR.</Text>
-    {room.currentRole === 'organizer' && room.travelParty !== 'solo' ? <View style={s.stack}><Text style={s.strong}>Transport for</Text><View style={s.row}>{room.members.map((member) => <Pressable key={member.memberId} accessibilityRole="radio" accessibilityLabel={`Transport for ${member.displayName}`} accessibilityState={{ checked: memberId === member.memberId, disabled: busy }} disabled={busy} onPress={() => setChosenMemberId(member.memberId)} style={[s.chip, memberId === member.memberId && s.chipSelected]}><Text style={memberId === member.memberId ? s.chipTextSelected : s.chipText}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></Pressable>)}</View></View> : null}
+    {room.currentRole === 'organizer' && room.travelParty !== 'solo' ? <View style={s.stack}><Text style={s.strong}>Transport for</Text><View style={s.row}>{room.members.map((member) => <Pressable key={member.memberId} accessibilityRole="radio" accessibilityLabel={`Transport for ${member.displayName}`} aria-checked={memberId === member.memberId} aria-disabled={busy} accessibilityState={{ checked: memberId === member.memberId, disabled: busy }} disabled={busy} onPress={() => setChosenMemberId(member.memberId)} style={[s.chip, memberId === member.memberId && s.chipSelected]}><Text style={memberId === member.memberId ? s.chipTextSelected : s.chipText}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></Pressable>)}</View></View> : null}
     <Choices values={['arrival', 'departure']} value={direction} onChange={setDirection} disabled={busy} />
     <LogisticsOptions key={`${memberId}-${direction}`} room={room} kind="transport" direction={direction} busy={busy} act={saveForTraveller} />
     {existing ? <Text style={s.strong}>Saved: {existing.departureLocation} → {existing.arrivalLocation} · {money(existing.cost)} · {existing.status}</Text> : null}
@@ -129,18 +130,33 @@ function StayCard({ stay, room, busy, act }: Props & { stay: Stay }) {
 export function LogisticsSummary({ room }: { room: QuestRoom }) {
   const logistics = room.logistics ?? emptyLogistics;
   const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0);
-  return <View style={s.panel}>
-    <Text style={s.kicker}>LOGISTICS SUMMARY</Text><Text style={s.heading}>{room.travelParty === 'solo' ? 'Your travel details' : `${room.members.length} travellers`}</Text>
-    <Text style={s.strong}>Arrival · local time at destination</Text>
-    {room.members.map((member) => { const arrival = logistics.transport.find((item) => item.memberId === member.memberId && item.direction === 'arrival' && item.status !== 'proposed'); return <Text key={member.memberId} style={s.body}>{member.displayName} · {arrival ? `${arrival.arrivalAt.slice(0, 10)} ${arrival.arrivalAt.slice(11, 16)} (${arrival.arrivalLocation}, UTC${arrival.arrivalAt.slice(19)})` : 'To be confirmed'}</Text>; })}
-    <Text style={s.strong}>Departure · local time at origin</Text>
-    {room.members.map((member) => { const departure = logistics.transport.find((item) => item.memberId === member.memberId && item.direction === 'departure' && item.status !== 'proposed'); return <Text key={member.memberId} style={s.body}>{member.displayName} · {departure ? `${departure.departureAt.slice(0, 10)} ${departure.departureAt.slice(11, 16)} (${departure.departureLocation})` : 'To be confirmed'}</Text>; })}
-    <Text style={s.heading}>{totals.stay?.name ?? 'Stay to be confirmed'}</Text>
-    {totals.stay ? <Text style={s.body}>{totals.stay.checkIn} – {totals.stay.checkOut}{'\n'}{money(totals.stay.totalCost)} total · {money(totals.stayPerPerson)}/person</Text> : null}
-    <Text style={s.body}>{room.travelParty === 'solo' ? 'Your transport' : 'Average transport/person'} · {money(Math.round(totals.averageTransport * 100) / 100)}</Text>
-    <Text style={s.strong}>{room.travelParty === 'solo' ? 'Your remaining budget' : 'Shared activity budget/person'} · {money(totals.remaining)}</Text>
-    <Text style={s.small}>{room.travelParty === 'solo' ? 'Available for food, activities and local transport. Reserve money for costs still to be confirmed.' : 'Uses the lowest remaining amount so everyone can afford the shared plan. Unknown costs still need to be reserved.'}</Text>
-    {totals.draft ? <Text style={s.error}>Draft itinerary · {logisticsDraftNotice}</Text> : null}
+  const localTime = (value: string) => `${new Date(`${value.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}, ${value.slice(11, 16)}`;
+  const zone = (value: string) => value.endsWith('Z') ? 'UTC+00:00' : `UTC${value.slice(-6)}`;
+  return <View style={summaryStyles.card}>
+    <View style={summaryStyles.header}><Text style={summaryStyles.label}>Logistics summary</Text><Text style={summaryStyles.title}>{room.travelParty === 'solo' ? 'Your travel details' : `${room.members.length} travellers`}</Text></View>
+    <View style={summaryStyles.travellers}>
+      {room.members.map((member) => {
+        const journeys = logistics.transport.filter((item) => item.memberId === member.memberId && item.status !== 'proposed');
+        const arrival = journeys.find((item) => item.direction === 'arrival');
+        const departure = journeys.find((item) => item.direction === 'departure');
+        const initials = member.displayName.trim().split(/\s+/).map((part) => Array.from(part)[0]).slice(0, 2).join('').toUpperCase() || '?';
+        return <View key={member.memberId} style={summaryStyles.traveller}>
+          <View style={summaryStyles.avatar} accessibilityElementsHidden aria-hidden><Text style={summaryStyles.initials}>{initials}</Text></View>
+          <View style={summaryStyles.details}>
+            <Text style={s.strong}>{member.displayName}</Text>
+            {arrival ? <View style={summaryStyles.journey}><Text style={s.small}>Arrives <Text style={summaryStyles.time}>{localTime(arrival.arrivalAt)}</Text></Text><Text style={summaryStyles.badge}>{arrival.arrivalLocation} · {zone(arrival.arrivalAt)}</Text></View> : <Text style={summaryStyles.pending}>◷ Arrival to be confirmed</Text>}
+            {departure ? <View style={summaryStyles.journey}><Text style={s.small}>Departs <Text style={summaryStyles.time}>{localTime(departure.departureAt)}</Text></Text><Text style={summaryStyles.badge}>{departure.departureLocation} · {zone(departure.departureAt)}</Text></View> : <Text style={summaryStyles.pending}>◷ Departure to be confirmed</Text>}
+          </View>
+        </View>;
+      })}
+    </View>
+    {totals.stay ? <View style={summaryStyles.header}><Text style={s.strong}>{totals.stay.name}</Text><Text style={s.small}>{totals.stay.checkIn} – {totals.stay.checkOut}{'\n'}{money(totals.stay.totalCost)} total · {money(totals.stayPerPerson)}/person</Text></View> : null}
+    <View style={summaryStyles.tiles}>
+      <View style={summaryStyles.tile}><Text style={summaryStyles.tileLabel}>{room.travelParty === 'solo' ? 'Your transport' : 'Avg. transport / person'}</Text><Text style={summaryStyles.tileAmount}>{money(Math.round(totals.averageTransport * 100) / 100)}</Text></View>
+      <View style={[summaryStyles.tile, summaryStyles.activityTile]}><Text style={[summaryStyles.tileLabel, summaryStyles.onGreen]}>{room.travelParty === 'solo' ? 'Your remaining budget' : 'Shared activity budget / person'}</Text><Text style={[summaryStyles.tileAmount, summaryStyles.onGreen]}>{money(totals.remaining)}</Text></View>
+    </View>
+    <Text style={s.small}>{room.travelParty === 'solo' ? 'Available for food, activities and local transport. Reserve money for costs still to be confirmed.' : 'This uses the lowest remaining amount so everyone can afford the shared plan.'}{!totals.stay ? ' Stay costs still need to be reserved.' : totals.draft ? ' Unknown transport costs still need to be reserved.' : ''}</Text>
+    {totals.draft ? <View style={summaryStyles.warning}><Text style={summaryStyles.warningIcon} accessibilityElementsHidden aria-hidden>⚠</Text><Text style={summaryStyles.warningText}>Draft itinerary — {logisticsDraftNotice}</Text></View> : null}
   </View>;
 }
 
@@ -152,6 +168,8 @@ export function LogisticsStage(props: Props) {
   const logistics = room.logistics ?? emptyLogistics;
   const totals = logisticsTotals(logistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0);
   const own = totals.members.find((member) => member.memberId === room.currentMemberId)!;
+  const budget = room.budgetSummary?.crewHardCeiling ?? 0;
+  const barTotal = Math.max(budget, own.transportCost + totals.stayPerPerson, 1);
   async function finish(skip: boolean) { if (await act({ type: 'complete_logistics', skip, revision: room.revision })) onItinerary?.(); }
   return <View style={s.stack}>
     <Choices values={['Transport', 'Accommodation', 'Summary']} value={tab} onChange={navigate} disabled={busy} />
@@ -164,18 +182,76 @@ export function LogisticsStage(props: Props) {
       {room.currentRole === 'organizer' ? <AppButton label="Help me choose later" variant="secondary" disabled={busy} onPress={() => void act({ type: 'skip_stay' })} /> : null}
       {logistics.staySkipped ? <Text style={s.small}>Stay marked for later.</Text> : null}
     </View> : null}
-    <View style={s.success} testID="logistics-budget"><Text style={s.kicker}>YOUR TRIP BUDGET</Text>
-      <Text style={s.body}>{room.travelParty === 'solo' ? 'Your trip budget' : 'Trip budget per person'} · {money(room.budgetSummary?.crewHardCeiling ?? 0)}</Text>
-      <Text style={s.body}>Transport · −{money(own.transportCost)}</Text><Text style={s.body}>Accommodation · −{money(totals.stayPerPerson)}</Text>
-      <Text style={s.heading}>Remaining · {money(own.remaining)}</Text>
-      <Text style={s.body}>{money(own.remaining)} available for food, activities and local transport</Text>
-      {totals.draft ? <Text style={s.small}>Provisional: unknown transport and stay costs are not deducted yet.</Text> : null}
+    <View style={budgetStyles.card} testID="logistics-budget">
+      <View style={budgetStyles.header}>
+        <Text style={budgetStyles.label}>{room.travelParty === 'solo' ? 'Your trip budget' : 'Trip budget per person'}</Text>
+        <View style={budgetStyles.amountRow}><Text style={budgetStyles.amount}>{money(budget)}</Text><Text style={s.small}>per person</Text></View>
+      </View>
+      <View style={budgetStyles.bar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden>
+        <View style={[budgetStyles.transportSegment, { width: `${own.transportCost / barTotal * 100}%` }]} />
+        <View style={[budgetStyles.staySegment, { width: `${totals.stayPerPerson / barTotal * 100}%` }]} />
+      </View>
+      <View style={budgetStyles.deductions}>
+        <View style={budgetStyles.line}><View style={budgetStyles.category}><View style={[budgetStyles.dot, budgetStyles.transportSegment]} /><Text style={budgetStyles.categoryText}>Transport</Text></View><Text style={s.strong}>− {money(own.transportCost)}</Text></View>
+        <View style={budgetStyles.line}><View style={budgetStyles.category}><View style={[budgetStyles.dot, budgetStyles.staySegment]} /><Text style={budgetStyles.categoryText}>Accommodation</Text></View><Text style={s.strong}>− {money(totals.stayPerPerson)}</Text></View>
+      </View>
+      <View style={budgetStyles.remaining}>
+        <View style={budgetStyles.line}><Text style={s.body}>Remaining</Text><Text style={[budgetStyles.remainingAmount, own.remaining < 0 && budgetStyles.overBudget]}>{money(own.remaining)}</Text></View>
+        <Text style={s.small}>Available for food, activities and local transport</Text>
+      </View>
+      {totals.draft ? <View style={budgetStyles.notice}><Text style={s.small} accessibilityElementsHidden aria-hidden>ⓘ</Text><Text style={budgetStyles.noticeText}>Provisional — unknown transport and stay costs are not deducted yet.</Text></View> : null}
       {totals.remaining < 0 ? <Text accessibilityRole="alert" style={s.error}>Selected logistics exceed the trip budget. Choose cheaper transport or a cheaper stay before generating.</Text> : null}
     </View>
     {tab === 'Summary' ? <><LogisticsSummary room={room} /><AppButton label="Edit" variant="secondary" disabled={busy} onPress={() => navigate('Transport')} />
-      {room.currentRole === 'organizer' ? <AppButton label={totals.draft ? 'Confirm & Generate Draft Itinerary' : 'Confirm & Generate Itinerary'} disabled={busy || totals.remaining < 0} onPress={() => void finish(totals.draft)} /> : <Text style={s.body}>The organiser can confirm this summary and generate the itinerary.</Text>}
+      {room.currentRole === 'organizer' ? <AppButton label="Generate itinerary" disabled={busy || totals.remaining < 0} onPress={() => void finish(totals.draft)} /> : <Text style={s.body}>The organiser can confirm this summary and generate the itinerary.</Text>}
     </> : <>{tab === 'Transport' ? <AppButton label="Next: Accommodation" disabled={busy} onPress={() => navigate('Accommodation')} /> : null}<AppButton label="Review logistics summary" variant={tab === 'Transport' ? 'secondary' : 'primary'} disabled={busy} onPress={() => navigate('Summary')} /></>}
     {room.stage === 'complete' && onItinerary ? <AppButton label={room.travelParty === "solo" ? "View my itinerary" : "View our itinerary"} variant="secondary" onPress={onItinerary} /> : null}
     {tab !== 'Summary' && room.currentRole === 'organizer' ? <AppButton label="Skip for now" variant="secondary" disabled={busy} onPress={() => navigate('Summary')} /> : null}
   </View>;
 }
+
+const budgetStyles = StyleSheet.create({
+  card: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 4, borderLeftColor: colors.leaf, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg, overflow: 'hidden' },
+  header: { gap: spacing.xs },
+  label: { color: colors.sky, fontSize: typography.small, fontWeight: '700', lineHeight: 20 },
+  amountRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.xs },
+  amount: { color: colors.ink, fontSize: 30, fontWeight: '700', lineHeight: 38, fontVariant: ['tabular-nums'] },
+  bar: { height: 12, borderRadius: radius.pill, backgroundColor: colors.leaf, flexDirection: 'row', overflow: 'hidden', marginTop: spacing.xs },
+  transportSegment: { backgroundColor: colors.coral },
+  staySegment: { backgroundColor: colors.sky },
+  deductions: { gap: spacing.sm },
+  line: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: spacing.md, rowGap: spacing.xs },
+  category: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  categoryText: { color: colors.ink, fontSize: typography.body, lineHeight: 23 },
+  dot: { width: 9, height: 9, borderRadius: radius.pill },
+  remaining: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, gap: spacing.xs },
+  remainingAmount: { color: colors.ink, fontSize: 24, fontWeight: '700', lineHeight: 32, fontVariant: ['tabular-nums'] },
+  overBudget: { color: colors.danger },
+  notice: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  noticeText: { color: colors.textMuted, fontSize: typography.small, lineHeight: 21, flex: 1 },
+});
+
+const summaryStyles = StyleSheet.create({
+  card: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.xl },
+  header: { gap: spacing.xs },
+  label: { color: colors.coral, fontSize: typography.small, fontWeight: '600', lineHeight: 20 },
+  title: { color: colors.ink, fontSize: 24, fontWeight: '700', lineHeight: 32 },
+  travellers: { gap: spacing.lg },
+  traveller: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  avatar: { minWidth: 36, minHeight: 36, padding: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.sky, alignItems: 'center', justifyContent: 'center' },
+  initials: { color: colors.paper, fontSize: typography.small, fontWeight: '700' },
+  details: { flex: 1, minWidth: 0, gap: 2 },
+  journey: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: 2 },
+  time: { color: colors.ink },
+  badge: { color: colors.textMuted, fontSize: typography.label, lineHeight: 18, backgroundColor: colors.surface, borderRadius: 5, paddingHorizontal: 6, flexShrink: 1 },
+  pending: { color: colors.coral, fontSize: typography.small, fontStyle: 'italic', lineHeight: 21 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  tile: { flexGrow: 1, flexBasis: 140, minWidth: 0, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, gap: spacing.xs },
+  activityTile: { backgroundColor: colors.sky },
+  tileLabel: { color: colors.textMuted, fontSize: typography.small, lineHeight: 18 },
+  tileAmount: { color: colors.ink, fontSize: 20, fontWeight: '700', lineHeight: 28, fontVariant: ['tabular-nums'] },
+  onGreen: { color: colors.paper },
+  warning: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.errorSurface, borderRadius: radius.sm, padding: spacing.md },
+  warningIcon: { color: colors.coral, lineHeight: 21 },
+  warningText: { color: colors.coral, fontSize: typography.small, lineHeight: 21, flex: 1 },
+});

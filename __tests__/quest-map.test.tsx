@@ -113,3 +113,16 @@ describe('attraction map accessible selection', () => {
     expect(screen.getByText('Loading map…')).toBeTruthy();
   });
 });
+
+test('keeps place details expandable without changing the selection', async () => {
+  const country = countryByCode('JP')!;
+  const onToggle = jest.fn();
+  await render(<AttractionMap country={{ ...country, attractions: [{ ...country.attractions[0], name: 'tokyo tower', description: 'A full description available on demand.' }] }} selectedIds={[]} onToggle={onToggle} />);
+  expect(screen.getByText('Tokyo Tower')).toBeTruthy();
+  expect(screen.queryByText('A full description available on demand.')).toBeNull();
+  await fireEvent.press(screen.getByLabelText('Details for Tokyo Tower'));
+  expect(screen.getByText('A full description available on demand.')).toBeTruthy();
+  expect(onToggle).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByLabelText('Details for Tokyo Tower'));
+  expect(screen.queryByText('A full description available on demand.')).toBeNull();
+});

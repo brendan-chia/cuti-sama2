@@ -1,18 +1,21 @@
+import { placeLabel } from '@/lib/presentation';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { countryByCode } from '../../../packages/contracts/src/countries';
 import type { QuestAction, QuestRoom } from '../../../packages/contracts/src/quest';
-import { emptyLogistics, logisticsTotals } from '../../../packages/contracts/src/logistics';
+
 import { BrandLogo } from '@/components/brand-logo';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { FlightPath } from '@/components/flight-path';
+import { ExploreSuggestions } from './explore-suggestions';
 import { PlaceImportPanel } from './place-import-panel';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, typography } from '@/theme/tokens';
 import { AttractionMap } from './attraction-map';
+import { ItineraryPlan } from './itinerary-plan';
 import { LogisticsStage } from './logistics-stage';
-import { BudgetStage, money } from './budget-stage';
+import { BudgetStage } from './budget-stage';
 import { CountryPicks } from './country-picks';
 import { CrewChoices } from './crew-choices';
 import { DestinationAnnouncement } from './destination-announcement';
@@ -38,9 +41,12 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
   const country = countryByCode(room.selectedCountryCode);
   const solo = room.travelParty === 'solo';
   const ownVotes = room.attractionVotes?.find((vote) => vote.memberId === room.currentMemberId)?.attractionIds ?? [];
-  const [selected, setSelected] = useState(solo ? room.attractionIds : ownVotes);
+  const [selected, setSelected] = useState(solo ? (ownVotes.length ? ownVotes : room.attractionIds) : ownVotes);
   const dirty = [...selected].sort().join(',') !== [...ownVotes].sort().join(',');
-  const ballots = room.attractionVotes ?? [];
+  const ballots = (room.attractionVotes ?? []).filter(ballot => room.members.some(member => member.memberId === ballot.memberId));
+  const [planSelection, setPlanSelection] = useState<string[] | null>(null);
+  const votedIds = [...new Set(ballots.flatMap(ballot => ballot.attractionIds))].sort();
+  const planIds = (planSelection ?? votedIds).filter(id => votedIds.includes(id));
   const allVoted = room.members.every((member) => ballots.some((ballot) => ballot.memberId === member.memberId && ballot.attractionIds.length > 0));
   if (!country) return <Text accessibilityRole="alert" style={s.error}>The selected country could not be loaded. Refresh the quest to try again.</Text>;
   const organizer = room.currentRole === 'organizer';
@@ -48,40 +54,42 @@ function ExploreStage({ room, busy, act, onConfirmed }: { room: QuestRoom; busy:
   const mapCountry = { ...country, attractions: [...country.attractions, ...(room.importedPlaces ?? []).map((place) => ({ ...place, category: room.travelParty === 'solo' ? 'Your saved places' : 'From your crew', description: place.address }))] };
   return <View style={s.stack}>
     <View style={s.success}><Text style={s.kicker}>DESTINATION UNLOCKED</Text><Text style={s.title}>{country.flag} {country.name}</Text><Text style={s.body}>{room.travelParty !== 'solo' && votes !== undefined ? `${votes} of ${room.members.length} travellers voted yes. ` : ''}{country.tagline}</Text></View>
-    <PlaceImportPanel tripId={room.tripId} countryName={country.name} disabled={busy} onConfirmed={onConfirmed} />
+    <PlaceImportPanel tripId={room.tripId} countryName={country.name} disabled={busy} onConfirmed={(next) => { const added = (next.importedPlaces ?? []).filter(place => !(room.importedPlaces ?? []).some(old => old.id === place.id)).map(place => place.id); setSelected(current => [...new Set([...current, ...added])].slice(0, 20)); onConfirmed(next); }} />
     <Text style={s.heading}>{room.travelParty === 'solo' ? 'Your discovery map' : 'Your crew’s discovery map'}</Text>
     <AttractionMap country={mapCountry} selectedIds={selected} onToggle={(id) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : current.length < 20 ? [...current, id] : current)} disabled={busy} />
-    <AppButton label={solo ? 'Save stops & continue to Logistics' : ownVotes.length ? 'Update my attraction votes' : 'Submit my attraction votes'} testID="save-quest-attractions" disabled={!selected.length || (!solo && !dirty)} loading={busy} onPress={() => void act({ type: solo ? 'attractions' : 'attraction_votes', attractionIds: selected })} />
+    <ExploreSuggestions key={room.tripId + country.code} onConfirmed={onConfirmed} room={room} selectedIds={selected} disabled={busy} onAdd={id => setSelected(current => current.includes(id) || current.length >= 20 ? current : [...current, id])} />
+    <AppButton label={solo ? 'Continue to Logistics' : ownVotes.length ? 'Update my attraction votes' : 'Submit my attraction votes'} testID="save-quest-attractions" disabled={busy || !selected.length || (solo && !room.period) || (!solo && !dirty)} loading={busy} onPress={() => void act({ type: solo ? 'attractions' : 'attraction_votes', attractionIds: selected })} />
     {!solo ? <View style={s.stack}>
       <Text accessibilityLiveRegion="polite" style={s.body}>{ballots.length} of {room.members.length} travellers have voted. Select up to 20 places each.</Text>
       <CrewChoices room={room} places={mapCountry.attractions} />
-      {organizer ? <AppButton label="Compile voted attractions & continue" testID="compile-quest-attractions" disabled={!allVoted || dirty} loading={busy} onPress={() => void act({ type: 'compile_attractions' })} /> : <Text style={s.small}>Once everyone has voted, your organiser compiles all chosen attractions and opens Logistics.</Text>}
+      {organizer ? <View style={s.stack}>
+        <Text accessibilityRole="header" style={s.heading}>Choose your itinerary stops</Text>
+        <Text style={s.small}>Your crew’s picks, in one place. Tap a stop to include or remove it from your itinerary.</Text>
+        {mapCountry.attractions.filter(place => votedIds.includes(place.id)).map((place, index) => <Pressable
+          key={place.id} accessibilityRole="checkbox" accessibilityLabel={`Include ${placeLabel(place.name)} in itinerary`}
+          aria-checked={planIds.includes(place.id)} aria-disabled={busy} accessibilityState={{ checked: planIds.includes(place.id), disabled: busy }} disabled={busy}
+          style={({ pressed }) => [styles.stopCard, pressed && !busy && styles.stopCardPressed, busy && styles.stopCardDisabled]}
+          onPress={() => setPlanSelection(current => {
+            const ids = current ?? votedIds;
+            return ids.includes(place.id) ? ids.filter(id => id !== place.id) : [...ids, place.id];
+          })}>
+            <View style={styles.stopNumber}><Text style={styles.stopNumberText}>{index + 1}</Text></View>
+            <View style={styles.stopCopy}>
+              <Text style={styles.stopName}>{placeLabel(place.name)}</Text>
+              <Text style={styles.stopDescription} numberOfLines={2}>{place.description || place.category}</Text>
+            </View>
+            <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.stopCheck}>{planIds.includes(place.id) ? '✓' : '○'}</Text>
+          </Pressable>)}
+        {!allVoted || dirty ? <Text style={s.small}>Everyone must save their votes before you build the trip.</Text> : null}
+        {room.plannerVersion !== '1.0' ? <Text accessibilityRole="alert" style={s.error}>Trip building needs a server update. Your votes are still saved.</Text> : null}
+        <AppButton label="Continue to Logistics" testID="compile-quest-attractions" disabled={busy || !allVoted || dirty || !planIds.length || !room.period || room.plannerVersion !== '1.0'}
+          loading={busy} onPress={() => void act({ type: 'compile_attractions', attractionIds: planIds })} />
+      </View> : <Text style={s.small}>Once everyone has voted, your organiser chooses the itinerary stops and builds the trip.</Text>}
     </View> : null}
   </View>;
 }
 
-function QuestSummary({ room, onItinerary }: { room: QuestRoom; onItinerary?: () => void }) {
-  const country = countryByCode(room.selectedCountryCode);
-  return <View style={s.stack}>
-    <View style={styles.ticket}>
-      <Text style={styles.ticketKicker}>CUTISAMA2 · YOUR TRIP PLAN</Text>
-      <Text style={styles.ticketTitle}>{country?.flag} {country?.name}</Text>
-      <Text style={styles.ticketBody}>{room.period ? periodLabel(room.period) : ''}</Text>
-      <View style={styles.ticketDivider} />
-      <Text style={styles.ticketKicker}>THE STOPS YOU PICKED</Text>
-      {[...(country?.attractions ?? []), ...(room.importedPlaces ?? [])].filter((place) => room.attractionIds.includes(place.id)).map((place, index) => <Text key={place.id} style={styles.ticketBody}>{String(index + 1).padStart(2, '0')}  {place.name}</Text>)}
-      <View style={styles.ticketDivider} />
-      <Text style={styles.ticketKicker}>TRIP SPENDING LIMIT</Text>
-      <Text style={styles.ticketTitle}>{room.budgetSummary ? money(room.budgetSummary.crewHardCeiling) : '—'}</Text>
-      <Text style={styles.ticketBody}>{room.travelParty === 'solo' ? 'Your whole trip' : `per person · ${room.members.length} travellers · whole trip`}</Text>
-    </View>
-    <Text style={s.body}>Your dates, destination, places and budget are saved.</Text>
-    <Text style={s.body}>Turn your selected places into a day-by-day itinerary, with time for travel and meals, within your trip budget.</Text>
-    {onItinerary ? <AppButton label={room.travelParty === 'solo' ? 'Generate my itinerary' : room.currentRole === 'organizer' ? 'Generate our itinerary' : 'View our itinerary'} testID="open-quest-itinerary" onPress={onItinerary} /> : null}
-  </View>;
-}
-
-export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQuest, updateAction = updateQuest, subscribeAction = subscribeToQuest, suggestAction = suggestTripPeriods }: Props) {
+export function QuestScreen({ tripId, onBack, loadAction = loadQuest, updateAction = updateQuest, subscribeAction = subscribeToQuest, suggestAction = suggestTripPeriods }: Props) {
   const [room, setRoom] = useState<QuestRoom | null>(null);
   const [announcedCountry, setAnnouncedCountry] = useState<string | null>(null);
   const acceptedRoom = useRef<QuestRoom | null>(null);
@@ -97,6 +105,9 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
     const previous = acceptedRoom.current;
     acceptedRoom.current = next;
     setRoom(next);
+    if (previous?.stage === 'explore' && next.stage === 'logistics') {
+      requestAnimationFrame(() => screenScroll.current?.scrollTo({ y: 0, animated: false }));
+    }
     if (previous?.stage === 'voting' && next.stage === 'explore' && next.travelParty !== 'solo') setAnnouncedCountry(next.selectedCountryCode);
     else if (next.stage !== 'explore') setAnnouncedCountry(null);
   }, []);
@@ -132,9 +143,8 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
   }
 
   if (!room) return <Screen scrollRef={screenScroll}><View style={s.stack}><Text style={s.title}>{error ? 'Your quest is waiting.' : 'Gathering your next adventure…'}</Text>{error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Try again" onPress={() => void refresh()} /></> : <Text style={s.body}>Opening your trip plan.</Text>}<AppButton label="Back to the lobby" variant="secondary" onPress={onBack} /></View></Screen>;
-  const logisticsOpen = room.stage === 'logistics' || room.stage === 'complete';
-  const logisticsDraft = logisticsTotals(room.logistics ?? emptyLogistics, room.members.map((member) => member.memberId), room.budgetSummary?.crewHardCeiling ?? 0).draft;
-  const completed = room.stage === 'complete' && !logisticsDraft;
+  const logisticsOpen = room.stage === 'logistics';
+  const completed = room.stage === 'complete';
   const voting = room.stage === 'voting';
   const solo = room.travelParty === 'solo';
   const steps = solo ? questSteps.filter(step => step.stage !== 'voting') : questSteps;
@@ -144,14 +154,14 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
   const ready = field ? room.members.filter((member) => member[field]).length : room.members.length;
   return <Screen testID="trip-quest-screen" scrollRef={screenScroll}>
     <DestinationAnnouncement countryCode={announcedCountry} onDismiss={() => setAnnouncedCountry(null)} />
-    <View style={s.stack}>
+    <View style={styles.questStack}>
       <View style={s.between}><Pressable accessibilityRole="button" onPress={onBack}><Text style={s.link}>‹ Trip lobby</Text></Pressable><BrandLogo compact /></View>
-      {!voting ? <Text numberOfLines={1} style={s.small}>{room.tripName}</Text> : null}
-      <FlightPath stage={index} solo={solo} />
-      <View style={s.stack}>{!voting ? <Text style={s.kicker}>{completed ? 'QUEST COMPLETE' : logisticsOpen ? 'PLAN YOUR LOGISTICS' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? (solo ? 'Your adventure is ready.' : 'From group chat to game plan.') : solo && room.stage === 'timing' ? 'Choose your travel dates.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? (solo ? 'Your decisions, your adventure.' : 'You made the big decisions. Together.') : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
+      {!voting ? <Text style={s.small}>{room.tripName}</Text> : null}
+      <FlightPath stage={completed ? steps.length + 1 : index} solo={solo} />
+      <View style={styles.chapterHeader}>{!voting ? <Text style={s.kicker}>{completed ? 'ITINERARY STATION' : logisticsOpen ? 'PLAN YOUR LOGISTICS' : `CHAPTER ${index + 1} · ${step.label.toUpperCase()}`}</Text> : null}<Text accessibilityRole="header" style={[s.title, voting && styles.compactTitle]}>{completed ? 'Your itinerary' : solo && room.stage === 'timing' ? 'Choose your travel dates.' : step.title}</Text>{!voting && !logisticsOpen ? <Text style={s.body}>{completed ? (solo ? 'Your decisions, your adventure.' : 'You made the big decisions. Together.') : solo ? 'Choose what works for your solo adventure.' : step.description}</Text> : null}</View>
       {error ? <View style={s.errorPanel}><Text accessibilityRole="alert" style={s.error}>{error}</Text>{unavailable ? <AppButton label="Reconnect & refresh" variant="secondary" onPress={() => { setError(null); void refresh(); }} /> : <Pressable accessibilityRole="button" onPress={() => setError(null)}><Text style={s.link}>Dismiss</Text></Pressable>}</View> : null}
       {!solo && !completed && !logisticsOpen ? <View><View style={s.between}><Text style={s.kicker}>YOUR TRAVEL CREW</Text><Text accessibilityLiveRegion="polite" style={s.small}>{field ? `${ready} / ${room.members.length} ready` : 'Explore together'}</Text></View>{!voting ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crew}>
-        {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName} numberOfLines={1}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}
+        {room.members.map((member) => { const done = field ? member[field] : true; return <View key={member.memberId} style={styles.traveller}><View style={[styles.avatar, done && styles.avatarReady]}><Text style={styles.avatarText}>{member.displayName.slice(0, 1).toUpperCase()}</Text>{done ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.memberName}>{member.memberId === room.currentMemberId ? 'You' : member.displayName}</Text></View>; })}
       </ScrollView> : null}</View> : null}
       {room.period && room.stage !== 'picks' && !completed && !voting ? <Text style={s.small}>✓ {periodLabel(room.period)}{room.selectedCountryCode ? ` · ${countryByCode(room.selectedCountryCode)?.name}` : ''}</Text> : null}
       {room.stage === 'timing' ? <TimingStage room={room} busy={busy || unavailable} act={act} recommend={recommend} /> : null}
@@ -159,14 +169,26 @@ export function QuestScreen({ tripId, onBack, onItinerary, loadAction = loadQues
       {room.stage === 'voting' && !solo ? <CountryVote room={room} busy={busy || unavailable} act={act} /> : null}
       {room.stage === 'explore' ? <ExploreStage key={`${room.tripId}:${room.currentMemberId}:${JSON.stringify(room.attractionVotes?.find(vote => vote.memberId === room.currentMemberId)?.attractionIds)}`} room={room} busy={busy || unavailable} act={act} onConfirmed={accept} /> : null}
       {room.stage === 'budget' ? <BudgetStage key={`${room.tripId}:${room.currentMemberId}:${JSON.stringify(room.ownBudget)}`} room={room} busy={busy || unavailable} act={act} /> : null}
-      {logisticsOpen ? <View><LogisticsStage room={room} busy={busy || unavailable} act={act} onItinerary={onItinerary} onSectionChange={() => requestAnimationFrame(() => screenScroll.current?.scrollTo({ y: 0, animated: false }))} /></View> : null}
-      {completed ? <QuestSummary room={room} onItinerary={onItinerary} /> : null}
+      {logisticsOpen ? <View><LogisticsStage room={room} busy={busy || unavailable} act={act} onItinerary={() => requestAnimationFrame(() => screenScroll.current?.scrollTo({ y: 0, animated: false }))} onSectionChange={() => requestAnimationFrame(() => screenScroll.current?.scrollTo({ y: 0, animated: false }))} /></View> : null}
+      {completed ? <ItineraryPlan room={room} /> : null}
+      {completed && room.currentRole === 'organizer' ? <AppButton label="Edit logistics" variant="secondary" disabled={busy || unavailable} onPress={() => void act({ type: 'edit_logistics' })} /> : null}
     </View>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
+  stopCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 76, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  stopCardPressed: { backgroundColor: colors.surfaceTint },
+  stopCardDisabled: { opacity: 0.55 },
+  stopNumber: { width: 36, height: 36, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  stopNumberText: { color: colors.coral, fontSize: typography.body, fontWeight: '700' },
+  stopCopy: { flex: 1, gap: spacing.xs },
+  stopName: { color: colors.ink, fontSize: typography.heading, lineHeight: 25, fontWeight: '700' },
+  stopDescription: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
+  stopCheck: { color: colors.sky, fontSize: typography.heading, fontWeight: '700' },
   compactTitle: { fontSize: 25, lineHeight: 30 },
-  crew: { gap: spacing.lg, paddingVertical: spacing.md }, traveller: { alignItems: 'center', width: 54, gap: spacing.sm }, avatar: { height: 40, width: 40, backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, avatarReady: { borderColor: colors.sky }, avatarText: { color: colors.ink, fontWeight: '800' }, check: { color: colors.paper, backgroundColor: colors.sky, borderRadius: 9, fontSize: 9, width: 15, height: 15, textAlign: 'center', position: 'absolute', right: -4, bottom: -2 }, memberName: { color: colors.textMuted, fontSize: 10, maxWidth: 54 },
-  ticket: { borderWidth: 1, borderColor: colors.sun, backgroundColor: colors.surfaceWarm, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md }, ticketKicker: { color: colors.ink, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }, ticketTitle: { color: colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -0.7 }, ticketBody: { color: colors.ink, fontSize: 14, lineHeight: 22 }, ticketDivider: { borderTopColor: colors.disabled, borderTopWidth: 1, borderStyle: 'dashed', marginVertical: spacing.sm },
+  questStack: { gap: spacing.lg },
+  chapterHeader: { gap: spacing.md },
+  crew: { gap: spacing.lg, paddingVertical: spacing.md }, traveller: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, avatar: { height: 28, width: 28, backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, avatarReady: { borderColor: colors.sky }, avatarText: { color: colors.ink, fontWeight: '800' }, check: { color: colors.paper, backgroundColor: colors.sky, borderRadius: 9, fontSize: 9, width: 15, height: 15, textAlign: 'center', position: 'absolute', right: -4, bottom: -2 }, memberName: { color: colors.textMuted, fontSize: 13, maxWidth: 160 },
+  ticket: { borderWidth: 1, borderColor: colors.sun, backgroundColor: colors.surfaceWarm, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md }, ticketKicker: { color: colors.ink, fontSize: 12, fontWeight: '800', letterSpacing: 1.5 }, ticketTitle: { color: colors.ink, fontSize: 32, fontWeight: '700', letterSpacing: -0.7 }, ticketBody: { color: colors.ink, fontSize: 14, lineHeight: 22 }, ticketDivider: { borderTopColor: colors.disabled, borderTopWidth: 1, borderStyle: 'dashed', marginVertical: spacing.sm },
 });

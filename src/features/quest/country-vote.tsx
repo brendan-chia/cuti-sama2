@@ -41,8 +41,8 @@ function SwipeCard({ country, disabled, vote }: { country: Country; disabled: bo
       </Animated.View>
     </View>
     <View style={styles.voteButtons}>
-      <Pressable accessibilityLabel={`Disagree with ${country.name}`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => void commit(false)} style={({ pressed }) => [styles.voteButton, styles.pass, disabled && s.disabled, pressed && s.pressed]}><Text style={styles.passText}>×</Text><Text style={s.strong}>Pass</Text></Pressable>
-      <Pressable accessibilityLabel={`Agree with ${country.name}`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => void commit(true)} style={({ pressed }) => [styles.voteButton, styles.agree, disabled && s.disabled, pressed && s.pressed]}><Text style={styles.agreeIcon}>✓</Text><Text style={styles.agreeText}>Let’s go</Text></Pressable>
+      <Pressable accessibilityLabel={`Disagree with ${country.name}`} accessibilityRole="button" aria-disabled={disabled} accessibilityState={{ disabled }} disabled={disabled} onPress={() => void commit(false)} style={({ pressed }) => [styles.voteButton, styles.pass, disabled && s.disabled, pressed && s.pressed]}><Text style={styles.passText}>×</Text><Text style={s.strong}>Pass</Text></Pressable>
+      <Pressable accessibilityLabel={`Agree with ${country.name}`} accessibilityRole="button" aria-disabled={disabled} accessibilityState={{ disabled }} disabled={disabled} onPress={() => void commit(true)} style={({ pressed }) => [styles.voteButton, styles.agree, disabled && s.disabled, pressed && s.pressed]}><Text style={styles.agreeIcon}>✓</Text><Text style={styles.agreeText}>Let’s go</Text></Pressable>
     </View>
     <Text style={styles.swipeHint}>{disabled ? 'Saving your vote…' : 'Swipe left to pass · swipe right to agree\nYou can also use the buttons.'}</Text>
   </View>;

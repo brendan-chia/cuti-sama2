@@ -1,8 +1,9 @@
-import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { downloadVideo, removeJobDirectory } from './media.mjs';
 import { ingestPost, downloadPost } from './ingestion.mjs';
+import { mediaBatches } from './batches.mjs';
 import { preparePost } from './post-media.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 process.loadEnvFile(path.join(root,'.env.video-worker.local'));
@@ -11,7 +12,9 @@ if(!projectUrl||!token)throw new Error('Run the video worker setup first.');
 const python=process.env.VIDEO_WORKER_PYTHON||path.join(root,'.tmp/video-worker-venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
 const workRoot=path.join(root,'.tmp/video-worker-jobs');await mkdir(workRoot,{recursive:true});
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+let scope;
 async function api(body,retry=true){
+ body={...body,...(scope?{scope}:{})};
  for(let attempt=0;;attempt++){
   try{
    const response=await fetch(`${projectUrl}/functions/v1/video-import-worker`,{method:'POST',headers:{'Content-Type':'application/json','x-video-worker-token':token},body:JSON.stringify(body),signal:AbortSignal.timeout(145000)});
@@ -27,7 +30,7 @@ await writeFile(path.join(root,'.tmp/video-worker.pid'),String(process.pid));
 console.log('Local post worker running. Keep this process on while posts and Reels are analysed.');
 try{while(!stopping){
  let job;
- try{job=await api({action:'claim'});}catch(error){console.error(error.message);await sleep(15000);continue;}
+ try{scope='inspiration';job=await api({action:'claim'});if(!job){scope=undefined;job=await api({action:'claim'});}}catch(error){console.error(error.message);await sleep(15000);continue;}
  if(!job){if(process.argv.includes('--once'))break;await sleep(5000);continue;}
  const directory=path.join(workRoot,job.import_id);let leaseLost=false;
  const base={importId:job.import_id,lease:job.lease};
@@ -43,14 +46,13 @@ try{while(!stopping){
   }
   const media=await preparePost(assets,directory);
   const checkpoint=await api({...base,action:'start',hash:media.hash,totalFrames:media.frames.length,pipelineVersion:3,manifest:media.manifest});
-  for(const audio of media.audios){
-   if(!checkpoint.audioItemsDone.includes(audio.itemIndex)) await api({...base,action:'audio',itemIndex:audio.itemIndex,...(audio.file?{audio:(await readFile(audio.file)).toString('base64')}:{noAudio:true})});
-  }
-  for(let index=checkpoint.processedFrames;index<media.frames.length;index++){
+  const analysisStarted=Date.now();
+  for await(const batch of mediaBatches(media,checkpoint)){
    if(stopping||leaseLost)throw new Error('Worker stopped. Retry the import to resume.');
-   const frame=media.frames[index];await api({...base,action:'frame',index,seconds:frame.seconds,image:`data:image/jpeg;base64,${(await readFile(frame.file)).toString('base64')}`});
-   console.log(`Images / scenes: ${index+1}/${media.frames.length}`);
+   await api({...base,action:'batch',batch});
+   console.log(`Analysis batch complete: ${batch.frames.length} frames${batch.audio?', audio':''}.`);
   }
+  console.log(`Media AI stage: ${Math.round((Date.now()-analysisStarted)/1000)}s`);
   await api({...base,action:'finish'});console.log('Post image, caption and available audio analysis complete.');
  }catch(error){console.error(error.message);try{await api({...base,action:'fail',message:String(error.message).slice(0,500)},false);}catch{}}
  finally{clearInterval(heartbeat);await removeJobDirectory(workRoot,directory);}

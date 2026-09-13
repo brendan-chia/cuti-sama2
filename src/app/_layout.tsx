@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+import { AppState, Platform } from 'react-native';
+import { supabase } from '@/lib/supabase';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,6 +11,17 @@ import { BottomNavigation } from '@/components/bottom-navigation';
 export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (Platform.OS === 'web' || !supabase) return;
+    const client = supabase;
+    const sync = (state: string) => {
+      if (state === 'active') void client.auth.startAutoRefresh();
+      else void client.auth.stopAutoRefresh();
+    };
+    sync(AppState.currentState);
+    const subscription = AppState.addEventListener('change', sync);
+    return () => { subscription.remove(); void client.auth.stopAutoRefresh(); };
+  }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" />
@@ -16,7 +30,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
           headerBackButtonDisplayMode: 'minimal',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.surface },
+          headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.ink,
           headerTitleStyle: { fontWeight: '700' },
         }}
@@ -34,6 +48,7 @@ export default function RootLayout() {
         <Stack.Screen name="recover" options={{ title: 'Recover room access' }} />
         <Stack.Screen name="invite/[token]" options={{ title: 'Trip invitation' }} />
         <Stack.Screen name="trip/[tripId]" options={{ title: 'Trip Lobby' }} />
+        <Stack.Screen name="trip/[tripId]/mode" options={{ headerShown: false }} />
         <Stack.Screen name="trip/[tripId]/quest" options={{ headerShown: false }} />
         <Stack.Screen name="trip/[tripId]/constraints" options={{ title: 'Trip constraints' }} />
         <Stack.Screen name="trip/[tripId]/room" options={{ title: 'Preference table' }} />

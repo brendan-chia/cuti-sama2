@@ -15,14 +15,24 @@ type Props = { tripId: string; loadAction?: typeof getInvitationStatus; issueAct
 
 export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus, issueAction = issueInvitation, rotateAction = rotateInvitation }: Props) {
   const [state, setState] = useState<State | null>(null);
+  const [retry, setRetry] = useState(0);
+  const [qrWidth, setQrWidth] = useState(180);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    void loadAction(tripId).then((value) => active && setState(value)).catch((cause: unknown) => active && setError(cause instanceof Error ? cause.message : 'Could not load invitation.'));
+    void (async () => {
+      const value = await loadAction(tripId);
+      if (!active) return;
+      setError(null);
+      if (value.status.status === 'never_issued') {
+        const invitation = await issueAction(tripId);
+        if (active) setState({ status: invitation, invitation });
+      } else setState(value);
+    })().catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : 'Could not prepare invitation.'); });
     return () => { active = false; };
-  }, [loadAction, tripId]);
+  }, [loadAction, issueAction, tripId, retry]);
 
   async function create(action: typeof issueAction | typeof rotateAction) {
     setBusy(true); setError(null);
@@ -47,12 +57,12 @@ export function ShareInvitationScreen({ tripId, loadAction = getInvitationStatus
       <Text style={styles.title}>One link to the shared table.</Text>
       <Text style={styles.body}>Anyone with the active link can preview the room name and join as a guest.</Text>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      {!state && !error ? <Text style={styles.body}>Loading invitation…</Text> : null}
-      {state?.status.status === 'never_issued' ? <View style={styles.panel}><Text style={styles.panelTitle}>No invitation link yet</Text><Text style={styles.body}>Create an expiring link when you are ready to invite the group.</Text><AppButton label="Create invitation link" loading={busy} onPress={() => void create(issueAction)} /></View> : null}
+      {!state && error ? <AppButton label="Try again" onPress={() => { setError(null); setRetry(value => value + 1); }} /> : null}
+      {!state && !error ? <Text style={styles.body}>Preparing your invitation…</Text> : null}
       {state?.status.status === 'closed' ? <View style={styles.panel}><Text style={styles.panelTitle}>Invitations are closed</Text><Text style={styles.body}>Previous links no longer work. Members already inside are unaffected.</Text><AppButton label="Create a new link" loading={busy} onPress={() => void create(issueAction)} /></View> : null}
       {state?.status.status === 'open' && !invitation ? <View style={styles.panel}><Text style={styles.panelTitle}>The active link is not on this device</Text><Text style={styles.body}>For security, the raw link is only kept on the device that created it. Replace it to share from here.</Text><AppButton label="Replace with a new link" loading={busy} onPress={confirmRotate} /></View> : null}
       {invitation && shareUrl ? <View style={styles.panel}>
-        <View style={styles.qr}><QRCode backgroundColor={colors.ink} color={colors.background} size={190} value={shareUrl} /></View>
+        <View style={styles.qr} onLayout={({ nativeEvent }) => setQrWidth(Math.max(1, Math.min(220, nativeEvent.layout.width - 32)))}><QRCode quietZone={16} backgroundColor={colors.paper} color={colors.ink} size={qrWidth} value={shareUrl} /></View>
         <Text selectable style={styles.url}>{shareUrl}</Text>
         <Text style={styles.expiry}>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</Text>
         <AppButton label="Share invitation" onPress={() => void Share.share({ message: `Join our CutiSama2 Trip Room: ${shareUrl}`, url: shareUrl })} />
@@ -68,7 +78,7 @@ const styles = StyleSheet.create({
   body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23, marginTop: spacing.sm },
   panel: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, marginTop: spacing.xxl, padding: spacing.xl },
   panelTitle: { color: colors.ink, fontSize: typography.heading, fontWeight: '800' },
-  qr: { alignSelf: 'center', backgroundColor: colors.paper, borderRadius: radius.md, padding: spacing.lg },
+  qr: { width: '100%', alignItems: 'center', backgroundColor: colors.paper, borderRadius: radius.md },
   url: { color: colors.sky, fontSize: typography.small, lineHeight: 19, textAlign: 'center' },
   expiry: { color: colors.textMuted, fontSize: typography.small, textAlign: 'center' },
   error: { backgroundColor: colors.surface, borderRadius: radius.sm, color: colors.danger, marginTop: spacing.xl, padding: spacing.md },

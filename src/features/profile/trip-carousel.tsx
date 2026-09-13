@@ -51,22 +51,22 @@ export function TripCarousel({ trips, completed, busy, onOpen, onComplete, onMan
       </ScrollView>
     </View>
     {trips.length > 1 ? <View style={styles.navigation}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Previous trip" accessibilityState={{ disabled: active === 0 }} disabled={active === 0} onPress={() => go(active - 1)} style={[styles.arrow, active === 0 && styles.disabled]}><Text style={styles.arrowText}>‹</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Previous trip" aria-disabled={active === 0} accessibilityState={{ disabled: active === 0 }} disabled={active === 0} onPress={() => go(active - 1)} style={[styles.arrow, active === 0 && styles.disabled]}><Text style={styles.arrowText}>‹</Text></Pressable>
       <View style={styles.position}>
         {trips.length <= 7 ? <View style={styles.dots}>{trips.map((trip, i) => <View key={trip.id} style={[styles.dot, active === i && styles.activeDot]} />)}</View> : null}
         <Text accessibilityLiveRegion="polite" style={styles.hint}>{active + 1} of {trips.length} · Swipe to explore</Text>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Next trip" accessibilityState={{ disabled: active === trips.length - 1 }} disabled={active === trips.length - 1} onPress={() => go(active + 1)} style={[styles.arrow, active === trips.length - 1 && styles.disabled]}><Text style={styles.arrowText}>›</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Next trip" aria-disabled={active === trips.length - 1} accessibilityState={{ disabled: active === trips.length - 1 }} disabled={active === trips.length - 1} onPress={() => go(active + 1)} style={[styles.arrow, active === trips.length - 1 && styles.disabled]}><Text style={styles.arrowText}>›</Text></Pressable>
     </View> : null}
   </View>;
 }
 const styles = StyleSheet.create({
   stack: { gap: spacing.md },
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, gap: spacing.md, flex: 1 },
+  card: { backgroundColor: colors.paper, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, gap: spacing.md, flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  badge: { color: colors.sky, backgroundColor: colors.surfaceTint, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, fontSize: 10, fontWeight: '800', letterSpacing: 0.6, flexShrink: 1 },
+  badge: { color: colors.sky, backgroundColor: colors.surfaceTint, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, fontSize: 11, fontWeight: '700', letterSpacing: 0.6, flexShrink: 1 },
   number: { color: colors.textMuted, fontSize: typography.small },
-  title: { color: colors.ink, fontSize: 24, fontWeight: '800', lineHeight: 31, marginTop: spacing.sm },
+  title: { color: colors.ink, fontSize: 26, fontWeight: '700', lineHeight: 31, marginTop: spacing.sm },
   body: { color: colors.textMuted, fontSize: typography.body, lineHeight: 23 },
   actions: { gap: spacing.md, marginTop: spacing.md },
   navigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },

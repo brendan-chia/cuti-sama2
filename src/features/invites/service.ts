@@ -14,7 +14,7 @@ import * as Crypto from 'expo-crypto';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-import { ensureAnonymousSession } from '@/lib/auth';
+import { withSessionRefresh } from '@/lib/session-request';
 import {
   clearCachedInvitation,
   getCachedInvitation,
@@ -29,8 +29,7 @@ async function invoke<T>(
   body: Record<string, unknown>,
   parse: (value: unknown) => T,
 ) {
-  await ensureAnonymousSession();
-  const { data, error } = await requireSupabase().functions.invoke(functionName, { body });
+  const { data, error } = await withSessionRefresh(() => requireSupabase().functions.invoke(functionName, { body }));
   if (error) {
     let message = error.message || `${functionName} failed.`;
     if (error instanceof FunctionsHttpError) {

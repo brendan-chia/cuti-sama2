@@ -5,7 +5,7 @@ description: Design, redesign, or polish user-facing Expo React Native screens a
 
 # CutiSama UI
 
-Make the app feel like a warm, polished collaborative travel quest: youthful, adventurous, friendly, nature-inspired and trustworthy. The otter is a travelling companion; its map, backpack, rounded silhouette and cocoa lettering are the visual anchors. Avoid booking-app templates, corporate dashboards, recoloured Material UI, Trip.com imitation, childish cartoon saturation and neon gaming styling.
+Make the app feel like a warm, polished collaborative travel quest: youthful, adventurous, friendly and trustworthy. The otter is a travelling companion; its map, backpack, rounded silhouette and cocoa lettering are the visual anchors. Avoid booking-app templates, corporate dashboards, recoloured Material UI, Trip.com imitation, childish cartoon saturation and neon gaming styling. Use wanderlog as reference for layout, spacing, typography and colour hierarchy, but not for visual identity. Use the existing quest UI patterns and shared components; do not invent new ones without approval.
 
 ## Start with evidence
 

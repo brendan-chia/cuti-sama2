@@ -1,25 +1,5 @@
--- Extend the existing private input store. The legacy limit remains the hard cap.
--- Equal backfilled endpoints preserve old affordability without inventing flexibility.
-alter table public.trip_quest_inputs rename column budget to max_budget_myr;
-alter table public.trip_quest_inputs add column comfortable_budget_myr integer;
-update public.trip_quest_inputs set comfortable_budget_myr = max_budget_myr;
-alter table public.trip_quest_inputs add constraint private_budget_range_check check (
-  (comfortable_budget_myr is null and max_budget_myr is null) or
-  (comfortable_budget_myr is not null and max_budget_myr is not null
-    and comfortable_budget_myr between 1 and 1000000
-    and max_budget_myr between comfortable_budget_myr and 1000000)
-);
--- Preserve progress while collecting missing early budgets in already-persisted rooms.
-alter table public.trip_quests add column budget_resume_stage text
-  check (budget_resume_stage in ('picks','voting','explore','logistics','complete'));
-update public.trip_quests set budget_resume_stage = 'logistics' where stage = 'budget';
-update public.trip_quests q set budget_resume_stage = q.stage, stage = 'budget'
-  where q.stage in ('picks','voting','explore','logistics','complete') and exists (
-    select 1 from public.trip_quest_inputs i join public.trip_members m on m.id = i.member_id
-    where i.trip_id = q.trip_id and m.active and i.comfortable_budget_myr is null
-  );
-update public.trip_quests set revision = revision + 1, updated_at = now();
--- RLS/grants are unchanged: only the owner's input row is readable; broadcasts contain only an invalidation notice.
+-- Deterministic planner inputs: preserve role, all-voted, country, idempotency and stage gates.
+-- Scheduling is a pure application function; selected IDs and locked inputs remain persisted.
 
 create or replace function public.get_trip_quest(p_trip_id uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
@@ -74,6 +54,16 @@ begin
     'period', quest.period, 'ownPicks', own_input.country_codes, 'countries', quest.countries,
     'ownVotes', own_input.votes, 'results', quest.results, 'tiedCountryCodes', quest.tied_country_codes,
     'selectedCountryCode', quest.selected_country_code, 'attractionIds', quest.attraction_ids,
+    'plannerVersion', '1.0',
+    -- Only already-revealed, active participants' predefined vibe IDs. No identities or private values.
+    'groupVibes', (select coalesce(jsonb_agg(sub.choice_id order by sub.choice_id), '[]'::jsonb)
+      from public.preference_submissions sub
+      join public.preference_rounds r on r.id = sub.round_id
+      join public.preference_round_participants participant on participant.round_id = r.id and participant.member_id = sub.member_id
+      join public.trip_members m on m.id = sub.member_id
+      where r.trip_id = p_trip_id and r.kind = 'vibe' and r.revealed_at is not null
+        and participant.removed_at is null and m.active and m.trip_id = p_trip_id
+        and sub.choice_id in ('quiet','chill','lively','adventurous','balanced')),
     'attractionVotes', (select coalesce(jsonb_agg(jsonb_build_object('memberId', i.member_id, 'attractionIds', i.attraction_votes) order by i.member_id), '[]'::jsonb)
       from public.trip_quest_inputs i join public.trip_members m on m.id = i.member_id
       where i.trip_id = p_trip_id and m.active and cardinality(i.attraction_votes) > 0), 'ownBudget', case when own_input.comfortable_budget_myr is not null then jsonb_build_object('comfortableBudgetMYR', own_input.comfortable_budget_myr, 'maxBudgetMYR', own_input.max_budget_myr) else null end,
@@ -94,8 +84,6 @@ begin
 end;
 $$;
 
-
--- Confirm solo dates directly while retaining group date recommendations.
 create or replace function public.update_trip_quest(p_trip_id uuid, p_action jsonb, p_idempotency_key uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -236,6 +224,8 @@ begin
         select 1 from public.trip_quest_inputs i join public.trip_members m on m.id = i.member_id
         where i.trip_id = p_trip_id and m.active and cardinality(i.attraction_votes) = 0
       ) then raise exception using errcode = '22023', message = 'Everyone must vote for attractions before compiling.'; end if;
+      -- Old clients still compile the union. New clients explicitly select a subset.
+      if not (p_action ? 'attractionIds') then
       p_action := p_action || jsonb_build_object('attractionIds', (
         select jsonb_agg(id order by id) from (
           select distinct unnest(i.attraction_votes) as id
@@ -243,10 +233,17 @@ begin
           where i.trip_id = p_trip_id and m.active
         ) choices
       ));
+      end if;
     end if;
     if quest.stage <> 'explore' then raise exception using errcode = '22023', message = 'Choose attractions after a country has been decided.'; end if;
     if jsonb_typeof(p_action->'attractionIds') is distinct from 'array' then raise exception using errcode = '22023', message = 'Choose at least one attraction in the selected country.'; end if;
     select array_agg(value) into selected_attractions from jsonb_array_elements_text(p_action->'attractionIds');
+    if action_type = 'compile_attractions' and exists (
+      select 1 from unnest(selected_attractions) selected_id where not exists (
+        select 1 from public.trip_quest_inputs i join public.trip_members m on m.id = i.member_id
+        where i.trip_id = p_trip_id and m.active and selected_id = any(i.attraction_votes)
+      )
+    ) then raise exception using errcode = '22023', message = 'Choose itinerary stops from the crew votes.'; end if;
     if coalesce(cardinality(selected_attractions), 0) not between 1 and (case when action_type = 'compile_attractions' then 160 else 20 end)
       or cardinality(selected_attractions) <> (select count(distinct id) from unnest(selected_attractions) id)
       or exists (select 1 from unnest(selected_attractions) requested where not exists (
@@ -325,6 +322,3 @@ begin
   return response_snapshot;
 end;
 $$;
-
-
-

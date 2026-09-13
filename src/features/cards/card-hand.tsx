@@ -36,13 +36,13 @@ function SwipeableCard({ card, selected, customText, disabled, reducedMotion, on
 export function CardHand({ cards, selectedId, customText, disabled, reducedMotion, onDropActive, onPlay }: { cards: PreferenceChoice[]; selectedId: string | null; customText?: string | null; disabled: boolean; reducedMotion: boolean; onDropActive: (active: boolean) => void; onPlay: (card: PreferenceChoice) => void }) {
   return <View style={styles.hand}>
     <Text style={styles.handLabel}>YOUR HAND · SWIPE A CARD UP TO PLAY</Text>
-    <ScrollView contentContainerStyle={styles.cards} decelerationRate="fast" horizontal showsHorizontalScrollIndicator={false} snapToInterval={166} testID="card-hand">
+    <ScrollView contentContainerStyle={styles.cards} decelerationRate="fast" horizontal showsHorizontalScrollIndicator={false} snapToInterval={152} testID="card-hand">
       {cards.map((card) => <SwipeableCard card={card} customText={card.id === 'custom' ? customText : null} disabled={disabled} key={card.id} onDropActive={onDropActive} onPlay={onPlay} reducedMotion={reducedMotion} selected={selectedId === card.id} />)}
     </ScrollView>
   </View>;
 }
 
 const styles = StyleSheet.create({
-  hand: { marginHorizontal: -spacing.xl, marginTop: spacing.lg }, handLabel: { color: colors.textMuted, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.2, marginBottom: spacing.md, paddingHorizontal: spacing.xl },
+  hand: { marginTop: spacing.lg }, handLabel: { color: colors.textMuted, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.2, marginBottom: spacing.md, paddingHorizontal: spacing.sm },
   cards: { gap: spacing.md, paddingBottom: spacing.lg, paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
 });

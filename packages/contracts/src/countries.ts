@@ -1,4 +1,5 @@
 import type { QuestCountryCode } from './quest';
+import { bundledPlanningMetadata, type AttractionPlanningMetadata } from './attraction-planning';
 
 export type Attraction = {
   id: string;
@@ -8,7 +9,7 @@ export type Attraction = {
   longitude: number;
   description: string;
   sourceUrl?: string;
-};
+} & Partial<AttractionPlanningMetadata>;
 
 export type Country = {
   code: QuestCountryCode;
@@ -34,7 +35,7 @@ function country(code: QuestCountryCode, name: string, flag: string, tagline: st
       ? `https://images.unsplash.com/${photo}?auto=format&fit=crop&w=1200&q=80`
       : `https://loremflickr.com/1200/800/${encodeURIComponent(name)},landscape?lock=${code.charCodeAt(0) * 100 + code.charCodeAt(1)}`,
     attractions: stops.map(([slug, stopName, category, lat, lon, description, sourceUrl]) => ({
-      id: `${code.toLowerCase()}-${slug}`, name: stopName, category, latitude: lat, longitude: lon, description, sourceUrl,
+      id: `${code.toLowerCase()}-${slug}`, name: stopName, category, latitude: lat, longitude: lon, description, sourceUrl, ...bundledPlanningMetadata(code.toLowerCase() + '-' + slug, code, category),
     })),
   };
 }

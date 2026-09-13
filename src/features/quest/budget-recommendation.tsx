@@ -17,7 +17,7 @@ export function EstimateIncludes({ assumptions }: { assumptions: string[] }) {
   return <View style={styles.notes}>
     <View style={styles.includesHeader}>
       <Text accessibilityRole="header" style={styles.includesTitle}>What this estimate includes</Text>
-      {assumptions.length > 1 ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: showAll }} onPress={() => setShowAll(!showAll)} style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}><Text style={styles.link}>{showAll ? 'View cards' : 'View all'}</Text></Pressable> : null}
+      {assumptions.length > 1 ? <Pressable accessibilityRole="button" aria-expanded={showAll} accessibilityState={{ expanded: showAll }} onPress={() => setShowAll(!showAll)} style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}><Text style={styles.link}>{showAll ? 'View cards' : 'View all'}</Text></Pressable> : null}
     </View>
     {showAll ? <View style={styles.allNotes}>{assumptions.map((assumption, i) => <View key={i} style={styles.noteRow}><Text style={styles.noteNumber}>{String(i + 1).padStart(2, '0')}</Text><Text style={styles.note}>{assumption}</Text></View>)}</View> : <>
       <View style={styles.assumptionCard} accessibilityLiveRegion="polite">
@@ -27,8 +27,8 @@ export function EstimateIncludes({ assumptions }: { assumptions: string[] }) {
       {assumptions.length > 1 ? <View style={styles.navigation}>
         <Text style={styles.counter} accessibilityLiveRegion="polite">{current + 1} of {assumptions.length} details</Text>
         <View style={styles.arrows}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous estimate detail" accessibilityState={{ disabled: current === 0 }} disabled={current === 0} onPress={() => setIndex(current - 1)} style={({ pressed }) => [styles.arrow, current === 0 && styles.inactive, pressed && styles.pressed]}><Text style={styles.arrowText}>←</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next estimate detail" accessibilityState={{ disabled: current === assumptions.length - 1 }} disabled={current === assumptions.length - 1} onPress={() => setIndex(current + 1)} style={({ pressed }) => [styles.arrow, current === assumptions.length - 1 && styles.inactive, pressed && styles.pressed]}><Text style={styles.arrowText}>→</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous estimate detail" aria-disabled={current === 0} accessibilityState={{ disabled: current === 0 }} disabled={current === 0} onPress={() => setIndex(current - 1)} style={({ pressed }) => [styles.arrow, current === 0 && styles.inactive, pressed && styles.pressed]}><Text style={styles.arrowText}>←</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next estimate detail" aria-disabled={current === assumptions.length - 1} accessibilityState={{ disabled: current === assumptions.length - 1 }} disabled={current === assumptions.length - 1} onPress={() => setIndex(current + 1)} style={({ pressed }) => [styles.arrow, current === assumptions.length - 1 && styles.inactive, pressed && styles.pressed]}><Text style={styles.arrowText}>→</Text></Pressable>
         </View>
       </View> : null}
     </>}

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { useEffect, type ComponentProps } from 'react';
 
 import { countryByCode } from '../packages/contracts/src/countries';
@@ -6,7 +6,7 @@ import type { QuestRoom, TripPeriod } from '../packages/contracts/src/quest';
 import { QuestScreen } from '@/features/quest/quest-screen';
 
 const mockUseEffect = useEffect;
-jest.mock('expo-router', () => ({ useFocusEffect: (effect: () => void | (() => void)) => mockUseEffect(effect, [effect]) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }), useFocusEffect: (effect: () => void | (() => void)) => mockUseEffect(effect, [effect]) }));
 jest.mock('@/theme/motion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/components/date-field', () => {
   const React = jest.requireActual('react'); const { TextInput } = jest.requireActual('react-native');
@@ -28,7 +28,7 @@ const tripId = '67e3c78c-a1e0-41c2-9f1c-582ed656d777';
 const period: TripPeriod = { startsOn: '2027-12-04', endsOn: '2027-12-08', label: 'Five days together', reason: 'Fits the shared calendar with two weekend days.' };
 const baseRoom: QuestRoom = {
   tripId, tripName: 'The annual escape', currentMemberId: organizerId, currentRole: 'organizer',
-  stage: 'picks', revision: 1,
+  stage: 'picks', revision: 1, plannerVersion: '1.0',
   members: [
     { memberId: organizerId, displayName: 'Organiser', availabilitySubmitted: true, picksSubmitted: false, votesSubmitted: false, budgetSubmitted: false },
     { memberId, displayName: 'Aina', availabilitySubmitted: true, picksSubmitted: false, votesSubmitted: false, budgetSubmitted: false },
@@ -63,7 +63,7 @@ describe('trip quest shared planning flow', () => {
   it('solo planning hides voting and submits one directly selected destination', async () => {
     const { screen, updateAction } = await openQuest(roomWith({ travelParty: 'solo', members: [baseRoom.members[0]] }));
     expect(screen.queryByText('Vote')).toBeNull();
-    expect(screen.getByTestId('flight-path').props.accessibilityLabel).toContain('of 4 stages');
+    expect(screen.getByTestId('flight-path').props.accessibilityLabel).toContain('of 6 stages');
     await fireEvent.press(screen.getByLabelText('Japan'));
     await fireEvent.press(screen.getByLabelText('Thailand'));
     await fireEvent.press(screen.getByText('Choose destination & explore'));
@@ -79,8 +79,8 @@ describe('trip quest shared planning flow', () => {
     expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'confirm_stay', stayId: stay.id });
   });
 
-  it.each(['organizer', 'member'] as const)('shows transport and stay inputs on an old completed trip for the %s', async (role) => {
-    const room = roomWith({ stage: 'complete', currentRole: role, currentMemberId: role === 'member' ? memberId : organizerId });
+  it.each(['organizer', 'member'] as const)('shows transport and stay inputs in Logistics for the %s', async (role) => {
+    const room = roomWith({ stage: 'logistics', currentRole: role, currentMemberId: role === 'member' ? memberId : organizerId });
     const { screen, updateAction } = await openQuest(room);
     expect(screen.queryByText('QUEST COMPLETE')).toBeNull();
     expect(screen.getByText('PLAN YOUR LOGISTICS')).toBeTruthy();
@@ -99,8 +99,8 @@ describe('trip quest shared planning flow', () => {
     expect(screen.getByText('Add stay option')).toBeTruthy();
   });
 
-  it('lets the organiser save another traveller’s transport directly from an old completed trip', async () => {
-    const { screen, updateAction } = await openQuest(roomWith({ stage: 'complete' }));
+  it('lets the organiser save another traveller’s transport in Logistics', async () => {
+    const { screen, updateAction } = await openQuest(roomWith({ stage: 'logistics' }));
     await fireEvent.press(screen.getByLabelText('Transport for Aina'));
     await fireEvent.press(screen.getByText('Add or edit my own booking'));
     for (const [label, value] of [
@@ -126,9 +126,10 @@ describe('trip quest shared planning flow', () => {
     await fireEvent.press(screen.getByText('Skip for now'));
     expect(updateAction).not.toHaveBeenCalled();
     expect(screen.getByText(/Schedule may change once transport/)).toBeTruthy();
-    await fireEvent.press(screen.getByText('Confirm & Generate Draft Itinerary'));
+    await fireEvent.press(screen.getByText('Generate itinerary'));
     expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'complete_logistics', skip: true, revision: 1 });
-    expect(onItinerary).toHaveBeenCalledTimes(1);
+    expect(onItinerary).not.toHaveBeenCalled();
+    expect(screen.getByText('ITINERARY STATION')).toBeTruthy();
   });
 
   it('lets members vote on stays but hides organiser confirmation controls', async () => {
@@ -141,7 +142,7 @@ describe('trip quest shared planning flow', () => {
     await fireEvent.press(screen.getByText('Vote · 0'));
     expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'stay_vote', stayId: stay.id });
     await fireEvent.press(screen.getByText('Review logistics summary'));
-    expect(screen.queryByText('Confirm & Generate Draft Itinerary')).toBeNull();
+    expect(screen.queryByText('Generate itinerary')).toBeNull();
   });
 
   it('collects a proposal and hides the compiled list until everyone submits', async () => {
@@ -316,7 +317,7 @@ describe('trip quest shared planning flow', () => {
     const updateAction = jest.fn(async () => ({ ...room, stage: 'logistics' as const }));
     const { screen } = await openQuest(room, { updateAction });
     await fireEvent.press(screen.getByTestId('compile-quest-attractions'));
-    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'compile_attractions' });
+    expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'compile_attractions', attractionIds: ['jp-fushimi-inari', 'jp-senso-ji'] });
   });
 
   it('disables compilation while another traveller has not voted', async () => {
@@ -347,24 +348,14 @@ describe('trip quest shared planning flow', () => {
     await waitFor(() => expect(screen.getByText('CHAPTER 3 · WISHLIST')).toBeTruthy());
   });
 
-  it('summarizes the saved destination, dates, stops and per-person ceiling', async () => {
-    const country = countryByCode('JP')!;
-    const stay = { id: '33333333-3333-4333-8333-333333333333', name: 'Crew stay', area: 'Tokyo', image: 'https://example.com/stay.jpg', latitude: 35, longitude: 139, totalCost: 1000, checkIn: '2027-12-04', checkOut: '2027-12-08', rating: 8, distance: '6 min from station', bookingLink: 'https://example.com/book', provider: 'Provider' };
-    const transport = baseRoom.members.flatMap((member) => (['arrival', 'departure'] as const).map((direction) => ({ memberId: member.memberId, direction, mode: 'flight' as const, status: 'selected' as const, departureLocation: 'KUL', arrivalLocation: 'NRT', departureAt: '2027-12-04T07:00:00+08:00', arrivalAt: '2027-12-04T14:30:00+09:00', cost: 100, bookingLink: null })));
-    const room = roomWith({ stage: 'complete', logistics: { transport, stays: [stay], selectedStayId: stay.id, votes: [], skippedMemberIds: [], staySkipped: false }, selectedCountryCode: 'JP', attractionIds: country.attractions.slice(0, 2).map((place) => place.id), budgetSummary: { submittedCount: 2, crewComfortCeiling: 1500, crewHardCeiling: 1500, currency: 'MYR' } });
-    const onItinerary = jest.fn();
-    const { screen } = await openQuest(room, { onItinerary });
-    expect(screen.getByLabelText('5 of 5 stages completed. Journey complete')).toBeTruthy();
-    expect(screen.getByText('From group chat to game plan.')).toBeTruthy();
-    expect(screen.getByText(/4 Dec 2027.*8 Dec 2027/)).toBeTruthy();
-    expect(screen.getByText(new RegExp(`01\\s+${country.attractions[0].name}`))).toBeTruthy();
-    expect(screen.getByText(new RegExp(`02\\s+${country.attractions[1].name}`))).toBeTruthy();
-    expect(screen.getByText('RM 1,500')).toBeTruthy();
-    expect(screen.getByText('per person · 2 travellers · whole trip')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('open-quest-itinerary'));
-    expect(onItinerary).toHaveBeenCalledTimes(1);
+  it('restores the itinerary at station seven with Logistics separate', async () => {
+    const { screen } = await openQuest(roomWith({ stage: 'complete', selectedCountryCode: 'JP', attractionIds: ['jp-sensoji'] }));
+    expect(screen.getByLabelText('6 of 7 stages completed. Plane stopped at Itinerary')).toBeTruthy();
+    expect(screen.getByText('Your itinerary')).toBeTruthy();
+    expect(within(screen.getByTestId('deterministic-itinerary')).getByText('Sensoji Temple')).toBeTruthy();
+    expect(screen.queryByTestId('logistics-budget')).toBeNull();
+    expect(screen.getByText('Edit logistics')).toBeTruthy();
   });
-
   it('ignores an older delayed room response after a newer stage arrives', async () => {
     const initial = roomWith({ revision: 4 }); const delayed = deferred<QuestRoom>();
     const newer = { ...votingRoom(), revision: 6 };
@@ -425,4 +416,65 @@ it.each(['organizer', 'member'] as const)('announces the decided destination to 
   expect(screen.queryByTestId('destination-announcement')).toBeNull();
   await act(async () => notify());
   expect(screen.queryByTestId('destination-announcement')).toBeNull();
+});
+
+it('builds only the organiser-selected subset and shows results after save acknowledgment', async () => {
+  const room = roomWith({ stage: 'explore', selectedCountryCode: 'JP', attractionVotes: [
+    { memberId: organizerId, attractionIds: ['jp-sensoji'] },
+    { memberId, attractionIds: ['jp-shibuya-sky'] },
+  ] });
+  const pending = deferred<QuestRoom>();
+  const updateAction = jest.fn(() => pending.promise);
+  const { screen } = await openQuest(room, { updateAction });
+  await fireEvent.press(screen.getByLabelText('Include Shibuya Sky in itinerary'));
+  await fireEvent.press(screen.getByText('Continue to Logistics'));
+  expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'compile_attractions', attractionIds: ['jp-sensoji'] });
+  expect(screen.queryByTestId('deterministic-itinerary')).toBeNull();
+  await act(async () => pending.resolve({ ...room, revision: 2, stage: 'logistics', attractionIds: ['jp-sensoji'] }));
+  expect(screen.queryByTestId('deterministic-itinerary')).toBeNull();
+  expect(screen.getByTestId('logistics-budget')).toBeTruthy();
+});
+it('keeps Build unavailable on an older server that would discard the subset', async () => {
+  const { screen } = await openQuest(roomWith({ stage: 'explore', selectedCountryCode: 'JP', plannerVersion: undefined,
+    attractionVotes: [{ memberId: organizerId, attractionIds: ['jp-sensoji'] }, { memberId, attractionIds: ['jp-sensoji'] }] }));
+  expect(screen.getByText('Trip building needs a server update. Your votes are still saved.')).toBeTruthy();
+  expect(screen.getByTestId('compile-quest-attractions').props.accessibilityState.disabled).toBe(true);
+});
+it('does not show a built plan when saving the selection fails', async () => {
+  const room = roomWith({ stage: 'explore', selectedCountryCode: 'JP', attractionVotes: [
+    { memberId: organizerId, attractionIds: ['jp-sensoji'] }, { memberId, attractionIds: ['jp-sensoji'] },
+  ] });
+  const { screen } = await openQuest(room, { updateAction: jest.fn(async () => { throw new Error('Selection save failed'); }) });
+  await fireEvent.press(screen.getByText('Continue to Logistics'));
+  await waitFor(() => expect(screen.getByText('Selection save failed')).toBeTruthy());
+  expect(screen.queryByTestId('deterministic-itinerary')).toBeNull();
+  expect(screen.getByTestId('attraction-map')).toBeTruthy();
+});
+it('recreates the shared draft including every selected stop on a member reload', async () => {
+  const { screen } = await openQuest(roomWith({ stage: 'complete', selectedCountryCode: 'JP', currentRole: 'member',
+    currentMemberId: memberId, attractionIds: ['jp-sensoji', 'jp-mount-fuji'] }));
+  expect(screen.getByTestId('deterministic-itinerary')).toBeTruthy();
+  expect(screen.queryByTestId('unscheduled-attractions')).toBeNull();
+  expect(screen.getByTestId('itinerary-list')).toBeTruthy();
+  expect(screen.getByText(/Mount Fuji/)).toBeTruthy();
+  expect(screen.queryByText('Continue to Logistics')).toBeNull();
+});
+it('solo Build saves attractions and enters Logistics without showing the itinerary', async () => {
+  const room = roomWith({ stage: 'explore', selectedCountryCode: 'JP', travelParty: 'solo', members: [baseRoom.members[0]] });
+  const updateAction = jest.fn(async () => ({ ...room, stage: 'logistics' as const, revision: 2, attractionIds: ['jp-sensoji'] }));
+  const { screen } = await openQuest(room, { updateAction });
+  await fireEvent.press(screen.getByLabelText('Select Sensoji Temple'));
+  await fireEvent.press(screen.getByText('Continue to Logistics'));
+  expect(updateAction).toHaveBeenCalledWith(tripId, { type: 'attractions', attractionIds: ['jp-sensoji'] });
+  await waitFor(() => expect(screen.getByTestId('logistics-budget')).toBeTruthy());
+  expect(screen.queryByTestId('deterministic-itinerary')).toBeNull();
+});
+
+test('restores imported visit selections for a solo traveller without opening Logistics', async () => {
+  const country = countryByCode('JP')!;
+  const id = country.attractions[0].id;
+  const { screen } = await openQuest(roomWith({ stage: 'explore', travelParty: 'solo', selectedCountryCode: 'JP', attractionVotes: [{ memberId: organizerId, attractionIds: [id] }] }));
+  expect(screen.getByLabelText(`Select ${country.attractions[0].name}`).props.accessibilityState.checked).toBe(true);
+  expect(screen.queryByText('Next: Accommodation')).toBeNull();
+  expect(screen.getByTestId('explore-suggestions')).toBeTruthy();
 });

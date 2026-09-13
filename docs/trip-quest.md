@@ -47,7 +47,7 @@ Costs up to and including the comfort ceiling are comfortable. Costs above comfo
 
 ### Existing rooms and rollout
 
-Apply `0037_private_budget_ranges.sql` with the matching client and Edge Function updates. The new client intentionally rejects the old single-value response; old clients cannot submit ambiguous single-amount budget actions. No live database is modified by adding this migration file.
+Apply `0038_private_budget_ranges.sql` with the matching client and Edge Function updates. The new client intentionally rejects the old single-value response; old clients cannot submit ambiguous single-amount budget actions. No live database is modified by adding this migration file.
 
 The migration renames the existing private budget column to the maximum field and backfills comfort with the same old amount, preserving historical affordability without granting additional flexibility. Old Budget-stage rooms resume Logistics after confirmation. Other rooms with missing active budgets temporarily return to Budget and resume their previous stage via `budget_resume_stage`; saved dates, picks, ballots, destination, attractions and logistics are retained. Rooms with complete legacy budgets retain their stage. Revisions increase to invalidate previous itinerary inputs and refresh observers.
 
@@ -112,3 +112,5 @@ Backend deployment completed on 7 September 2026 to Supabase project `cvgwxbirij
 Migration `0027_logistics_edit_access.sql` is deployed to the same project. Completed legacy quests and draft plans keep the transport and accommodation inputs available. Opening a trip does not mutate it; saving transport, a stay option, a vote or a stay decision reopens Logistics and increments the revision atomically. Members edit their own transport, add options and vote; organisers can also enter transport for any active traveller in the trip and retain the final stay decision. Nonparticipants cannot be targeted. Incomplete logistics display Chapter 6 rather than a completed flight plan. Empty accommodation lists open directly into the stay form, and section navigation resets the scroll position so its inputs are visible.
 
 Verification: 231 app tests, TypeScript, lint and the production web export passed. Remote rollback-only suites passed 14 Logistics and 7 access-control assertions. An isolated Edge preview with fixture RPC responses exercised organiser transport entry for another traveller, member self-entry, stay creation, organiser confirmation, member voting and mobile overflow. The static preview still reports the previously documented React hydration warning on direct dynamic-trip navigation; native-device QA has not been performed.
+
+Deployment numbering: remote 0037 was already occupied by `trip_workspace`; its applied SQL is restored locally as `0037_trip_workspace.sql`. The private budget migration is 0038 and also updates the workspace legacy importer to read the renamed hard maximum.

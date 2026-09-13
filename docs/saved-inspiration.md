@@ -1,21 +1,44 @@
-# Saved inspiration
+# Saved inspiration with OpenAI
 
-Open **My profile & trips → Saved inspiration**. Save a public HTTPS social post URL into a named folder. Each account has up to 200 links. Sharing trackers are removed; saving the same URL updates its folder/caption instead of duplicating it. Search by place, summary or tag. Links and analyses are private and survive leaving the screen.
+Saved Instagram and TikTok posts now queue real media analysis through the local video worker: captions, sampled video frames, carousel photos and available audio. OpenAI reads the images and combines evidence; OpenAI Whisper transcribes audio with segment timestamps. The existing bounded downloader/FFmpeg pipeline supports posts up to its 120-second limit and samples at most 20 images/scenes. It does not inspect every video frame. Private or inaccessible posts can fail; no caption-only success is silently reported for a media job.
 
-Saving triggers the `analyze-inspiration` Edge Function. It claims the row with a lease and uses `EdgeRuntime.waitUntil` to finish after returning HTTP 202. The screen refreshes status while open. Failed jobs can be retried; an interrupted worker becomes reclaimable after two minutes. Editing a caption clears its analysis and lease so an older worker cannot overwrite the new content. Removing a link also prevents the worker from recreating it.
+Other supported social URLs continue to use public metadata and supplied captions/transcripts through the direct OpenAI Responses API. Failed jobs remain saved and can be retried. Existing ready analyses remain unchanged; edit the caption to request a fresh analysis.
 
-The reader uses existing Instagram/TikTok public-caption extraction. For YouTube, Facebook, X/Twitter, Threads, Pinterest, Reddit and LinkedIn it attempts public HTML metadata with bounded reads, deadlines and no redirects. Other HTTPS social links can be stored but require a pasted caption or transcript for analysis. Private posts, login pages, shortened redirect links and posts without exposed text may need a caption. This feature does not download videos, transcribe audio, or analyze carousel images. The existing trip-specific video importer remains separate.
+## API key and configuration
 
-Analysis stores a title, summary, tags, planning notes, and explicitly named places with supporting evidence. It records the extracted source text and provider/model. These are post-derived suggestions, not verified addresses or current prices. From a trip’s Explore stage choose **Choose from my saved inspiration**, then run the existing place search and confirm the matching locations. Personal folder contents are not automatically shared with trip members.
+In the hosted Supabase project, open **Edge Functions → Secrets** and add:
 
-## Provider configuration
+```dotenv
+OPENAI_API_KEY=your-openai-api-key
+INSPIRATION_LLM_PROVIDER=openai
+OPENAI_INSPIRATION_MODEL=gpt-4.1-mini
+OPENAI_VISION_MODEL=gpt-4.1-mini
+```
 
-Default: `INSPIRATION_LLM_PROVIDER=groq`, using the existing `GROQ_API_KEY` and `GROQ_STRUCTURED_OUTPUT_MODEL`.
+For local Edge Functions, put the same settings in **`supabase/.env.local`** (gitignored). The template is `supabase/functions/.env.example`. Never put the key in `EXPO_PUBLIC_*` or mobile code. The media worker only needs its existing worker token and project URL; API keys stay in Edge Function secrets. Audio uses `whisper-1` because this pipeline requires segment timestamps. No OpenRouter, Groq or ElevenLabs credentials are needed for the saved-reel media path. Other unrelated AI features retain their existing configuration. An explicit `INSPIRATION_LLM_PROVIDER=groq` still overrides caption-only analysis, so replace any old setting with `openai`.
 
-Later, configure server secrets `INSPIRATION_LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_INSPIRATION_MODEL` (the chosen Responses-compatible model). The OpenAI adapter uses `POST /v1/responses`, structured output with `text.format`, and `store:false`. There is no automatic fallback to another provider after an OpenAI failure. No provider secrets are exposed to the mobile/web app.
+## Deployment
 
-Official contract: https://developers.openai.com/api/docs/guides/structured-outputs
+Apply migration `0040_saved_inspiration_media.sql` after existing migrations, then deploy `analyze-inspiration`, `video-import-worker`, and `import-trip-places`. Deploy the updated app and restart the updated worker with `npm run video-worker`. Existing worker setup instructions still apply (`npm run video-worker:setup` for first-time setup). The worker must remain running for saved media jobs to finish. Without it, jobs stay queued. Configure the key before starting jobs.
 
-## Deployment and checks
+For local functions: `supabase functions serve --env-file supabase/.env.local`.
 
-Apply migration `0029_saved_inspiration.sql` and deploy `analyze-inspiration`. No OpenAI secret is required until switching providers. Database regressions: `supabase/tests/0018_saved_inspiration.sql`. URL/schema tests: `__tests__/inspiration.test.ts`. The OpenAI adapter is tested with mocked responses; a live OpenAI call requires the future key and model configuration.
+## Using analyzed places in Wishlist
+
+In Wishlist, choose **Choose from my saved inspiration**, select a ready analysis, and review its places while selecting countries. One saved idea is queued per user/trip; another selection replaces it. This queue survives navigation on the same device/browser. You can also use **Use these in a trip** from Saved inspiration before Wishlist.
+
+When the destination reaches Explore, the queued places are prefilled. Choose **Find the places**, confirm the correct map matches, then select them on the map and submit your attraction choices/build the trip. The backend reads the owned saved analysis directly and searches all its places in the selected country without a second LLM extraction. Confirmed places become itinerary candidates. Personal analyses are not shared; only locations explicitly confirmed for the trip are shared.
+
+## Checks and API references
+
+`node --experimental-strip-types scripts/test-inspiration-ai.mjs` tests mocked OpenAI text, image and timestamped audio contracts. Run relevant Jest tests and `npm run video-worker:test` for the handoff and local media pipeline. Live OpenAI/media and hosted database validation require configured services.
+
+Official contracts: [structured output](https://developers.openai.com/api/docs/guides/structured-outputs), [vision](https://developers.openai.com/api/docs/guides/images-vision), [audio transcription](https://developers.openai.com/api/docs/guides/speech-to-text).
+
+## Concurrent media analysis
+
+The updated worker sends bounded batches to `video-import-worker`. Each batch runs up to three selected frame analyses concurrently with one audio transcription, then commits one checkpoint. The 8–20 single-video frame selection and 20-image post budget are unchanged. Larger images/audio are split into smaller batches to respect the 4 MB request limit. Old workers can still use the sequential endpoints.
+
+Partial failures save the successful contiguous frame prefix and completed audio before retrying. Frames after a failed frame may be analyzed again on retry; completed prefixes and audio are skipped. Finish still requires every selected frame and audio item. AI calls are unchanged on a successful run; concurrency can encounter rate limits sooner, so existing bounded retries remain active. The worker logs elapsed time for the media AI stage; live speedup has not been benchmarked.
+
+Deploy `video-import-worker` and restart `npm run video-worker` to enable batching. No database migration is required. `npm run video-worker:test` includes concurrency and retry tests.

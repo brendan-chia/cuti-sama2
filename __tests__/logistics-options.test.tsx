@@ -30,14 +30,14 @@ test('failed lists provide retry without saving fabricated data', async () => {
   await waitFor(() => expect(screen.getByText('No overnight stay is needed for a one-day trip.')).toBeTruthy());
   expect(act).not.toHaveBeenCalled();
 });
-test('adds an accommodation suggestion using its complete details', async () => {
+test('shows accommodation details without a separate Add button', async () => {
   const stay = { id: '33333333-3333-4333-8333-333333333333', name: 'Example stay', area: 'Tokyo', image: 'https://example.com/stay.jpg', latitude: 35, longitude: 139, totalCost: 1050, checkIn: '2027-12-04', checkOut: '2027-12-08', rating: 0, distance: 'Verify location', bookingLink: 'https://www.google.com/search?q=stay', provider: 'AI planning estimate' };
   mockInvoke.mockResolvedValue({ data: { transport: [], stays: [{ stay, reason: 'Near your chosen stops.' }] }, error: null });
   const act = jest.fn().mockResolvedValue(true);
   const screen = await render(<LogisticsOptions room={room} kind="stays" busy={false} act={act} />);
-  await waitFor(() => expect(screen.getByText('Add Example stay')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Add Example stay'));
-  expect(act).toHaveBeenCalledWith({ type: 'stay', stay });
+  await waitFor(() => expect(screen.getByText('Example Stay')).toBeTruthy());
+  expect(screen.queryByText('Add Example stay')).toBeNull();
+  expect(act).not.toHaveBeenCalled();
 });
 
 test('switching alternatives updates the explanation and saves the visible journey', async () => {
@@ -90,3 +90,21 @@ test('closing the preview does not save and a failed save keeps the details open
   if (saved) expect(act).toHaveBeenNthCalledWith(2, { type: 'confirm_stay', stayId: stay.id });
   else expect(act).toHaveBeenCalledTimes(1);
  });
+
+test('browses hotel cards with dots and swipes and selects the visible hotel', async () => {
+  const base = { id: '33333333-3333-4333-8333-333333333333', name: 'First hotel', area: 'Tokyo', image: 'https://example.com/stay.jpg', latitude: 35, longitude: 139, totalCost: 1000, checkIn: '2027-12-04', checkOut: '2027-12-08', rating: 0, distance: 'Verify location', bookingLink: 'https://example.com/stay', provider: 'AI planning estimate' };
+  const second = { ...base, id: '44444444-4444-4444-8444-444444444444', name: 'Second hotel', totalCost: 1500 };
+  mockInvoke.mockResolvedValue({ data: { transport: [], stays: [{ stay: second, reason: 'More space.' }, { stay: base, reason: 'Lower price.' }] }, error: null });
+  const act = jest.fn().mockResolvedValue(true);
+  const screen = await render(<LogisticsOptions room={{ ...room, currentRole: 'organizer' }} kind="stays" busy={false} act={act} />);
+  await waitFor(() => expect(screen.getByText('Hotel 1 of 2 · Swipe for alternatives')).toBeTruthy());
+  expect(screen.getByText('First Hotel')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Show hotel 2: Second Hotel'));
+  expect(screen.getByText('Hotel 2 of 2 · Swipe for alternatives')).toBeTruthy();
+  expect(screen.getByText('Second Hotel')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Select stay & update budget'));
+  await waitFor(() => expect(act).toHaveBeenNthCalledWith(2, { type: 'confirm_stay', stayId: second.id }));
+  expect(act).toHaveBeenNthCalledWith(1, { type: 'stay', stay: second });
+  await fireEvent(screen.getByTestId('stay-recommendation-cards'), 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 0 } } });
+  expect(screen.getByText('Hotel 1 of 2 · Swipe for alternatives')).toBeTruthy();
+});

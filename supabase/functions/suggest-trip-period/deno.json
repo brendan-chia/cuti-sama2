@@ -4,6 +4,8 @@
     "zod": "npm:zod@4.5.4",
     "../../../packages/contracts/src/quest": "../../../packages/contracts/src/quest.ts",
     "../../../packages/contracts/src/logistics": "../../../packages/contracts/src/logistics.ts",
-    "../../../packages/contracts/src/place-import": "../../../packages/contracts/src/place-import.ts"
+    "../../../packages/contracts/src/place-import": "../../../packages/contracts/src/place-import.ts",
+    "../../../packages/contracts/src/trip-vibe": "../../../packages/contracts/src/trip-vibe.ts",
+    "../../../packages/contracts/src/budget": "../../../packages/contracts/src/budget.ts"
   }
 }

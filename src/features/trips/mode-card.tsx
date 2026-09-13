@@ -15,7 +15,7 @@ export function ModeCard({ option, selected, onSelect }: ModeCardProps) {
     <Pressable
       accessibilityLabel={option.title}
       accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
+      aria-checked={selected} accessibilityState={{ checked: selected }}
       onPress={() => onSelect(option.value)}
       style={({ pressed }) => [
         styles.card,
@@ -44,13 +44,13 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     gap: spacing.sm,
     minHeight: 148,
     padding: spacing.lg,
   },
-  selectedCard: { backgroundColor: colors.sand, borderColor: colors.sand },
+  selectedCard: { backgroundColor: colors.surfaceTint, borderColor: colors.sky },
   pressed: { opacity: 0.84 },
   topRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   step: {
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.4,
   },
-  selectedStep: { color: colors.coralPressed },
+  selectedStep: { color: colors.sky },
   eyebrow: {
     color: colors.textMuted,
     flex: 1,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  selectedEyebrow: { color: colors.surfaceTint },
+  selectedEyebrow: { color: colors.textMuted },
   radio: {
     alignItems: 'center',
     borderColor: colors.disabled,
@@ -78,9 +78,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 22,
   },
-  radioSelected: { borderColor: colors.coral },
+  radioSelected: { borderColor: colors.sky },
   radioDot: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.sky,
     borderRadius: radius.pill,
     height: 12,
     width: 12,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 26,
   },
-  selectedText: { color: colors.background },
+  selectedText: { color: colors.ink },
   description: { color: colors.textMuted, fontSize: typography.small, lineHeight: 20 },
-  selectedDescription: { color: colors.surfaceTint },
+  selectedDescription: { color: colors.textMuted },
 });

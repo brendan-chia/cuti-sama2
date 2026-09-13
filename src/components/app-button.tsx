@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '@/theme/tokens';
@@ -23,32 +23,32 @@ export function AppButton({
   testID,
 }: AppButtonProps) {
   const inactive = disabled || loading;
+  const [focused, setFocused] = useState(false);
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: inactive, busy: loading }}
+      aria-disabled={inactive} aria-busy={loading} accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       testID={testID}
       style={({ pressed }) => [
         styles.base,
         variant === 'primary' ? styles.primary : styles.secondary,
         pressed && !inactive ? [styles.pressed, variant === 'primary' && styles.primaryPressed] : null,
-        inactive ? styles.disabled : null,
+        disabled && !loading ? styles.disabled : null,
+        focused && !inactive ? styles.focused : null,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.onAction : colors.ink} />
-      ) : (
-        <View style={styles.labelRow}>
-          {leading}
-          <Text style={[styles.label, variant === 'primary' ? styles.primaryLabel : null]}>
+      <View style={styles.labelRow}>
+          {loading ? <ActivityIndicator color={variant === 'primary' ? colors.paper : colors.ink} /> : leading}
+          <Text style={[styles.label, variant === 'primary' ? styles.primaryLabel : null, disabled && !loading && styles.disabledLabel]}>
             {label}
           </Text>
         </View>
-      )}
     </Pressable>
   );
 }
@@ -63,23 +63,25 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   primary: {
-    backgroundColor: colors.action,
+    backgroundColor: colors.sky,
     borderColor: colors.sky,
     borderWidth: 1,
   },
   secondary: {
-    backgroundColor: colors.surfaceTint,
+    backgroundColor: colors.paper,
     borderColor: colors.border,
     borderWidth: 1,
   },
   pressed: {
     opacity: 1,
-    transform: [{ scale: 0.99 }],
   },
-  primaryPressed: { backgroundColor: colors.actionPressed },
+  primaryPressed: { backgroundColor: colors.ink },
   disabled: {
-    opacity: 0.65,
+    backgroundColor: colors.border,
+    borderColor: colors.border,
   },
+  focused: { borderColor: colors.ink, borderWidth: 2 },
+  disabledLabel: { color: colors.textMuted },
   labelRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   primaryLabel: {
-    color: colors.onAction,
+    color: colors.paper,
     fontWeight: '800',
   },
 });

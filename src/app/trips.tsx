@@ -36,7 +36,7 @@ export default function Trips() {
   return <Screen><View style={s.stack}>
     <Text style={s.title}>Your trips.</Text>
     <Text style={s.body}>Pick up a plan, or revisit a favourite adventure.</Text>
-    <View style={s.row}>{[false, true].map(value => <Pressable key={String(value)} accessibilityRole="tab" accessibilityState={{ selected: past === value }} onPress={() => setPast(value)} style={[s.chip, past === value && s.chipSelected]}><Text style={past === value ? s.chipTextSelected : s.chipText}>{value ? 'Past trips' : 'Current & upcoming'}</Text></Pressable>)}</View>
+    <View style={s.row}>{[false, true].map(value => <Pressable key={String(value)} accessibilityRole="tab" aria-selected={past === value} accessibilityState={{ selected: past === value }} onPress={() => setPast(value)} style={[s.chip, past === value && s.chipSelected]}><Text style={past === value ? s.chipTextSelected : s.chipText}>{value ? 'Past trips' : 'Current & upcoming'}</Text></Pressable>)}</View>
     {error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Retry loading trips" onPress={() => setRetry(value => value + 1)} /></> : null}
     {!history && !error ? <Text accessibilityLiveRegion="polite" style={s.body}>Loading your trips…</Text> : null}
     {history && trips.length ? <TripCarousel key={`${past}:${trips.map(trip => trip.id).join(',')}`} trips={trips} completed={history.completed} busy={busy}

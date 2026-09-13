@@ -1,5 +1,5 @@
 import { MediaManifestSchema, mediaEvidenceLabel } from './media.ts';
-import { mergeObservations, normalizeTranscript, normalizeElevenLabsTranscript, transcribeAudio } from './ai.ts';
+import { mergeObservations, normalizeTranscript, normalizeElevenLabsTranscript, transcribeAudio, chat } from './ai.ts';
 import { llmConfig, llmFetch, GROQ_ENDPOINT } from '../_shared/llm.ts';
 
 function assert(value:unknown,message:string):asserts value {if(!value)throw new Error(message);}
@@ -19,37 +19,37 @@ Deno.test('ElevenLabs phrases retain timestamps and omit audio events',()=>{
   assert(rejected,'Missing or reversed timestamps must be rejected');
  }
 });
-Deno.test('audio uses ElevenLabs multipart authentication and handles failures',async()=>{
- const previous=Deno.env.get('ELEVENLABS_API_KEY');
- const previousModel=Deno.env.get('ELEVENLABS_TRANSCRIPTION_MODEL');
+Deno.test('audio uses OpenAI multipart authentication and handles failures',async()=>{
+ const previous=Deno.env.get('OPENAI_API_KEY');
+ const previousModel=Deno.env.get('OPENAI_UNUSED_AUDIO_MODEL');
  try{
-  Deno.env.set('ELEVENLABS_API_KEY','test-eleven');Deno.env.delete('ELEVENLABS_TRANSCRIPTION_MODEL');
+  Deno.env.set('OPENAI_API_KEY','test-eleven');Deno.env.delete('OPENAI_UNUSED_AUDIO_MODEL');
   const result=await transcribeAudio(btoa('mp3 fixture'),(async(url,init)=>{
-   assert(String(url)==='https://api.elevenlabs.io/v1/speech-to-text','Wrong audio endpoint');
+   assert(String(url)==='https://api.openai.com/v1/audio/transcriptions','Wrong audio endpoint');
    const headers=new Headers(init?.headers);
-   assert(headers.get('xi-api-key')==='test-eleven'&&!headers.has('authorization')&&!headers.has('content-type'),'Use ElevenLabs key and automatic multipart boundary');
+   assert(headers.get('authorization')==='Bearer test-eleven'&&!headers.has('xi-api-key')&&!headers.has('content-type'),'Use OpenAI key and automatic multipart boundary');
    const form=init?.body;assert(form instanceof FormData,'Must upload multipart audio');
-   assert(form.get('model_id')==='scribe_v2'&&form.get('timestamps_granularity')==='word','Request timed Scribe transcription');
-   assert(form.get('tag_audio_events')==='false'&&form.get('diarize')==='false','Disable unused annotations');
+   assert(form.get('model')==='whisper-1'&&form.get('timestamp_granularities[]')==='segment','Request timed OpenAI transcription');
+   assert(form.get('response_format')==='verbose_json','Disable unused annotations');
    const file=form.get('file');assert(file instanceof File&&await file.text()==='mp3 fixture'&&file.type==='audio/mpeg','MP3 bytes must survive decoding');
-   return Response.json(speech);
+   return Response.json(normalizeElevenLabsTranscript(speech));
   }) as typeof fetch);
   assert(result.segments.length===2,'Expected phrases');
   for(const [status,expected] of [[401,'authentication'],[403,'authentication'],[429,'rate limit'],[500,'temporarily unavailable']] as const){
    let message='';try{await transcribeAudio(btoa('test'),(()=>Promise.resolve(new Response('',{status}))) as typeof fetch);}catch(error){message=(error as Error).message;}
    assert(message.includes(expected),`Missing error for ${status}`);
   }
-  Deno.env.delete('ELEVENLABS_API_KEY');
+  Deno.env.delete('OPENAI_API_KEY');
   let message='';try{await transcribeAudio('',(()=>{throw new Error('Should not fetch');}) as typeof fetch);}catch(error){message=(error as Error).message;}
-  assert(message.includes('ELEVENLABS_API_KEY'),'Missing key must fail before fetching');
+  assert(message.includes('OPENAI_API_KEY'),'Missing key must fail before fetching');
  }finally{
-  if(previous===undefined)Deno.env.delete('ELEVENLABS_API_KEY');else Deno.env.set('ELEVENLABS_API_KEY',previous);
-  if(previousModel===undefined)Deno.env.delete('ELEVENLABS_TRANSCRIPTION_MODEL');else Deno.env.set('ELEVENLABS_TRANSCRIPTION_MODEL',previousModel);
+  if(previous===undefined)Deno.env.delete('OPENAI_API_KEY');else Deno.env.set('OPENAI_API_KEY',previous);
+  if(previousModel===undefined)Deno.env.delete('OPENAI_UNUSED_AUDIO_MODEL');else Deno.env.set('OPENAI_UNUSED_AUDIO_MODEL',previousModel);
  }
 });
-Deno.test('all LLM purposes use Groq and preserve native request fields',async()=>{
+Deno.test('unrelated shared LLM configuration remains Groq',async()=>{
  for(const purpose of ['structured','itinerary','vision'] as const){
-  const config=llmConfig(purpose);assert(config.provider==='groq'&&config.endpoint===GROQ_ENDPOINT,'All non-audio AI uses Groq');
+  const config=llmConfig(purpose);assert(config.provider==='groq'&&config.endpoint===GROQ_ENDPOINT,'Shared legacy AI configuration stays unchanged');
  }
  const body=JSON.stringify({max_completion_tokens:1800,response_format:{type:'json_schema',json_schema:{name:'test',strict:true,schema:{type:'object'}}}});
  await llmFetch(((_url,init)=>{assert(init?.body===body,'Do not rewrite Groq schema or token limits');return Promise.resolve(Response.json({}));}) as typeof fetch)(GROQ_ENDPOINT,{method:'POST',body});
@@ -70,4 +70,17 @@ Deno.test('photo and mixed carousel manifests preserve item identity and reject 
  assert(mediaEvidenceLabel(parsed.frames[1])==='Video 2 at 1.250s','Video evidence must identify its carousel item');
  assert(!MediaManifestSchema.safeParse({...manifest,frames:manifest.frames.slice(0,1)}).success,'Every carousel item needs coverage');
  assert(!MediaManifestSchema.safeParse({...manifest,items:[{kind:'image',hasAudio:true},manifest.items[1]]}).success,'Photos cannot have audio');
+});
+
+Deno.test('media vision and evidence combination use direct OpenAI with image payloads',async()=>{
+ const previous=Deno.env.get('OPENAI_API_KEY');Deno.env.set('OPENAI_API_KEY','test');
+ try { for(const vision of [false,true]) {
+  const messages=[{role:'user',content:[{type:'text',text:'Read this frame'},{type:'image_url',image_url:{url:'data:image/jpeg;base64,AAAA'}}]}];
+  const result=await chat(messages,vision,async(url,init)=>{
+   assert(String(url)==='https://api.openai.com/v1/chat/completions','Must call OpenAI directly');
+   const body=JSON.parse(String(init?.body));assert(body.store===false,'Do not store responses');
+   assert(JSON.stringify(body.messages)===JSON.stringify(messages),'Image data must be preserved');
+   return Response.json({choices:[{message:{content:JSON.stringify({places:[{name:'Tokyo Tower',evidence:'Visible sign'}]})}}]});
+  });assert(result.length===1,'Parse observations');
+ }} finally {if(previous===undefined)Deno.env.delete('OPENAI_API_KEY');else Deno.env.set('OPENAI_API_KEY',previous);}
 });

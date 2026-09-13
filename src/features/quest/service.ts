@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { QuestActionSchema, QuestRoomSchema, type QuestAction, type QuestRoom } from '../../../packages/contracts/src/quest';
+import { withSessionRefresh } from '@/lib/session-request';
 import { ensureAnonymousSession } from '@/lib/auth';
 import { withPersistentOperationKey } from '@/lib/idempotency';
 import { requireSupabase } from '@/lib/supabase';
 
 export async function loadQuest(tripId: string): Promise<QuestRoom> {
   await ensureAnonymousSession();
-  const { data, error } = await requireSupabase().rpc('get_trip_quest', { p_trip_id: z.uuid().parse(tripId) });
+  const { data, error } = await withSessionRefresh(() => requireSupabase().rpc('get_trip_quest', { p_trip_id: z.uuid().parse(tripId) }));
   if (error) throw new Error(error.message);
   return QuestRoomSchema.parse(data);
 }
@@ -17,9 +18,9 @@ export async function updateQuest(tripId: string, action: QuestAction): Promise<
   await ensureAnonymousSession();
   const scope = `${id}.${parsed.type}${parsed.type === 'vote' ? `.${parsed.countryCode}` : ''}`;
   return withPersistentOperationKey('trip-quest', scope, parsed, async (idempotencyKey) => {
-    const { data, error } = await requireSupabase().rpc('update_trip_quest', {
+    const { data, error } = await withSessionRefresh(() => requireSupabase().rpc('update_trip_quest', {
       p_trip_id: id, p_action: parsed, p_idempotency_key: idempotencyKey,
-    });
+    }));
     if (error) throw new Error(error.message);
     return QuestRoomSchema.parse(data);
   });

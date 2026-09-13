@@ -7,6 +7,7 @@ type DateFieldProps = {
   error?: string;
   label: string;
   minimumDate?: string;
+  rangeStart?: string;
   onChange: (value: string) => void;
   required?: boolean;
   value: string;
@@ -25,7 +26,7 @@ function displayDate(value: string) {
   return parseDate(value)?.toLocaleDateString('en-MY', { day: 'numeric', month: 'long', year: 'numeric' }) ?? 'Choose date';
 }
 
-export function DateField({ error, label, minimumDate, onChange, required = false, value }: DateFieldProps) {
+export function DateField({ error, label, minimumDate, rangeStart, onChange, required = false, value }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [month, setMonth] = useState(() => new Date());
   const today = useCurrentDate();
@@ -52,12 +53,12 @@ export function DateField({ error, label, minimumDate, onChange, required = fals
   return <View style={styles.group}>
     <Text style={styles.label}>{label}</Text>
     <Text style={styles.hint}>{required ? 'Required' : 'Optional'} · Tap to choose from the calendar</Text>
-    <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ expanded: showPicker }} onPress={toggle} style={({ pressed }) => [styles.input, error && styles.inputError, pressed && styles.pressed]}>
+    <Pressable accessibilityLabel={label} accessibilityRole="button" aria-expanded={showPicker} accessibilityState={{ expanded: showPicker }} onPress={toggle} style={({ pressed }) => [styles.input, error && styles.inputError, pressed && styles.pressed]}>
       <Text style={selected ? styles.value : styles.placeholder}>{selected ? displayDate(value) : 'Choose date'}</Text><Text aria-hidden style={styles.calendar}>{showPicker ? 'CLOSE' : 'CALENDAR'}</Text>
     </Pressable>
     {showPicker ? <View style={styles.calendarPanel} testID={`${label.toLowerCase().replace(/\s+/g, '-')}-picker`}>
       <View style={styles.monthHeader}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Previous month for ${label}`} accessibilityState={{ disabled: previousDisabled }} disabled={previousDisabled} style={[styles.monthButton, previousDisabled && styles.disabled]} onPress={() => setMonth(new Date(year, monthIndex - 1, 1, 12))}><Text style={styles.monthArrow}>‹</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Previous month for ${label}`} aria-disabled={previousDisabled} accessibilityState={{ disabled: previousDisabled }} disabled={previousDisabled} style={[styles.monthButton, previousDisabled && styles.disabled]} onPress={() => setMonth(new Date(year, monthIndex - 1, 1, 12))}><Text style={styles.monthArrow}>‹</Text></Pressable>
         <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.monthTitle}>{month.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={`Next month for ${label}`} style={styles.monthButton} onPress={() => setMonth(new Date(year, monthIndex + 1, 1, 12))}><Text style={styles.monthArrow}>›</Text></Pressable>
       </View>
@@ -66,8 +67,10 @@ export function DateField({ error, label, minimumDate, onChange, required = fals
         if (!day) return <View key={column} style={styles.dayCell} />;
         const date = dateOnly(new Date(year, monthIndex, day, 12));
         const disabled = Boolean(minimum && date < minimum);
-        const checked = date === value;
-        return <Pressable key={column} accessibilityRole="button" accessibilityLabel={displayDate(date)} accessibilityState={{ selected: checked, disabled }} disabled={disabled} onPress={() => { if (date < minimum || date < calendarDate()) return; onChange(date); setShowPicker(false); }} style={({ pressed }) => [styles.dayCell, checked && styles.selectedDay, disabled && styles.disabled, pressed && styles.pressed]}><Text style={[styles.dayText, checked && styles.selectedText]}>{day}</Text></Pressable>;
+        const endpoint = date === rangeStart || date === value;
+        const inRange = Boolean(rangeStart && value >= rangeStart && date >= rangeStart && date <= value);
+        const checked = date === value || date === rangeStart;
+        return <Pressable key={column} accessibilityRole="button" accessibilityLabel={displayDate(date)} aria-pressed={checked} aria-disabled={disabled} accessibilityState={{ selected: checked, disabled }} disabled={disabled} onPress={() => { if (date < minimum || date < calendarDate()) return; onChange(date); setShowPicker(Boolean(rangeStart)); }} style={({ pressed }) => [styles.dayCell, disabled && !checked && styles.disabled, pressed && styles.pressed]}>{inRange ? <View testID={`date-range-${date}`} style={[styles.rangeLine, date === rangeStart && { left: '50%' }, date === value && { right: '50%' }]} /> : null}<View style={[styles.dayCircle, endpoint && styles.selectedDay]}><Text style={[styles.dayText, endpoint && styles.selectedText]}>{day}</Text></View></Pressable>;
       })}</View>)}
       <Text style={styles.hint}>Select a day to confirm your date.</Text>
     </View> : null}
@@ -83,9 +86,11 @@ const styles = StyleSheet.create({
   monthButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   monthArrow: { fontSize: 28, color: colors.sky },
   week: { flexDirection: 'row' },
-  weekday: { flex: 1, textAlign: 'center', color: colors.textMuted, fontSize: 11, paddingVertical: 8 },
+  weekday: { flex: 1, textAlign: 'center', color: colors.textMuted, fontSize: 12, paddingVertical: 8 },
   dayCell: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
   dayText: { color: colors.ink, fontSize: 14, fontWeight: '600' },
+  dayCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  rangeLine: { position: 'absolute', left: 0, right: 0, height: 32, backgroundColor: colors.leafSurface },
   selectedDay: { backgroundColor: colors.sky },
   selectedText: { color: colors.paper },
   disabled: { opacity: 0.3 },
@@ -99,6 +104,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     minHeight: 52,
     paddingHorizontal: spacing.lg,
@@ -106,10 +113,10 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: colors.danger },
   pressed: { opacity: 0.82 },
-  value: { color: colors.ink, fontSize: typography.body },
-  placeholder: { color: colors.textMuted, fontSize: typography.body },
+  value: { color: colors.ink, fontSize: typography.body, flex: 1 },
+  placeholder: { color: colors.textMuted, fontSize: typography.body, flex: 1 },
   calendar: { color: colors.sky, fontSize: typography.label, fontWeight: '800', letterSpacing: 1.1 },
-  clearButton: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  clearButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingVertical: spacing.sm },
   clearText: { color: colors.sky, fontSize: typography.small, fontWeight: '700' },
   error: { color: colors.danger, fontSize: typography.small, lineHeight: 18 },
 });

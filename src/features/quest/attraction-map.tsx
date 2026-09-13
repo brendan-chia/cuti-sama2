@@ -1,3 +1,4 @@
+import { placeLabel } from '@/lib/presentation';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -28,6 +29,7 @@ function CountryAttractionMap({ country, selectedIds, onToggle, disabled = false
   const [drag, setDrag] = useState({ x: 0, y: 0 });
   const [tileStatus, setTileStatus] = useState<Record<string, 'loaded' | 'error'>>({});
   const [retry, setRetry] = useState(0);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [linkError, setLinkError] = useState<string | null>(null);
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => false,
@@ -84,8 +86,8 @@ function CountryAttractionMap({ country, selectedIds, onToggle, disabled = false
             const selected = selectedIds.includes(attraction.id);
             return <Pressable
               key={attraction.id} testID={`map-pin-${attraction.id}`}
-              accessibilityRole="checkbox" accessibilityLabel={`${attraction.name}, map pin ${index + 1}`}
-              accessibilityState={{ checked: selected, disabled }} accessibilityHint="Adds or removes this attraction from your collection."
+              accessibilityRole="checkbox" accessibilityLabel={`${placeLabel(attraction.name)}, map pin ${index + 1}`}
+              aria-checked={selected} aria-disabled={disabled} accessibilityState={{ checked: selected, disabled }} accessibilityHint="Adds or removes this attraction from your collection."
               disabled={disabled} onPress={() => onToggle(attraction.id)} hitSlop={6}
               style={[styles.pin, selected && styles.pinSelected, { left: point.x - 20, top: point.y - 40 }]}
             ><Text style={[styles.pinText, selected && styles.pinTextSelected]}>{selected ? '✓' : index + 1}</Text><View style={[styles.pinTail, selected && styles.pinTailSelected]} /></Pressable>;
@@ -95,8 +97,8 @@ function CountryAttractionMap({ country, selectedIds, onToggle, disabled = false
       {pending && <View pointerEvents="none" style={styles.loading}><ActivityIndicator size="small" color={colors.sky} /><Text style={styles.loadingText}>Loading map…</Text></View>}
       {allFailed && <View pointerEvents="none" style={styles.mapUnavailable}><Text style={styles.unavailableTitle}>Map unavailable</Text><Text style={styles.unavailableBody}>You can still collect places below.</Text></View>}
       <View style={styles.mapControls}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Zoom in on country map" accessibilityState={{ disabled: viewport.zoom >= MAX_MAP_ZOOM }} disabled={viewport.zoom >= MAX_MAP_ZOOM} onPress={() => zoomBy(1)} style={styles.mapControl}><Text style={styles.controlText}>+</Text></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Zoom out on country map" accessibilityState={{ disabled: viewport.zoom <= MIN_MAP_ZOOM }} disabled={viewport.zoom <= MIN_MAP_ZOOM} onPress={() => zoomBy(-1)} style={styles.mapControl}><Text style={styles.controlText}>−</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Zoom in on country map" aria-disabled={viewport.zoom >= MAX_MAP_ZOOM} accessibilityState={{ disabled: viewport.zoom >= MAX_MAP_ZOOM }} disabled={viewport.zoom >= MAX_MAP_ZOOM} onPress={() => zoomBy(1)} style={styles.mapControl}><Text style={styles.controlText}>+</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Zoom out on country map" aria-disabled={viewport.zoom <= MIN_MAP_ZOOM} accessibilityState={{ disabled: viewport.zoom <= MIN_MAP_ZOOM }} disabled={viewport.zoom <= MIN_MAP_ZOOM} onPress={() => zoomBy(-1)} style={styles.mapControl}><Text style={styles.controlText}>−</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={`Reset map to ${country.name} overview`} onPress={() => setViewport(initialPosition)} style={styles.mapControl}><Text style={styles.recenterText}>↺</Text></Pressable>
       </View>
       <Pressable accessibilityRole="link" accessibilityLabel="Map data copyright OpenStreetMap contributors" onPress={() => void openLink('https://www.openstreetmap.org/copyright')} style={styles.attribution}><Text style={styles.attributionText}>© OpenStreetMap contributors</Text></Pressable>
@@ -107,11 +109,14 @@ function CountryAttractionMap({ country, selectedIds, onToggle, disabled = false
       {country.attractions.map((attraction, index) => {
         const selected = selectedIds.includes(attraction.id);
         return <View key={attraction.id} style={[styles.attractionRow, selected && styles.attractionRowSelected]}>
-          <Pressable accessibilityRole="checkbox" accessibilityLabel={`${attraction.name}, ${attraction.category}`} accessibilityState={{ checked: selected, disabled }} disabled={disabled} onPress={() => onToggle(attraction.id)} style={styles.attractionChoice} testID={`attraction-${attraction.id}`}>
+          <Pressable accessibilityRole="checkbox" accessibilityLabel={`${placeLabel(attraction.name)}, ${attraction.category}`} aria-checked={selected} aria-disabled={disabled} accessibilityState={{ checked: selected, disabled }} disabled={disabled} onPress={() => onToggle(attraction.id)} style={styles.attractionChoice} testID={`attraction-${attraction.id}`}>
             <View style={[styles.listNumber, selected && styles.listNumberSelected]}><Text style={[styles.numberText, selected && styles.numberTextSelected]}>{selected ? '✓' : index + 1}</Text></View>
-            <View style={styles.attractionCopy}><Text style={styles.category}>{attraction.category.toUpperCase()}</Text><Text style={styles.attractionName}>{attraction.name}</Text><Text style={styles.description}>{attraction.description}</Text></View>
+            <View style={styles.attractionCopy}><Text style={styles.attractionName}>{placeLabel(attraction.name)}</Text><Text style={styles.category}>{attraction.category}</Text></View>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Locate ${attraction.name} on map`} onPress={() => locate(attraction)} style={styles.locateButton}><Text style={styles.locateText}>Locate ↗</Text></Pressable>
+          <View style={styles.rowActions}>{attraction.description ? <Pressable accessibilityRole="button" accessibilityLabel={`Details for ${placeLabel(attraction.name)}`} accessibilityState={{ expanded: expanded.includes(attraction.id) }} onPress={() => setExpanded(current => current.includes(attraction.id) ? current.filter(id => id !== attraction.id) : [...current, attraction.id])} style={styles.locateButton}><Text style={styles.locateText}>{expanded.includes(attraction.id) ? 'Hide details −' : 'Details +'}</Text></Pressable> : null}
+
+          <Pressable accessibilityRole="button" accessibilityLabel={`Locate ${placeLabel(attraction.name)} on map`} onPress={() => locate(attraction)} style={styles.locateButton}><Text style={styles.locateText}>Locate ↗</Text></Pressable></View>
+          {expanded.includes(attraction.id) ? <Text style={styles.description}>{attraction.description}</Text> : null}
         </View>;
       })}
     </View>
@@ -146,17 +151,18 @@ const styles = StyleSheet.create({
   retryButton: { paddingVertical: spacing.sm, paddingRight: spacing.md, minHeight: 44, justifyContent: 'center' },
   retryText: { color: colors.sky, fontSize: typography.small, fontWeight: '800' },
   list: { gap: spacing.sm },
-  attractionRow: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: spacing.sm },
-  attractionRowSelected: { borderBottomColor: colors.sky },
+  attractionRow: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  attractionRowSelected: { borderColor: colors.sky },
   attractionChoice: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.sm },
   listNumber: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   listNumberSelected: { backgroundColor: colors.sky, borderColor: colors.sky },
   numberText: { color: colors.ink, fontSize: typography.body, fontWeight: '800' },
   numberTextSelected: { color: colors.background },
   attractionCopy: { flex: 1, gap: spacing.xs },
-  category: { color: colors.coral, fontSize: typography.label, fontWeight: '800', letterSpacing: 1 },
-  attractionName: { color: colors.ink, fontSize: typography.body, fontWeight: '800' },
-  description: { color: colors.textMuted, fontSize: typography.small, lineHeight: 19 },
-  locateButton: { alignSelf: 'flex-start', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginLeft: 36, minHeight: 44, justifyContent: 'center' },
+  category: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+  attractionName: { color: colors.ink, fontSize: 17, lineHeight: 25, fontWeight: '600' },
+  description: { color: colors.textMuted, fontSize: 14, lineHeight: 22, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginLeft: 48 },
+  locateButton: { alignSelf: 'flex-start', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center' },
   locateText: { color: colors.sky, fontSize: typography.small, fontWeight: '700' },
 });

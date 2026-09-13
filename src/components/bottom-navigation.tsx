@@ -19,13 +19,13 @@ export function BottomNavigation() {
   const active = pathname.startsWith('/trip/') || pathname === '/trips' || (pathname === '/profile' && section === 'trips') ? '/trips'
     : ['/create', '/solo', '/new-trip'].includes(pathname) ? '/new-trip'
     : ['/social', '/discover', '/join'].includes(pathname) || pathname.startsWith('/invite/') ? '/social'
-    : pathname === '/profile' ? '/profile' : pathname === '/' ? '/' : '';
+    : ['/profile', '/inspiration', '/recover'].includes(pathname) ? '/profile' : pathname === '/' ? '/' : '';
   return <SafeAreaView edges={['bottom', 'left', 'right']} style={s.safe}>
     <View style={s.row} accessibilityRole="tablist">
       {destinations.map(item => {
         const selected = item.href === active;
         const create = item.href === '/new-trip';
-        return <Pressable key={item.href} accessibilityRole="tab" accessibilityLabel={item.accessibilityLabel} accessibilityState={{ selected }} onPress={() => router.navigate(item.href)} style={({ pressed }) => [s.tab, pressed && s.pressed]}>
+        return <Pressable key={item.href} accessibilityRole="tab" accessibilityLabel={item.accessibilityLabel} aria-selected={selected} accessibilityState={{ selected }} onPress={() => router.navigate(item.href)} style={({ pressed }) => [s.tab, pressed && s.pressed]}>
           <View style={[s.icon, selected && s.selectedIcon, create && s.create]}>
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={create ? colors.onAction : selected ? colors.sky : colors.textMuted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><Path d={item.path} /></Svg>
           </View>
@@ -37,9 +37,9 @@ export function BottomNavigation() {
 }
 const s = StyleSheet.create({
   safe: { backgroundColor: colors.paper, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  row: { flexDirection: 'row', width: '100%', maxWidth: 560, alignSelf: 'center', paddingVertical: 6 },
-  tab: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  icon: { width: 46, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', width: '100%', maxWidth: 720, alignSelf: 'center', paddingVertical: 6 },
+  tab: { flex: 1, minHeight: 64, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  icon: { width: 48, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   selectedIcon: { backgroundColor: colors.leafSurface },
   create: { backgroundColor: colors.action },
   label: { fontSize: 12, fontWeight: '600', color: colors.textMuted },

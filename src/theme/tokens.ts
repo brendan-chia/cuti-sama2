@@ -10,6 +10,8 @@ export const colors = {
   // Logo samples with paired accessible foregrounds; sky stays dark for links.
   action: '#8CB64A', onAction: '#382819', actionPressed: '#82AC40',
   leafSurface: '#D9E5B2', surfaceWarm: '#FAE2BF', input: '#FFF9EE',
+  orangeSurface: '#FE7B22', orangeSurfaceLight: '#FF9B45',
+  destinationTitle: '#123858',
   errorSurface: '#FBECE5', scrim: 'rgba(56, 40, 25, 0.58)',
   // Compatibility aliases let all existing screens share the otter palette.
   midnight: '#FFFBF3', midnightRaised: '#FFFFFF', midnightSoft: '#EDF4DB', white: '#5B402E',
@@ -28,7 +30,7 @@ export const spacing = {
 export const radius = {
   sm: 10,
   md: 16,
-  lg: 24,
+  lg: 20,
   pill: 999,
 } as const;
 
@@ -37,6 +39,6 @@ export const typography = {
   title: 28,
   heading: 19,
   body: 15,
-  small: 12,
-  label: 10,
+  small: 13,
+  label: 12,
 } as const;

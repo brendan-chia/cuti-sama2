@@ -44,7 +44,7 @@ export function UseInspiration({ inspirationId }: { inspirationId: string }) {
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
           <Text style={s.title}>Turn saved places into a trip</Text>
-          <Text style={s.body}>Choose a trip. Your places will be ready in Explore, where you can confirm the matching locations and include them in your itinerary. Trips that have already finished choosing stops are not listed.</Text>
+          <Text style={s.body}>Choose a trip. Review your places in Wishlist while choosing countries, then confirm the matching locations in Explore to include them in your itinerary. Trips that have already finished choosing stops are not listed.</Text>
           {busy ? <Text accessibilityLiveRegion="polite" style={s.body}>Preparing your trips…</Text> : null}
           {error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><AppButton label="Retry trips" disabled={busy} onPress={() => void choose()} /></> : null}
           {trips.map(trip => <AppButton key={trip.id} label={`Use these in ${trip.name}`} variant="secondary" disabled={busy} onPress={() => void use(trip)} />)}

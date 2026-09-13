@@ -1,6 +1,7 @@
+import { WishlistInspiration } from '@/features/inspiration/wishlist-inspiration';
 import { useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { countries, countryByCode, searchCountries } from '../../../packages/contracts/src/countries';
 import type { QuestAction, QuestCountryCode, QuestRoom } from '../../../packages/contracts/src/quest';
 import { AppButton } from '@/components/app-button';
@@ -21,6 +22,9 @@ function CountryPhoto({ country }: { country: (typeof countries)[number] }) {
 }
 
 export function CountryPicks({ room, busy, act }: Props) {
+  const { fontScale } = useWindowDimensions();
+  const [gridWidth, setGridWidth] = useState(0);
+  const singleColumn = (gridWidth > 0 && gridWidth < 300) || fontScale > 1.3;
   const solo = room.travelParty === 'solo';
   const limit = solo ? 1 : 3;
   const [selected, setSelected] = useState<QuestCountryCode[]>(room.ownPicks);
@@ -35,24 +39,26 @@ export function CountryPicks({ room, busy, act }: Props) {
     <View style={s.success}><Text style={s.heading}>Your wishlist is on the table.</Text><Text style={s.body}>Everyone’s picks stay hidden until the whole group has submitted. Your countries will become part of the shared voting deck.</Text>
       {room.ownPicks.map((code) => <Text key={code} style={s.strong}>{countryByCode(code)?.flag} {countryByCode(code)?.name}</Text>)}
     </View>
+    <WishlistInspiration tripId={room.tripId} disabled={busy} />
     <AppButton label="Edit my picks" variant="secondary" disabled={busy} onPress={() => { setSelected(room.ownPicks); setEditing(true); }} />
   </View>;
   return <View style={s.stack}>
+    <WishlistInspiration tripId={room.tripId} disabled={busy} />
     <View style={styles.slots} accessibilityLabel={`${selected.length} of ${limit} country slots filled`}>
       {Array.from({ length: limit }, (_, i) => i).map((index) => {
         const country = countryByCode(selected[index]);
         return <Pressable key={index} accessibilityRole="button" accessibilityLabel={country ? `Remove ${country.name}` : `Empty country slot ${index + 1}`} disabled={!country || busy} onPress={() => toggle(country!.code)} style={[styles.slot, country && styles.filled]}>
-          {country ? <><CountryPhoto key={country.code} country={country} /><View style={styles.slotCaption}><Text numberOfLines={1} style={styles.selectedSlotLabel}>{country.name}</Text></View></> : <><Text style={styles.slotIcon}>+</Text><Text numberOfLines={1} style={styles.slotLabel}>{`Pick ${index + 1}`}</Text></>}
+          {country ? <><CountryPhoto key={country.code} country={country} /><View style={styles.slotCaption}><Text style={styles.selectedSlotLabel}>{country.name}</Text></View></> : <><Text style={styles.slotIcon}>+</Text><Text style={styles.slotLabel}>{`Pick ${index + 1}`}</Text></>}
         </Pressable>;
       })}
     </View>
     <FormField label="Find a country" onChangeText={setQuery} value={query} placeholder="Japan, Thailand, Philippines…" />
     <Text accessibilityLiveRegion="polite" style={s.small}>{solo ? 'Choose your destination. No voting needed.' : selected.length === 3 ? 'All three slots filled. Remove a pick to swap it.' : `${3 - selected.length} slots left · choose at least one country`}</Text>
-    <View style={styles.grid}>{visible.map((country) => {
+    <View style={styles.grid} onLayout={event => setGridWidth(event.nativeEvent.layout.width)}>{visible.map((country) => {
       const chosen = selected.includes(country.code); const disabled = busy || (!solo && !chosen && selected.length >= 3);
-      return <Pressable key={country.code} accessibilityRole="checkbox" accessibilityLabel={country.name} accessibilityState={{ checked: chosen, disabled }} disabled={disabled} onPress={() => toggle(country.code)} style={({ pressed }) => [styles.country, chosen && styles.chosen, disabled && !chosen && s.disabled, pressed && s.pressed]}>
+      return <Pressable key={country.code} accessibilityRole={solo ? "radio" : "checkbox"} accessibilityLabel={country.name} aria-checked={chosen} aria-disabled={disabled} accessibilityState={{ checked: chosen, disabled }} disabled={disabled} onPress={() => toggle(country.code)} style={({ pressed }) => [styles.country, singleColumn && styles.countryFull, chosen && styles.chosen, disabled && !chosen && s.disabled, pressed && s.pressed]}>
         <View style={styles.countryPhoto}><CountryPhoto key={country.code} country={country} /><View style={[styles.selection, chosen && styles.selectionChosen]}><Text style={[styles.selectionText, chosen && styles.check]}>{chosen ? '✓' : '+'}</Text></View></View>
-        <View style={styles.caption}><Text style={[styles.countryName, chosen && styles.check]}>{country.name}</Text></View>
+        <View style={styles.caption}><Text style={[styles.countryName, chosen && styles.selectedName]}>{country.name}</Text></View>
       </Pressable>;
     })}</View>
     {!visible.length ? <Text style={s.body}>No country found in this collection. Try another name.</Text> : null}
@@ -66,8 +72,9 @@ const styles = StyleSheet.create({
   slot: { flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.md, minHeight: 106, padding: spacing.sm },
   filled: { borderStyle: 'solid', borderColor: colors.sky, backgroundColor: colors.surfaceTint },
   slotIcon: { fontSize: 30, color: colors.textMuted }, slotLabel: { color: colors.ink, fontSize: 12, fontWeight: '700' },
-  grid: { gap: spacing.sm, flexDirection: 'row', flexWrap: 'wrap' },
-  country: { width: '48%', flexGrow: 1, maxWidth: '50%', overflow: 'hidden', borderWidth: 2, borderColor: colors.surface, borderRadius: radius.md, backgroundColor: colors.surface },
+  grid: { gap: spacing.md, flexDirection: 'row', flexWrap: 'wrap' },
+  country: { width: '47%', flexGrow: 1, maxWidth: '49%', overflow: 'hidden', borderWidth: 2, borderColor: colors.surface, borderRadius: radius.md, backgroundColor: colors.surface },
+  countryFull: { width: '100%', maxWidth: '100%' },
   countryPhoto: { aspectRatio: 1.35 },
   photo: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, overflow: 'hidden', backgroundColor: colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
   photoFallback: { fontSize: 36, color: colors.textMuted },
@@ -77,5 +84,6 @@ const styles = StyleSheet.create({
   selectionText: { color: colors.ink, fontSize: 19, fontWeight: '700' },
   slotCaption: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.sky, paddingVertical: spacing.sm, paddingHorizontal: 4 },
   selectedSlotLabel: { color: colors.paper, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  chosen: { backgroundColor: colors.surfaceTint, borderColor: colors.sky }, countryName: { color: colors.ink, fontWeight: '700', fontSize: 14 }, check: { color: colors.paper, fontWeight: '900' },
+  selectedName: { color: colors.sky },
+  chosen: { backgroundColor: colors.surfaceTint, borderColor: colors.sky }, countryName: { color: colors.ink, fontWeight: '700', fontSize: 15 }, check: { color: colors.paper, fontWeight: '900' },
 });

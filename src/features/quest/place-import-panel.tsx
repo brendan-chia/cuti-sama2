@@ -1,9 +1,11 @@
+import { placeLabel } from '@/lib/presentation';
 import { useEffect, useRef, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { normalizeSocialUrl, type PlaceImportResult } from '../../../packages/contracts/src/place-import';
 import type { QuestRoom } from '../../../packages/contracts/src/quest';
 import { AppButton } from '@/components/app-button';
+import { PlaceChipField } from '@/components/place-chip-field';
 import { FormField } from '@/components/form-field';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { confirmTripPlaces, importTripPlaces } from './place-import-service';
@@ -21,6 +23,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
   const [captionOnly, setCaptionOnly] = useState(false);
   const videoMode = !captionOnly && isSocialVideoUrl(sourceUrl);
   const [text, setText] = useState('');
+  const [inspirationId, setInspirationId] = useState<string>();
   const [image, setImage] = useState<string>();
   const [showFallback, setShowFallback] = useState(false);
   const [result, setResult] = useState<PlaceImportResult | null>(null);
@@ -36,8 +39,9 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
       if (!id) return;
       const item = (await loadInspiration()).find(idea => idea.id === id);
       if (!active) return;
-      if (!item?.analysis?.places.length) { setError('This saved idea is not ready. Choose another saved inspiration below.'); return; }
-      setText(item.analysis.places.map(place => `${place.name}${place.location ? `, ${place.location}` : ''}`).join('\n'));
+      if (item?.status !== 'ready' || !item.analysis?.places.length) { setError('This saved idea is not ready. Choose another saved inspiration below.'); return; }
+      setInspirationId(item.id);
+      setText(item.analysis.places.map(place => `${placeLabel(place.name)}${place.location ? `, ${place.location}` : ''}`).join('\n') + '\n');
       setCaptionOnly(true); setShowFallback(true); setOpen(true);
     })().catch(() => { if (active) setError('Could not load the inspiration for this trip. Choose it from saved inspiration below.'); });
     return () => { active = false; };
@@ -47,7 +51,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     working.current = true; setBusy(true); setError(null); setSaved(false); setResult(null); setSelected([]);
     try {
       const url = sourceUrl.trim() ? normalizeSocialUrl(sourceUrl.trim()) : '';
-      const next = await importAction(tripId, { sourceUrl: url, text: text.trim(), ...(image ? { image } : {}) });
+      const next = await importAction(tripId, { sourceUrl: url, text: text.trim(), ...(image ? { image } : {}), ...(inspirationId ? { inspirationId } : {}) });
       setResult(next);
       if (next.status === 'needs_input') setShowFallback(true);
     } catch (cause) { setShowFallback(true); setError(cause instanceof Error ? cause.message : 'Could not read this public post. Please try again.'); }
@@ -62,6 +66,7 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
       if (!base64 || base64.length > 4_000_000) throw new Error('Choose a screenshot under 3 MB.');
       const mime = base64.startsWith('iVBOR') ? 'image/png' : base64.startsWith('UklGR') ? 'image/webp' : base64.startsWith('/9j/') ? 'image/jpeg' : null;
       if (!mime) throw new Error('Choose a JPEG, PNG, or WebP screenshot.');
+      setInspirationId(undefined);
       setImage(`data:${mime};base64,${base64}`); setResult(null); setError(null);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not open your photos.'); }
   }
@@ -70,21 +75,21 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
     working.current = true; setBusy(true); setError(null);
     try {
       const room = await confirmAction(result.importId, selected);
-      onConfirmed(room); void clearPendingInspiration(tripId).catch(() => {}); setSaved(true); setResult(null); setSelected([]); setText(''); setImage(undefined); setShowFallback(false);
+      onConfirmed(room); void clearPendingInspiration(tripId).catch(() => {}); setSaved(true); setInspirationId(undefined); setResult(null); setSelected([]); setText(''); setImage(undefined); setShowFallback(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not confirm these places.'); }
     finally { working.current = false; setBusy(false); }
   }
   return <View style={styles.panel} testID="place-import-panel">
-    <SavedIdeasPicker disabled={busy || disabled} onChoose={(names) => { setText(names); setSourceUrl(''); setCaptionOnly(true); setShowFallback(true); setOpen(true); setResult(null); setSelected([]); }} />
+    <SavedIdeasPicker disabled={busy || disabled} onChoose={(names, id) => { setInspirationId(id); setText(names + '\n'); setSourceUrl(''); setCaptionOnly(true); setShowFallback(true); setOpen(true); setResult(null); setSelected([]); }} />
     <Text style={s.kicker}>FROM YOUR FEED TO YOUR NEXT TRIP</Text>
     <Text style={s.heading}>Saw it. Saved it. Let’s find it.</Text>
     <Text style={s.body}>Bring a travel post to the map. Find the places in {countryName}, then check that we got them right.</Text>
     {!open ? <AppButton label="＋ Add a travel post" onPress={() => setOpen(true)} disabled={disabled} /> : <View style={s.stack}>
-      <FormField label="Social post link" placeholder="Paste a TikTok, Instagram, or YouTube link" autoCapitalize="none" autoCorrect={false} value={sourceUrl} editable={!busy && !disabled} onChangeText={(value) => { setSourceUrl(value); setCaptionOnly(false); setResult(null); setSaved(false); setError(null); setText(''); setImage(undefined); setShowFallback(false); }} />
+      <FormField label="Social post link" placeholder="Paste a TikTok, Instagram, or YouTube link" autoCapitalize="none" autoCorrect={false} value={sourceUrl} editable={!busy && !disabled} onChangeText={(value) => { setInspirationId(undefined); setSourceUrl(value); setCaptionOnly(false); setResult(null); setSaved(false); setError(null); setText(''); setImage(undefined); setShowFallback(false); }} />
       {videoMode ? <VideoImportPanel tripId={tripId} sourceUrl={sourceUrl} caption="" disabled={disabled} onConfirmed={onConfirmed} onFallback={() => { setCaptionOnly(true); setShowFallback(true); }} /> : <>
       <Text style={s.small}>We’ll read the public caption for place names. For names shown only in a photo or carousel slide, add a screenshot. Only places you confirm are added to your trip.</Text>
       {showFallback ? <View style={s.stack}>
-        <FormField label="Caption or place names" placeholder="Paste the caption or the names shown in the post" multiline maxLength={6000} value={text} editable={!busy && !disabled} onChangeText={setText} />
+        <PlaceChipField value={text} editable={!busy && !disabled} onChangeText={(value) => { setInspirationId(undefined); setText(value); }} />
         <Text style={s.small}>The caption or screenshot you submit is sent to our AI reader.</Text>
         <AppButton label={image ? 'Replace screenshot' : 'Add a screenshot'} variant="secondary" disabled={busy || disabled} onPress={() => void pickImage()} />
         {image ? <><Text style={s.small}>Screenshot attached. Choose Find the places to read it.</Text><AppButton label="Remove screenshot" variant="secondary" disabled={busy || disabled} onPress={() => setImage(undefined)} /></> : null}
@@ -93,15 +98,15 @@ export function PlaceImportPanel({ tripId, countryName, disabled, onConfirmed, i
       {result ? <View style={s.stack}>
         <Text accessibilityLiveRegion="polite" style={s.body}>{result.message}</Text>
         {result.candidates.map((place) => <View key={place.id} style={styles.candidate}>
-          <Pressable accessibilityRole="checkbox" accessibilityLabel={`Confirm ${place.name}`} accessibilityState={{ checked: selected.includes(place.id), disabled: busy || disabled }} disabled={busy || disabled} onPress={() => setSelected((current) => current.includes(place.id) ? current.filter((id) => id !== place.id) : [...current, place.id])} style={styles.choice}>
-            <Text style={styles.checkbox}>{selected.includes(place.id) ? '☑' : '□'}</Text><View style={styles.copy}><Text style={s.strong}>{place.name}</Text><Text style={s.small}>{place.address}</Text><Text style={styles.evidence}>{place.evidence}</Text></View>
+          <Pressable accessibilityRole="checkbox" accessibilityLabel={`Confirm ${placeLabel(place.name)}`} aria-checked={selected.includes(place.id)} aria-disabled={busy || disabled} accessibilityState={{ checked: selected.includes(place.id), disabled: busy || disabled }} disabled={busy || disabled} onPress={() => setSelected((current) => current.includes(place.id) ? current.filter((id) => id !== place.id) : [...current, place.id])} style={styles.choice}>
+            <Text style={styles.checkbox}>{selected.includes(place.id) ? '☑' : '□'}</Text><View style={styles.copy}><Text style={s.strong}>{placeLabel(place.name)}</Text><Text style={s.small}>{placeLabel(place.address)}</Text><Text style={styles.evidence}>{place.evidence}</Text></View>
           </Pressable>
-          <Pressable accessibilityRole="link" accessibilityLabel={`Check ${place.name} on OpenStreetMap`} onPress={() => void Linking.openURL(place.sourceUrl).catch(() => setError('Could not open the map. Please try again.'))}><Text style={s.link}>Check on OpenStreetMap ↗</Text></Pressable>
+          <Pressable accessibilityRole="link" accessibilityLabel={`Check ${placeLabel(place.name)} on OpenStreetMap`} onPress={() => void Linking.openURL(place.sourceUrl).catch(() => setError('Could not open the map. Please try again.'))}><Text style={s.link}>Check on OpenStreetMap ↗</Text></Pressable>
         </View>)}
         {result.candidates.length ? <><Text style={s.small}>Choose the matching locations, not every alternative. Place data © OpenStreetMap contributors.</Text><AppButton label={`Confirm ${selected.length} ${selected.length === 1 ? 'place' : 'places'}`} disabled={disabled || !selected.length} loading={busy} onPress={() => void confirm()} /></> : null}
       </View> : null}
       </>}
-      {saved ? <Text accessibilityLiveRegion="polite" style={s.strong}>✓ Places confirmed. Select them on the map below and save your stops to include them in the itinerary.</Text> : null}
+      {saved ? <Text accessibilityLiveRegion="polite" style={s.strong}>✓ Places added and checked for visiting. You can adjust your choices on the map.</Text> : null}
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
     </View>}
   </View>;

@@ -58,7 +58,7 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
     <Text style={s.heading}>When would you like to travel?</Text>
     <Text style={s.body}>Choose a start date from tomorrow onwards, then pick your destination.</Text>
     <DateField label="Start date" minimumDate={earliestStart} required value={startsOn} onChange={setStartsOn} />
-    <DateField label="End date" required value={endsOn} minimumDate={startsOn && startsOn > earliestStart ? startsOn : earliestStart} onChange={setEndsOn} />
+    <DateField label="End date" rangeStart={startsOn} required value={endsOn} minimumDate={startsOn && startsOn > earliestStart ? startsOn : earliestStart} onChange={setEndsOn} />
     {startsOn && endsOn && !valid ? <Text style={s.error}>Choose a future trip of 1–30 days.</Text> : null}
     <AppButton label="Confirm my dates" testID="save-quest-availability" loading={busy} disabled={!valid} onPress={() => void act({ type: 'availability', startsOn, endsOn, preferences: { flexibility: 'exact', daysOff: [], unavailable: [] } })} />
   </View>;
@@ -67,18 +67,18 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
       <Text style={s.heading}>Which dates would you propose?</Text>
       <Text style={s.small}>Share your preferred period. We’ll combine everyone’s preferences, flexibility and Malaysian national holidays into a recommendation.</Text>
       <DateField label="Proposed start date" minimumDate={earliestStart} required value={startsOn} onChange={setStartsOn} />
-      <DateField label="Proposed end date" required value={endsOn} minimumDate={startsOn && startsOn > earliestStart ? startsOn : earliestStart} onChange={setEndsOn} />
+      <DateField label="Proposed end date" rangeStart={startsOn} required value={endsOn} minimumDate={startsOn && startsOn > earliestStart ? startsOn : earliestStart} onChange={setEndsOn} />
       <Text style={s.strong}>How flexible is your start date?</Text>
-      <View style={s.row}>{flexibilityOptions.map(([value, label]) => <Pressable key={value} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: preferences.flexibility === value, disabled: busy }} disabled={busy} style={[s.chip, preferences.flexibility === value && s.chipSelected]} onPress={() => setPreferences({ ...preferences, flexibility: value })}><Text style={[s.chipText, preferences.flexibility === value && s.chipTextSelected]}>{label}</Text></Pressable>)}</View>
+      <View style={s.row}>{flexibilityOptions.map(([value, label]) => <Pressable key={value} accessibilityRole="radio" accessibilityLabel={label} aria-checked={preferences.flexibility === value} aria-disabled={busy} accessibilityState={{ checked: preferences.flexibility === value, disabled: busy }} disabled={busy} style={[s.chip, preferences.flexibility === value && s.chipSelected]} onPress={() => setPreferences({ ...preferences, flexibility: value })}><Text style={[s.chipText, preferences.flexibility === value && s.chipTextSelected]}>{label}</Text></Pressable>)}</View>
       <Text style={s.small}>We keep a proposed trip length where possible and show any length changes before you confirm.</Text>
       <Text style={s.strong}>Your usual days off</Text>
-      <View style={s.row}>{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, index) => <Pressable key={label} accessibilityRole="checkbox" accessibilityLabel={`${label} off`} accessibilityState={{ checked: preferences.daysOff.includes(index), disabled: busy }} disabled={busy} style={[s.chip, preferences.daysOff.includes(index) && s.chipSelected]} onPress={() => setPreferences({ ...preferences, daysOff: (preferences.daysOff.includes(index) ? preferences.daysOff.filter((day) => day !== index) : [...preferences.daysOff, index]).sort() })}><Text style={[s.chipText, preferences.daysOff.includes(index) && s.chipTextSelected]}>{label}</Text></Pressable>)}</View>
+      <View style={s.row}>{[1, 2, 3, 4, 5, 6, 0].map((index) => { const label = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]; return <Pressable key={label} accessibilityRole="checkbox" accessibilityLabel={`${label} off`} aria-checked={preferences.daysOff.includes(index)} aria-disabled={busy} accessibilityState={{ checked: preferences.daysOff.includes(index), disabled: busy }} disabled={busy} style={[s.chip, preferences.daysOff.includes(index) && s.chipSelected]} onPress={() => setPreferences({ ...preferences, daysOff: (preferences.daysOff.includes(index) ? preferences.daysOff.filter((day) => day !== index) : [...preferences.daysOff, index]).sort() })}><Text style={[s.chipText, preferences.daysOff.includes(index) && s.chipTextSelected]}>{label}</Text></Pressable>; })}</View>
       <Text style={s.strong}>Dates you cannot travel (optional)</Text>
       <Text style={s.small}>These dates are private. Recommendations will never overlap them.</Text>
       {preferences.unavailable.map((range, index) => <View key={`${range.startsOn}-${index}`}><Text style={s.small}>{periodLabel(range)}</Text><AppButton label={`Remove unavailable range ${index + 1}`} variant="secondary" disabled={busy} onPress={() => setPreferences({ ...preferences, unavailable: preferences.unavailable.filter((_, position) => position !== index) })} /></View>)}
       {preferences.unavailable.length < 20 ? <>
         <DateField label="Unavailable from" value={blockedStart} onChange={setBlockedStart} />
-        <DateField label="Unavailable until" value={blockedEnd} minimumDate={blockedStart || undefined} onChange={setBlockedEnd} />
+        <DateField label="Unavailable until" rangeStart={blockedStart} value={blockedEnd} minimumDate={blockedStart || undefined} onChange={setBlockedEnd} />
         <AppButton label="Add unavailable dates" variant="secondary" disabled={busy || !validBlock} onPress={() => { setPreferences({ ...preferences, unavailable: [...preferences.unavailable, { startsOn: blockedStart, endsOn: blockedEnd }] }); setBlockedStart(''); setBlockedEnd(''); }} />
       </> : null}
       {pendingBlock ? <Text style={s.small}>Add this unavailable range or clear both fields before saving.</Text> : null}
@@ -110,7 +110,7 @@ export function TimingStage({ room, busy, act, recommend }: Props) {
             <Text style={styles.count}>{traveller.leaveDays === 0 ? 'No leave' : `${traveller.leaveDays} ${traveller.leaveDays === 1 ? 'day' : 'days'}`}</Text>
           </View>)}
           </View>
-          <Pressable accessibilityRole="button" accessibilityState={{ expanded: expandedPeriod === `${period.startsOn}:${period.endsOn}` }} style={({ pressed }) => [styles.disclosure, pressed && { opacity: 0.65 }]} onPress={() => setExpandedPeriod(expandedPeriod === `${period.startsOn}:${period.endsOn}` ? null : `${period.startsOn}:${period.endsOn}`)}>
+          <Pressable accessibilityRole="button" aria-expanded={expandedPeriod === `${period.startsOn}:${period.endsOn}`} accessibilityState={{ expanded: expandedPeriod === `${period.startsOn}:${period.endsOn}` }} style={({ pressed }) => [styles.disclosure, pressed && { opacity: 0.65 }]} onPress={() => setExpandedPeriod(expandedPeriod === `${period.startsOn}:${period.endsOn}` ? null : `${period.startsOn}:${period.endsOn}`)}>
             <Text style={styles.detailLabel}>{expandedPeriod === `${period.startsOn}:${period.endsOn}` ? 'Hide details' : 'View leave dates & details'}</Text>
             <Text style={styles.detailLabel}>{expandedPeriod === `${period.startsOn}:${period.endsOn}` ? '−' : '+'}</Text>
           </Pressable>

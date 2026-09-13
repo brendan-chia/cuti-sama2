@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { tripVibes } from './trip-vibe';
 import { LogisticsSchema, TransportSchema, StaySchema } from './logistics';
 import { ConfirmedPlaceSchema } from './place-import';
 import { ParticipantBudgetSchema, CrewBudgetSchema } from './budget';
@@ -41,7 +42,7 @@ const CountryPicksSchema = z.array(QuestCountryCodeSchema).min(1).max(3)
 
 export const QuestActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('attraction_votes'), attractionIds: z.array(z.string().min(1).max(120)).min(1).max(20).refine((ids) => new Set(ids).size === ids.length, 'Choose each attraction once.') }).strict(),
-  z.object({ type: z.literal('compile_attractions') }).strict(),
+  z.object({ type: z.literal('compile_attractions'), attractionIds: z.array(z.string().min(1).max(150)).min(1).max(160).refine(ids => new Set(ids).size === ids.length, 'Choose each attraction once.').optional() }).strict(),
   AvailabilitySchema.extend({ type: z.literal('availability'), preferences: DatePreferencesSchema.optional() }).strict(),
   z.object({ type: z.literal('period'), period: TripPeriodSchema }).strict(),
   z.object({ type: z.literal('picks'), countryCodes: CountryPicksSchema }).strict(),
@@ -89,6 +90,8 @@ export const QuestRoomSchema = z.object({
   tiedCountryCodes: z.array(QuestCountryCodeSchema),
   selectedCountryCode: QuestCountryCodeSchema.nullable(),
   attractionIds: z.array(z.string()),
+  plannerVersion: z.literal('1.0').optional(),
+  groupVibes: z.array(z.enum(tripVibes)).max(8).optional(),
   attractionVotes: z.array(z.object({ memberId: z.uuid(), attractionIds: z.array(z.string()) }).strict()).optional(),
   importedPlaces: z.array(ConfirmedPlaceSchema).optional(),
   logistics: LogisticsSchema.optional(),

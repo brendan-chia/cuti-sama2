@@ -16,8 +16,9 @@ export const PlaceImportRequestSchema = z.object({
   tripId: z.uuid(), requestId: z.uuid(),
   sourceUrl: z.string().trim().max(2000).default(''),
   text: z.string().trim().max(6000).default(''),
+  inspirationId: z.uuid().optional(),
   image: z.string().max(4_000_000).regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/).optional(),
-}).strict().refine((value) => Boolean(value.sourceUrl || value.text || value.image), 'Add a link, caption, or screenshot.');
+}).strict().refine((value) => Boolean(value.sourceUrl || value.text || value.image || value.inspirationId), 'Add a link, caption, or screenshot.');
 
 export const PlaceImportResultSchema = z.object({
   importId: z.uuid(), candidates: z.array(PlaceCandidateSchema).max(12),

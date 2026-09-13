@@ -136,3 +136,20 @@ describe('LobbyScreen', () => {
     expect(onConstraints).not.toHaveBeenCalled();
   });
 });
+
+test('updates travellers and readiness without a top notification', async () => {
+  let changed: () => void = () => undefined;
+  let current = lobby;
+  const screen = await render(<LobbyScreen tripId={lobby.tripId} onInvite={jest.fn()} onAccessRevoked={jest.fn()} loadAction={async () => current} subscribeAction={async (_room, callbacks) => { changed = callbacks.onChanged; return async () => undefined; }} />);
+  await waitFor(() => expect(screen.getByText('Langkawi weekend')).toBeTruthy());
+  current = { ...lobby, members: [...lobby.members, { ...lobby.members[1], memberId: '33333333-3333-4333-8333-333333333333', displayName: 'Sam' }] };
+  await act(async () => changed());
+  await waitFor(() => expect(screen.getAllByText('Sam').length).toBeGreaterThan(0));
+  expect(screen.queryByText('Group updates')).toBeNull();
+  current = { ...current, members: current.members.map(member => ({ ...member, ready: true })) };
+  await act(async () => changed());
+  await waitFor(() => expect(screen.getByText('The table is ready.')).toBeTruthy());
+  await act(async () => changed());
+  expect(screen.queryByText('Group updates')).toBeNull();
+  expect(screen.queryByText('Dismiss updates')).toBeNull();
+});

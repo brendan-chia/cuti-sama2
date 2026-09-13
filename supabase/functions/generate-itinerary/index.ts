@@ -82,6 +82,11 @@ Deno.serve(async (request) => {
 
   const prepared = await memberClient.rpc('prepare_quest_itinerary', { p_trip_id: parsed.data.tripId });
   if (prepared.error) return json({ error: prepared.error.message }, 409);
+  // New quest schedules are authoritative application output. Stale clients must not
+  // replace them by asking this legacy LLM endpoint to create another schedule.
+  if (prepared.data?.room?.plannerVersion === '1.0') {
+    return json({ error: 'Open the trip quest to view your activity plan or use Build Our Trip in Explore.' }, 409);
+  }
   let questInput: ReturnType<typeof questItineraryInput> | null = null;
   if (prepared.data) {
     if (prepared.data.room.currentRole !== 'organizer') return json({ error: 'The organiser generates the shared itinerary.' }, 403);

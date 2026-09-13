@@ -1,13 +1,15 @@
+import { BatchSchema, analyzeBatch } from './batch.ts';
+import { handleSavedMedia } from './saved-media.ts';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import type { PlaceCandidate } from '../../../packages/contracts/src/place-import.ts';
 import { json } from '../_shared/invites.ts';
-import { findPlaces, readPublicPost, translatePlacesToEnglish } from '../import-trip-places/providers.ts';
+import { findPlaces, readPublicPost } from '../import-trip-places/providers.ts';
 import { combineEvidence, inspectMedia, mergeObservations, transcribeAudio } from './ai.ts';
 import { normalizeVideoUrl, type SocialVideo } from '../../../packages/contracts/src/social-video.ts';
 import { MediaManifestSchema } from './media.ts';
 const PostSchema=z.object({platform:z.enum(['instagram','tiktok']),sourceUrl:z.string().max(2000),postId:z.string().max(150),caption:z.string().max(6000),title:z.string().max(500),author:z.string().max(200),durationSeconds:z.number().positive().max(120.1).nullable()}).strict();
-const RequestSchema=z.object({action:z.enum(['claim','heartbeat','ingest','start','audio','frame','finish','fail']),post:PostSchema.optional(),pipelineVersion:z.literal(3).optional(),manifest:MediaManifestSchema.optional(),itemIndex:z.number().int().min(0).max(19).optional(),importId:z.uuid().optional(),lease:z.uuid().optional(),hash:z.string().regex(/^[a-f0-9]{64}$/).optional(),totalFrames:z.number().int().min(1).max(20).optional(),index:z.number().int().min(0).max(19).optional(),seconds:z.number().min(0).max(121).optional(),image:z.string().max(3000000).regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/).optional(),audio:z.string().max(3500000).regex(/^[A-Za-z0-9+/=]+$/).optional(),noAudio:z.boolean().optional(),message:z.string().max(500).optional()}).strict();
+const RequestSchema=z.object({scope:z.literal('inspiration').optional(),action:z.enum(['claim','heartbeat','ingest','start','audio','frame','batch','finish','fail']),batch:BatchSchema.optional(),post:PostSchema.optional(),pipelineVersion:z.literal(3).optional(),manifest:MediaManifestSchema.optional(),itemIndex:z.number().int().min(0).max(19).optional(),importId:z.uuid().optional(),lease:z.uuid().optional(),hash:z.string().regex(/^[a-f0-9]{64}$/).optional(),totalFrames:z.number().int().min(1).max(20).optional(),index:z.number().int().min(0).max(19).optional(),seconds:z.number().min(0).max(121).optional(),image:z.string().max(3000000).regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/).optional(),audio:z.string().max(3500000).regex(/^[A-Za-z0-9+/=]+$/).optional(),noAudio:z.boolean().optional(),message:z.string().max(500).optional()}).strict();
 Deno.serve(async request=>{
  if(request.method!=='POST')return json({error:'Method not allowed.'},405);
  const secret=Deno.env.get('VIDEO_WORKER_TOKEN');
@@ -18,6 +20,7 @@ Deno.serve(async request=>{
   while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>4000000){await reader.cancel();return json({error:'Request too large.'},413);}text+=decoder.decode(part.value,{stream:true});}
   const input=RequestSchema.parse(JSON.parse(text+decoder.decode()));
   const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  if(input.scope==='inspiration') return await handleSavedMedia(db,input);
   if(input.action==='claim'){
    const result=await db.rpc('claim_video_import');if(result.error)throw result.error;
    if(!result.data)return json(null);
@@ -58,6 +61,12 @@ Deno.serve(async request=>{
   }
   if(job.pipeline_version!==3||!job.media_hash)return json({error:'Start photo and video processing first.'},409);
   const manifest=MediaManifestSchema.parse(job.media_manifest);
+  if(input.action==='batch'){
+   if(!input.batch)return json({error:'Missing media batch.'},400);
+   const next=await analyzeBatch(input.batch,manifest,{processedFrames:job.processed_frames,observations:job.observations,audioItemsDone:job.audio_items_done,transcripts:job.transcript_segments});
+   await update({processed_frames:next.processedFrames,observations:next.observations,audio_items_done:next.audioItemsDone,transcript_segments:next.transcripts,audio_done:next.audioItemsDone.length===manifest.items.length,message:`Analysed ${next.processedFrames} of ${job.total_frames} images / video scenes.`});
+   return next.failed?json({error:'AI batch partially completed. Retrying remaining work.'},503):json({ok:true});
+  }
   if(input.action==='audio'){
    const itemIndex=input.itemIndex;
    if(itemIndex===undefined||!manifest.items[itemIndex])return json({error:'Missing media item.'},400);
@@ -84,7 +93,7 @@ Deno.serve(async request=>{
    const matches=await Promise.all(names.slice(offset,offset+3).map(name=>findPlaces(name.name,name.evidence,quest.data!.selected_country_code)));
    for(const group of matches)for(const match of group)if(!candidates.some(p=>p.id===match.id)&&candidates.length<12)candidates.push(match);
   }
-  const translated=await translatePlacesToEnglish(candidates);
+  const translated=candidates;
   const message=`Analysed captions, available audio and ${job.total_frames} images / video scenes. ${translated.length?'Matched these locations against OpenStreetMap. Check the evidence and address before confirming.':'No matching places were found in your chosen country.'}`;
   const done=await db.rpc('finish_video_import',{p_import_id:input.importId,p_lease:input.lease,p_candidates:translated,p_message:message});
   if(done.error||!done.data)return json({error:'The import was cancelled or the trip changed.'},409);
