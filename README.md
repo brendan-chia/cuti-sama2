@@ -9,7 +9,7 @@
 
 ### The Problem
 
-Planning a trip involves more than finding attractive destinations. Friends must agree on dates, interests and spending limits, often across scattered messages and saved posts. One organiser ends up chasing replies and combining conflicting preferences, while travellers may feel uncomfortable revealing how much they can afford. Solo travellers face the same research and budgeting work without someone to share it.
+Most travel apps only handle one piece of this with either bookings, or budgeting, or itineraries. So travellers end up manually piecing it all together themselves. Group trips make it worse, since getting everyone's schedules, budgets, and preferences to line up is genuinely difficult. And when something changes mid-trip, there's rarely any real help from existing platforms in adjusting.
 
 Our target users are students, budget-conscious travellers and friend groups. The stakeholders are both the organiser coordinating decisions and the participants whose availability, interests and financial limits determine whether the plan works.
 
@@ -80,13 +80,12 @@ The following feedback was discussed with Jeremy Lau Wei Han on 7 September 2026
 
 | Date | Mentor | Feedback Received | What Was Changed |
 | --- | --- | --- | --- |
-| 7/9/2026 | Jeremy Lau Wei Han | Add favourites, personalisation and accounts. | README now explains profile favourites, identity and saved inspiration, including the limits of automatic personalisation. |
-| 7/9/2026 | Jeremy Lau Wei Han | Consider solo trips. | README now describes the existing solo flow and skipped voting steps. |
+| 7/9/2026 | Jeremy Lau Wei Han | Add favourites, personalisation and accounts. | Allow them to register an account, they can also use this app to save places they want to visit in the future |
 | 7/9/2026 | Jeremy Lau Wei Han | View previous trips; consider longevity and whether people will use it. | Added trips and memories, repeat-use rationale and a proposed validation plan. |
-| 7/9/2026 | Jeremy Lau Wei Han | Allow friends and public joining. | Documented invitation and discovery features with eligibility constraints. |
+| 7/9/2026 | Jeremy Lau Wei Han | Allow friends and public joining. | Add discovery features for users to request joining other travel groups|
 | 7/9/2026 | Jeremy Lau Wei Han | Highlight the algorithm; consider Gemini for budget recommendations. | Added decision rules, an affordability example and the distinction between AI estimates and personal spending limits. |
-| 7/9/2026 | Jeremy Lau Wei Han | Include competitive analysis and a clearer problem statement. | Added target stakeholders and a sourced comparison with Wanderlog. |
-| 7/9/2026 | Jeremy Lau Wei Han | Too much text; avoid repetitive organiser/participant demonstrations. | Reorganised the README into compact tables and diagrams; added the single-journey demo below. Presentation changes remain to be made. |
+| 7/9/2026 | Jeremy Lau Wei Han | Include competitive analysis and a clearer problem statement. | Added target stakeholders and competitive analysis |
+| 7/9/2026 | Jeremy Lau Wei Han | Too much text; avoid repetitive organiser/participant demonstrations. | Made the choice to just demo using one scree, not two screens |
 
 ## 3. Design & Prototype
 
