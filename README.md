@@ -73,7 +73,21 @@ This table summarises the current implementation and directions raised by the ju
 
 ### 2.2 Ideation Boards
 
-The diagrams below are reconstructed explanations of the current concept, not original workshop artefacts. Add the team's actual sketches or board links when available.
+The following boards document the team's ideation process and the development of the CutiSama2 concept.
+
+#### Ideation 1
+
+![Ideation board 1](assets/images/ideation1.jpg)
+
+#### Ideation 2
+
+![Ideation board 2](assets/images/ideation2.jpg)
+
+#### Ideation 3
+
+![Ideation board 3](assets/images/ideation3.jpg)
+
+The diagram below summarises how the main planning problems connect to CutiSama2's features.
 
 ```mermaid
 flowchart TD
@@ -111,11 +125,7 @@ The following feedback was discussed with Jeremy Lau Wei Han on 7 September 2026
 
 ## 3. Design & Prototype
 
-**UI Prototype:** [ Public Link ]
-
-Check that it opens in an incognito window. This can be a link to Figma, Canva, Netlify, Vercel or any other board where you showcase your UI. It can be clickable with hyperlinks or simply ordered screenshots.
-
-We recommend you embed or link 4–8 key screens as images, with a caption on each explaining the interaction
+**UI Prototype:** [View the CutiSama2 prototype on Canva](https://www.canva.com/design/DAHVEjjtaHw/5iotBNE3G4fXbxUN1TPgtQ/edit?ui=e30)
 
 ## 4. What Makes It Different
 
@@ -166,5 +176,3 @@ The build phase focuses on a demonstrable end-to-end path:
 6. Save the trip, reopen it from trip history and show favourite places or saved inspiration.
 
 The scope excludes live booking, payment processing, guaranteed prices, turn-by-turn navigation and a full social network. Booking links open external providers. These boundaries keep the prototype feasible while demonstrating the core value: helping travellers reach an affordable, explainable plan together.
-
-
