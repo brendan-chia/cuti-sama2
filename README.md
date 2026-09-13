@@ -107,18 +107,23 @@ Compared with general itinerary tools, the twist is that CutiSama2 makes agreeme
 
 ## 5. Technical Architecture & Feasibility
 
-### Tech stack
+### Technology stack and services
 
-| Layer | Technology | Why it was chosen and expected constraints |
+| Component | Technology and responsibility | Deployment / hosting |
 | --- | --- | --- |
-| Frontend | Expo SDK 57, Expo Router, React Native, TypeScript | One codebase for mobile and web with typed navigation and shared components. Native-device testing and platform-specific behaviour remain constraints. |
-| Backend | Supabase Auth, Edge Functions and RPC/database functions | Managed authentication and server-side workflows reduce infrastructure work. Function cold starts, deployment configuration and provider limits remain constraints. |
-| Database | Supabase PostgreSQL with Row Level Security and Realtime | Relational trip state, private participant inputs and secure per-user access fit the data model. Realtime is used for notifications; clients still refetch authorised state. |
-| Validation | Zod contracts and deterministic domain rules | Keeps mobile and server payloads aligned and prevents malformed or contradictory generated plans from being stored. Contracts must be updated across app and functions together. |
-| AI services | Configured Groq/OpenAI-compatible planning provider and OpenAI saved-inspiration analysis | AI assists with ranking, estimates and media extraction while server-side secrets stay private. Provider latency, cost, rate limits and imperfect estimates require fallbacks and validation. |
-| Maps | OpenStreetMap raster tiles | No additional map API key is required for the prototype. Tile usage must follow the OpenStreetMap policy and fresh imagery needs a network connection. |
-| Testing | Jest, React Native Testing Library, pgTAP, Deno and Maestro | Covers app logic, contracts, database rules, Edge Functions and user flows. Live provider, realtime and native-device behaviour still need deployment testing. |
-| Hosting | Expo-compatible build/runtime and a hosted Supabase project | Keeps the prototype deployable with managed services. Production hosting, secrets, quotas and release configuration must be maintained separately. |
+| Frontend | Expo SDK 57, Expo Router, React Native and TypeScript provide one application codebase for Android, iOS and web. The client renders the planning quest, calls authenticated backend endpoints and displays shared trip state. | The prototype runs through the Expo development runtime or as a static web export. Production Android and iOS binaries are intended to be created with [EAS Build](https://docs.expo.dev/build/introduction/) and distributed through Google Play and the Apple App Store. |
+| Backend | Supabase Auth manages guest and linked accounts. Supabase Edge Functions handle protected workflows and provider calls, while PostgreSQL RPC functions enforce trip roles, stage transitions, voting and idempotent mutations. | The backend functions are deployed to the team's managed Supabase Cloud project. API keys are stored as Supabase Edge Function secrets and are never bundled into the mobile or web client. |
+| Database and storage | Supabase PostgreSQL stores profiles, memberships, trips, private budget submissions, votes, itineraries and saved inspiration. Row Level Security restricts access, Realtime sends change notifications, and Supabase Storage holds private profile media. | PostgreSQL, Realtime and Storage are hosted in the same managed Supabase project. Database migrations in the repository define and version the schema. |
+| AI APIs | Groq structured-output models assist with date ranking, budget and transport estimates, and itinerary generation. OpenAI models support saved-inspiration analysis, online place discovery, accommodation suggestions and vision processing; Whisper provides timestamped audio transcription. Deterministic application rules validate generated results before they are stored. | All AI requests are made from Supabase Edge Functions. Provider credentials remain server-side. Availability, latency, rate limits and per-request cost must be monitored in production. |
+| Maps and place lookup | OpenStreetMap raster tiles provide the map, and Photon/OpenStreetMap records help resolve extracted or recommended place names to real locations. | These are external public services accessed over the network. The prototype follows OpenStreetMap attribution and tile-use requirements; higher traffic may require a commercial tile provider or a separately operated Photon instance. |
+| Media-processing service | A Node.js worker downloads permitted public Instagram or TikTok media, uses FFmpeg to sample video scenes and sends bounded image/audio evidence to the analysis pipeline. | This worker currently runs on a team-controlled computer for the prototype. A production release would require deploying it as a separate secured worker service with monitoring, job retries and controlled storage. |
+
+### Hosting plan and current status
+
+- **Currently hosted:** the PostgreSQL database, authentication, Realtime, Storage and deployed Edge Functions run on Supabase Cloud.
+- **Prototype client:** the Expo application is run on development devices, while the configured static web build can be exported for browser demonstrations.
+- **Planned production hosting:** use [EAS Hosting](https://docs.expo.dev/deploy/web/) for the static Expo web application and EAS Build for signed Android and iOS releases submitted to Google Play and the Apple App Store.
+- **Not yet production-hosted:** the media-processing worker and the final store/web releases. Production rollout still requires EAS configuration, domains, environment secrets, monitoring, quotas and release validation.
 
 ### System architecture diagram
 
