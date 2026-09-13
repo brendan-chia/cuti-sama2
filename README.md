@@ -2,7 +2,7 @@
 
 **Team:** Brendan Chia Yan Fei, Neo Li Xin, Chew Chiu Xian  
 **Problem Statement:** Travel Planner  
-**Video Presentation:** To add — unlisted YouTube link  
+**Video Presentation:** [Youtube Link](https://www.youtube.com/watch?v=6MbxPRiEul0)
 **Presentation Slides:** [View the CutiSama2 pitch deck on Canva](https://canva.link/e0cj10tgzjpw03b)
 
 ## 1. Project Overview
@@ -56,7 +56,6 @@ This table summarises the current implementation and directions raised by the ju
 | AI assistance with validated constraints (Chosen) | Helps with suggestions while keeping key decisions explainable. |
 | Automatic personalisation from all favourites (Future evaluation) | Saving favourites exists; broader recommendation integration needs explicit design and validation. |
 | Card-game interface, with each card representing a travel idea (Dropped) | The card metaphor made the experience playful, but it limited how much information users could compare at once. Dates, budgets, destinations and logistics need clear forms and summaries, so using cards for every decision would add extra steps and make planning harder to scan. The guided quest concept kept the sense of progression without making every interaction behave like a card game. |
-| Overcooked-style participant split screen combined with cards (Dropped) | Dividing the screen by participant would become crowded on mobile and would not scale well as the group size changed. It also implied that everyone had to participate at the same time, while CutiSama2 needs to support friends replying at different times and keep personal budgets private. A shared quest with individual submissions provides clearer progress without exposing each traveller's private input. |
 
 ### 2.2 Ideation Boards
 
