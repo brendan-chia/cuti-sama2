@@ -38,20 +38,6 @@ These features are represented in the repository; live availability depends on t
 
 Favourite places are currently saved profile data; this does not imply that every recommendation automatically uses them. Saved inspiration has a separate, explicit place-import flow.
 
-### What Makes the Algorithm Different?
-
-The core is a transparent decision process, with AI assisting within validated constraints.
-
-1. **Find feasible dates.** Intersect participants' availability and construct valid travel windows. AI may rank those candidates; calendar ranking provides a labelled fallback.
-2. **Protect affordability.** The group comfort ceiling is the lowest comfortable budget; the hard ceiling is the lowest maximum. Individual submissions remain private.
-3. **Choose fairly.** Deduplicate nominated countries and give each participant an agree/pass vote per country. Reveal results after everyone finishes. The highest positive vote count wins; the organiser resolves a tie, and an all-pass result reopens nominations.
-4. **Account for logistics.** Deduct each traveller's selected transport and shared accommodation costs. Use the lowest remaining amount for shared activities instead of an average that could leave someone behind.
-5. **Generate within constraints.** Validate structured AI output against the trip's dates, destination and budget. Missing logistics produce a provisional draft.
-
-**Example:** If three travellers set comfortable budgets of RM 800, RM 1,000 and RM 1,200, the group comfort ceiling is RM 800. If their maximums are RM 1,000, RM 1,400 and RM 1,500, the hard ceiling is RM 1,000. A RM 900 estimate is a stretch; RM 1,100 exceeds the shared limit.
-
-The judges suggested Gemini for budget recommendations. The current quest documentation uses Groq for date ranking, and the budget service uses a configured AI provider. Travellers determine their own limits; AI estimates costs rather than deciding what they can afford. See [quest mechanics](docs/trip-quest.md) and [saved inspiration](docs/saved-inspiration.md).
-
 ### Competitive Market
 
 | Alternative | Existing strengths | CutiSama2's intended focus |
@@ -106,8 +92,6 @@ flowchart TD
 ```
 
 This problem-to-solution map connects coordination difficulties to the features intended to address them.
-
-![CutiSama2 system architecture](assets/images/cutisama2-architecture-diagram.png)
 
 This flow shows the shared planning journey and where solo travellers skip group coordination.
 
@@ -182,159 +166,5 @@ The build phase focuses on a demonstrable end-to-end path:
 6. Save the trip, reopen it from trip history and show favourite places or saved inspiration.
 
 The scope excludes live booking, payment processing, guaranteed prices, turn-by-turn navigation and a full social network. Booking links open external providers. These boundaries keep the prototype feasible while demonstrating the core value: helping travellers reach an affordable, explainable plan together.
-## Demo Plan
 
-Use one trip across two prepared sessions instead of repeating the whole journey for each role.
-
-1. **Set the problem:** Friends want a trip but have different dates, interests and budgets.
-2. **Show personalisation:** Open a traveller's favourite places or saved inspiration.
-3. **Create once:** The organiser opens a group trip; a participant joins and submits preferences. Use prepared submissions for the remaining crew.
-4. **Show the decision:** Reveal country votes and explain the private budget ceilings with one numerical example.
-5. **Show the outcome:** Select places, review logistics and open the generated itinerary. Distinguish estimated costs from confirmed bookings.
-6. **Close the loop:** Reopen the trip from history and briefly show that solo mode skips voting.
-
-Keep the presentation focused on one problem, the decision mechanism and the resulting plan. Use screenshots and the flow diagram to support the live demo; prepare a recording if network-dependent services are unavailable.
-
-## Developer Setup
-
-<details>
-<summary>Expand technical stack, setup, verification and project structure</summary>
-
-## Technical stack
-
-- Expo SDK 57 and Expo Router
-- React 19.2 and React Native 0.86
-- TypeScript 6
-- React Native Gesture Handler and Reanimated
-- Supabase Auth, Postgres, Row Level Security, Realtime, and Edge Functions
-- Zod contracts shared across the app and backend
-- Groq structured output for optional reveal wording, itinerary generation, and bounded revisions
-- Jest, React Native Testing Library, pgTAP, Deno tests, and Maestro
-
-## Reliability and privacy
-
-- Anonymous identities persist in secure device storage and have an explicit recovery path when an identity is lost.
-- Room data is cached for offline recovery and refreshed from the authoritative backend after reconnecting.
-- Realtime broadcasts carry only scoped identifiers; clients refetch RLS-protected state after receiving an event.
-- Preference choices stay private during collection and are returned only after reveal.
-- Accessibility requirements remain private unless the member explicitly consents to group attribution.
-- Mutating workflows use persistent idempotency keys to prevent duplicate submissions and generated versions.
-- Group-match facts are deterministic and source-linked. AI can rewrite display prose but cannot create new conclusions.
-- Generated itineraries are schema checked and rejected when they conflict with locked destinations, hard constraints, provenance, or privacy rules.
-
-## Requirements
-
-- Node.js 22.13 or later
-- npm
-- Android Studio, Xcode, or an Expo-compatible device
-- A Supabase project with Anonymous Sign-Ins enabled
-- Supabase CLI and Docker for local database tests
-- Deno for Edge Function tests
-- Maestro for end-to-end mobile tests
-
-## Configure the app
-
-1. Install dependencies:
-
-   ```text
-   npm install
-   ```
-
-2. Copy `.env.example` to `.env`.
-
-3. Set the public Expo variables:
-
-   ```text
-   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
-   ```
-
-4. Start Supabase locally with `npx supabase start`, or link a hosted project with the Supabase CLI.
-
-Only the Supabase URL and publishable key belong in the Expo environment. Never expose a service-role key, Groq key, or other server secret through an `EXPO_PUBLIC_` variable.
-
-## Configure the backend
-
-Apply the database migrations and deploy the Edge Functions:
-
-```text
-npx supabase db push
-npx supabase functions deploy
-```
-
-Configure these Edge Function secrets:
-
-- `INVITE_BASE_URL` — HTTPS origin that opens the Expo Router app, without a trailing path.
-- `GROQ_API_KEY` — server-only Groq API key.
-- `GROQ_STRUCTURED_OUTPUT_MODEL` — model used for group-match wording and provenance-assisted output.
-- `GROQ_ITINERARY_MODEL` — optional itinerary-specific model; falls back to `GROQ_STRUCTURED_OUTPUT_MODEL` when omitted.
-
-Structured itinerary output currently expects a compatible model such as `openai/gpt-oss-20b` or `openai/gpt-oss-120b`. Unsupported or malformed AI output fails closed and is not stored.
-
-Supabase automatically supplies `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to deployed functions. Do not place the service-role key in the mobile app.
-
-## Run
-
-```text
-npm start
-```
-
-Platform shortcuts:
-
-```text
-npm run android
-npm run ios
-npm run web
-```
-
-## Verify
-
-Run the app checks:
-
-```text
-npm run typecheck
-npm run lint
-npm test
-npx expo export --platform web
-```
-
-Run backend checks:
-
-```text
-npx supabase test db
-deno test --allow-env supabase/functions
-```
-
-Run mobile end-to-end scenarios:
-
-```text
-maestro test e2e/create-trip.yaml e2e/invite-and-join.yaml
-```
-
-The Supabase database tests require Docker. Deno and Maestro commands require their respective local toolchains. Jest tests do not require a live backend.
-
-## Project structure
-
-```text
-src/app/                 Expo Router screens
-src/features/            Feature UI and client-side services
-src/domain/              Deterministic matching and state logic
-src/lib/                 Supabase, identity, storage, and recovery utilities
-packages/contracts/      Shared Zod request and response contracts
-supabase/functions/      Authenticated Edge Functions
-supabase/migrations/     Database schema and security migrations
-supabase/tests/          pgTAP database tests
-__tests__/               Jest unit and component tests
-e2e/                     Maestro mobile journeys
-```
-
-## App links
-
-The custom `cutisama2://` scheme is available during development. Production HTTPS invitation links also require:
-
-- the chosen domain in `ios.associatedDomains`;
-- Android intent filters; and
-- the domain's Apple and Android association files.
-
-</details>
 
